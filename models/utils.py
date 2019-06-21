@@ -3,6 +3,7 @@ Model utilities
 '''
 
 import os
+import math
 import shutil
 import tempfile
 from collections import OrderedDict
@@ -288,6 +289,13 @@ class ProbeTranslator(object):
             'model': model
         }
 
+        self.entropy = Entropy()
+
+        # to report the stats
+        self.mean = 0
+        self.variance = 0
+        self.count = 0
+
     def to(self, device):
         ''' Move the translator to the specified device '''
         if 'cuda' in device.type:
@@ -295,6 +303,10 @@ class ProbeTranslator(object):
             self.decoder = nn.DataParallel(self.decoder.cuda())
 
         return self
+
+    @property
+    def std_dev(self):
+        return math.sqrt(self.variance)
 
     @property
     def sos_idx(self):
@@ -346,6 +358,24 @@ class ProbeTranslator(object):
                 ('targets', targets),
                 ('gold_targets', gold_targets)
             ])
+
+    def probe(self, attn_weights):
+        # compute entropy
+        entropies = self.entropy(attn_weights)
+
+        topv, topi = attn_weights.topk(1, dim=-1)
+        # compute probabilities of argmax
+        argmax_probabilities = topv.squeeze(-1)
+
+        argmax_i = topi.squeeze(-1)
+        argmax_i_size = argmax_i.size()
+        small_argmax_i_size = argmax_i_size
+        small_argmax_i_size[:-1] = 1
+        original_i = torch.arange(argmax_i.size()[-1]).view(small_argmax_i_size).expand(argmax_i_size)
+        argmax_distances = argmax_i - original_i
+        return {'entropies': entropies,
+                'argmax_probabilities': argmax_probabilities,
+                'argmax_distances': argmax_distances}
 
 
 def get_final_state(x, mask, dim=1):

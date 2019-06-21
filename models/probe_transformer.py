@@ -247,8 +247,6 @@ class ProbeTransformer(nn.Module):
             reduction='none'
         )
 
-        self.entropy = Entropy()
-
     @classmethod
     def create_encoders(cls, config):
         ''' Create the transformer encoders '''
@@ -362,23 +360,3 @@ class ProbeTransformer(nn.Module):
     def embed(self, inputs, token_embedding):
         ''' Embed the given inputs '''
         return self.dropout(token_embedding(inputs) + self.position_embedding(inputs))
-
-    def probe(self, attn_weights):
-        # compute entropy
-        entropies = self.entropy(attn_weights)
-
-        topv, topi = attn_weights.topk(1, dim=-1)
-        # compute probabilities of argmax
-        argmax_probabilities = topv.squeeze(-1)
-
-        argmax_i = topi.squeeze(-1)
-        argmax_i_size = argmax_i.size()
-        small_argmax_i_size = argmax_i_size
-        small_argmax_i_size[:-1] = 1
-        original_i = torch.arange(argmax_i.size()[-1]).view(small_argmax_i_size).expand(argmax_i_size)
-        argmax_distances = argmax_i - original_i
-        return {'entropies': entropies,
-                'argmax_probabilities': argmax_probabilities,
-                'argmax_distances': argmax_distances}
-
-
