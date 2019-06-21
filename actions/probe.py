@@ -116,7 +116,7 @@ class Prober(object):
                 os.makedirs(self.config.output_directory)
 
             if self.config.timed:
-                Translator.CURRENT = self
+                Prober.CURRENT = self
                 stmt = f'Translator.CURRENT.translate_all(None, {epoch}, None, {verbose})'
                 timing = timeit.timeit(stmt, stmt, number=self.config.timed, globals=globals())
                 print(f'Translation timing={timing/self.config.timed}')

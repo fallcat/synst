@@ -9,8 +9,11 @@ from torch import nn
 
 from models.probe_attention import MultiHeadedAttention
 from models.embeddings import PositionEmbedding, TokenEmbedding
-from models.utils import LabelSmoothingLoss, Translator
+from models.utils import LabelSmoothingLoss, ProbeTranslator, Entropy
 from utils import left_shift, right_shift, triu
+
+import scipy.stats
+import numpy as np
 
 
 class TransformerSublayer(nn.Module):
@@ -214,11 +217,11 @@ class TransformerDecoderLayer(nn.Module):
         return mask[None, :dim, :dim]
 
 
-class Transformer(nn.Module):
+class ProbeTransformer(nn.Module):
     ''' The Transformer module '''
     def __init__(self, config, dataset):
         ''' Initialize the Transformer '''
-        super(Transformer, self).__init__()
+        super(ProbeTransformer, self).__init__()
 
         self.dataset = dataset
         self.span = config.span
@@ -243,6 +246,8 @@ class Transformer(nn.Module):
             ignore_index=self.padding_idx,
             reduction='none'
         )
+
+        self.entropy = Entropy()
 
     @classmethod
     def create_encoders(cls, config):
@@ -276,7 +281,7 @@ class Transformer(nn.Module):
 
     def translator(self, config):
         ''' Get a translator for this model '''
-        return Translator(config, self, self.dataset)
+        return ProbeTranslator(config, self, self.dataset)
 
     def reset_named_parameters(self, modules):
         ''' Get a translator for this model '''
@@ -357,3 +362,23 @@ class Transformer(nn.Module):
     def embed(self, inputs, token_embedding):
         ''' Embed the given inputs '''
         return self.dropout(token_embedding(inputs) + self.position_embedding(inputs))
+
+    def probe(self, attn_weights):
+        # compute entropy
+        entropies = self.entropy(attn_weights)
+
+        topv, topi = attn_weights.topk(1, dim=-1)
+        # compute probabilities of argmax
+        argmax_probabilities = topv.squeeze(-1)
+
+        argmax_i = topi.squeeze(-1)
+        argmax_i_size = argmax_i.size()
+        small_argmax_i_size = argmax_i_size
+        small_argmax_i_size[:-1] = 1
+        original_i = torch.arange(argmax_i.size()[-1]).view(small_argmax_i_size).expand(argmax_i_size)
+        argmax_distances = argmax_i - original_i
+        return {'entropies': entropies,
+                'argmax_probabilities': argmax_probabilities,
+                'argmax_distances': argmax_distances}
+
+

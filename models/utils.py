@@ -12,6 +12,7 @@ from torch import nn
 from torch.nn import functional as F
 
 from utils.beam_search import BeamSearchDecoder
+from utils.probe_beam_search import ProbeBeamSearchDecoder
 
 
 def restore(path, modules, num_checkpoints=1, map_location=None, strict=True):
@@ -273,6 +274,80 @@ class Translator(object):
             ])
 
 
+class ProbeTranslator(object):
+    ''' An object that encapsulates model evaluation '''
+    def __init__(self, config, model, dataset):
+        self.config = config
+        self.dataset = dataset
+
+        self.span = model.span
+        self.encoder = ModuleWrapper(model, 'encode')
+        self.decoder = ModuleWrapper(model, 'decode')
+
+        self.modules = {
+            'model': model
+        }
+
+    def to(self, device):
+        ''' Move the translator to the specified device '''
+        if 'cuda' in device.type:
+            self.encoder = nn.DataParallel(self.encoder.cuda())
+            self.decoder = nn.DataParallel(self.decoder.cuda())
+
+        return self
+
+    @property
+    def sos_idx(self):
+        ''' Get the sos index '''
+        return self.dataset.sos_idx
+
+    @property
+    def eos_idx(self):
+        ''' Get the eos index '''
+        return self.dataset.eos_idx
+
+    @property
+    def padding_idx(self):
+        ''' Get the padding index '''
+        return self.dataset.padding_idx
+
+    def translate(self, batch):
+        ''' Generate with the given batch '''
+        with torch.no_grad():
+            if self.config.length_basis:
+                length_basis = batch[self.config.length_basis]
+            else:
+                length_basis = [0] * len(batch['inputs'])
+
+            decoder = ProbeBeamSearchDecoder(
+                self.decoder,
+                self.eos_idx,
+                self.config,
+                self.span
+            )
+
+            encoded, encoder_attn_weights_list = self.encoder(batch['inputs'])
+            beams = decoder.initialize_search(
+                [[self.sos_idx] * self.span for _ in range(len(batch['inputs']))],
+                [l + self.config.max_decode_length + self.span + 1 for l in length_basis]
+            )
+            targets = [
+                beam.best_hypothesis.sequence[self.span - 1:]
+                for beam in decoder.decode(encoded, beams)
+            ]
+
+            gold_targets = []
+            gold_target_lens = batch['target_lens']
+            for i, target in enumerate(batch['targets']):
+                target_len = gold_target_lens[i]
+                gold_targets.append(target[:target_len].tolist())
+
+            return OrderedDict([
+                ('targets', targets),
+                ('gold_targets', gold_targets)
+            ])
+
+
 def get_final_state(x, mask, dim=1):
     ''' Collect the final state based on the passed in mask '''
     shape = list(x.shape)
@@ -284,3 +359,13 @@ def get_final_state(x, mask, dim=1):
     num_padding = mask.sum(1).view(*view_dims).expand(indices_shape)
 
     return x.gather(dim, shape[dim] - num_padding - 1).squeeze(dim)
+
+
+class Entropy(nn.Module):
+    def __init__(self):
+        super(Entropy, self).__init__()
+
+    def forward(self, x):
+        plogp = x * torch.log(x)
+        plogp[plogp != plogp] = 0
+        return - torch.sum(plogp, dim=-1)
