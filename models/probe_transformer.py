@@ -7,7 +7,7 @@ import threading
 import torch
 from torch import nn
 
-from models.attention import MultiHeadedAttention
+from models.probe_attention import MultiHeadedAttention
 from models.embeddings import PositionEmbedding, TokenEmbedding
 from models.utils import LabelSmoothingLoss, Translator
 from utils import left_shift, right_shift, triu
@@ -36,7 +36,11 @@ class TransformerSublayer(nn.Module):
 
     def forward(self, inputs, *sublayer_args, **sublayer_kwargs): # pylint:disable=arguments-differ
         ''' The forward pass of the sublayer '''
-        return self.norm(inputs + self.dropout(self.sublayer(*sublayer_args, **sublayer_kwargs)))
+        if type(self.sublayer) is MultiHeadedAttention:
+            attention, attn_weights = self.sublayer(*sublayer_args, **sublayer_kwargs)
+            return self.norm(inputs + self.dropout(attention)), attn_weights
+        else:
+            return self.norm(inputs + self.dropout(self.sublayer(*sublayer_args, **sublayer_kwargs)))
 
 
 class TransformerFFN(nn.Module):
@@ -90,7 +94,7 @@ class TransformerEncoderLayer(nn.Module):
         ''' The forward pass '''
         mask = inputs['mask']
         state = inputs['state']
-        state = self.self_attention(
+        state, encoder_attn_weights = self.self_attention(
             state, # residual
             state, state, state, mask # passed to multiheaded attention
         )
@@ -100,7 +104,7 @@ class TransformerEncoderLayer(nn.Module):
             state # passed to feed-forward network
         )
 
-        return {'state': state, 'mask': mask}
+        return {'state': state, 'mask': mask, 'encoder_attn_weights': encoder_attn_weights}
 
 
 class TransformerDecoderLayer(nn.Module):
@@ -151,7 +155,7 @@ class TransformerDecoderLayer(nn.Module):
             kwargs['key_mask'] = mask
             kwargs['attention_mask'] = self.mask(state)
 
-        state = self.self_attention(
+        state, decoder_attn_weights = self.self_attention(
             residual, # residual
             state, state, state, **kwargs # passed to multiheaded attention
         )
@@ -161,7 +165,7 @@ class TransformerDecoderLayer(nn.Module):
         if self.causal and cache is not None:
             kwargs['num_queries'] = self.span
 
-        state = self.source_attention(
+        state, enc_dec_attn_weights = self.source_attention(
             state, # residual
             source, source, state, **kwargs # passed to multiheaded attention
         )
@@ -178,13 +182,16 @@ class TransformerDecoderLayer(nn.Module):
             else:
                 state = cache[self.uuid] = torch.cat((cached, state), 1)
 
-        return {'state': state, 'mask': mask, 'cache': cache}
+        return {'state': state, 'mask': mask, 'cache': cache,
+                'decoder_attn_weights': decoder_attn_weights, 'enc_dec_attn_weights': enc_dec_attn_weights}
 
     _masks = threading.local()
     def mask(self, inputs):
         '''
         Get a self-attention mask
+
         The mask will be of shape [T x T] containing elements from the set {0, -inf}
+
         Input shape:  (B x T x E)
         Output shape: (T x T)
         '''
@@ -223,7 +230,7 @@ class Transformer(nn.Module):
         self.position_embedding = PositionEmbedding(config.embedding_size)
         self.dropout = nn.Dropout(config.dropout_p, inplace=True)
 
-        # Allow for overriding the encoders and decoders in dervied classes
+        # Allow for overriding the encoders and decoders in derived classes
         self.encoders = type(self).create_encoders(config)
         self.decoders = type(self).create_decoders(config)
 
@@ -284,8 +291,9 @@ class Transformer(nn.Module):
 
     def forward(self, batch): # pylint:disable=arguments-differ
         ''' A batch of inputs and targets '''
+        encoded, encoder_attn_weights_list = self.encode(batch['inputs'])
         decoded = self.decode(
-            self.encode(batch['inputs']),
+            encoded,
             right_shift(right_shift(batch['targets']), shift=self.span - 1, fill=self.sos_idx),
         )
 
@@ -295,7 +303,11 @@ class Transformer(nn.Module):
         nll = self.cross_entropy(logits, targets).sum(dims[:-1])
         smoothed_nll = self.label_smoothing(logits, targets).sum(dims)
 
-        return smoothed_nll, nll
+        return {'smoothed_nll': smoothed_nll,
+                'nll': nll,
+                'encoder_attn_weights_list': encoder_attn_weights_list,
+                'decoder_attn_weights_list': decoded['decoder_attn_weights_list'],
+                'enc_dec_attn_weights_list': decoded['enc_dec_attn_weights_list']}
 
     def encode(self, inputs):
         ''' Encode the inputs '''
@@ -303,10 +315,12 @@ class Transformer(nn.Module):
             'state': self.embed(inputs, self.embedding),
             'mask': inputs.eq(self.padding_idx)
         }
+        encoder_attn_weights_list = []
         for encoder in self.encoders:
             encoded = encoder(encoded)
+            encoder_attn_weights_list.append(encoded['encoder_attn_weights'])
 
-        return encoded
+        return encoded, encoder_attn_weights_list
 
     def decode(self, encoded, targets, decoders=None, embedding=None, cache=None, mask=None):
         ''' Decode the encoded sequence to the targets '''
@@ -321,8 +335,12 @@ class Transformer(nn.Module):
             'state': self.embed(targets, embedding),
             'mask': targets.eq(self.padding_idx) if mask is None else mask
         }
+        decoder_attn_weights_list = []
+        enc_dec_attn_weights_list = []
         for decoder in decoders:
             decoded = decoder(decoded, encoded)
+            decoder_attn_weights_list.append(decoded['decoder_attn_weights'])
+            enc_dec_attn_weights_list.append(decoded['enc_dec_attn_weights'])
 
         # compute projection to the vocabulary
         state = decoded['state']
@@ -332,6 +350,8 @@ class Transformer(nn.Module):
         return {
             'cache': decoded.get('cache'),
             'logits': embedding(state, transpose=True).transpose(2, 1),  # transpose to B x C x ...
+            'decoder_attn_weights_list': decoder_attn_weights_list,
+            'enc_dec_attn_weights_list': enc_dec_attn_weights_list
         }
 
     def embed(self, inputs, token_embedding):
