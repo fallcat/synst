@@ -57,7 +57,7 @@ def restore(path, modules, num_checkpoints=1, map_location=None, strict=True):
             count += 1
 
     for name, obj in modules.items():
-        print("name ", name, ", obj", obj.size())
+        print("name ", name)
         if isinstance(obj, nn.Module):
             obj.load_state_dict(state[name], strict=strict)
         else:
