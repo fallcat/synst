@@ -336,15 +336,22 @@ class ProbeTranslator(object):
                 self.span
             )
 
-            encoded, encoder_attn_weights_list = self.encoder(batch['inputs'])
+            encoded, encoder_attn_weights_tensor = self.encoder(batch['inputs'])
+
             beams = decoder.initialize_search(
                 [[self.sos_idx] * self.span for _ in range(len(batch['inputs']))],
                 [l + self.config.max_decode_length + self.span + 1 for l in length_basis]
             )
-            targets = [
-                beam.best_hypothesis.sequence[self.span - 1:]
-                for beam in decoder.decode(encoded, beams)
-            ]
+            # targets = [
+            #     beam.best_hypothesis.sequence[self.span - 1:]
+            #     for beam, decoder_attn_weights_tensors, enc_dec_attn_weights_tensors in decoder.decode(encoded, beams)
+            # ]
+
+            decoder_results = decoder.decode(encoded, beams)
+            targets = [beam.best_hypothesis.sequence[self.span - 1:] for beam in decoder_results['beams']]
+
+            decoder_attn_weights_tensors = decoder_results['decoder_attn_weights_tensors']
+            enc_dec_attn_weights_tensors = decoder_results['enc_dec_attn_weights_tensors']
 
             gold_targets = []
             gold_target_lens = batch['target_lens']
@@ -352,10 +359,16 @@ class ProbeTranslator(object):
                 target_len = gold_target_lens[i]
                 gold_targets.append(target[:target_len].tolist())
 
+            encoder_stats = probe(encoder_attn_weights_tensor)
+            decoder_stats = probe(decoder_attn_weights_tensors)
+            enc_dec_stats = probe(enc_dec_attn_weights_tensors)
+
             return OrderedDict([
                 ('targets', targets),
-                ('gold_targets', gold_targets)
-            ])
+                ('gold_targets', gold_targets),
+            ]), {'encoder_stats': encoder_stats,
+                 'decoder_stats': decoder_stats,
+                 'enc_dec_stats': enc_dec_stats}
 
 
 def get_final_state(x, mask, dim=1):

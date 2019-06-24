@@ -75,6 +75,10 @@ class MultiHeadedAttention(nn.Module):
             logits = logits.view(logits_shape)
 
         attn_weights = F.softmax(logits, dim=-1)
+        print("batch_size", batch_size)
+        print("self.num_heads", self.num_heads)
+        print("self.projection_dim", self.projection_dim)
+        print("attn_weights", attn_weights.size())
         attended = torch.bmm(attn_weights, values)
 
         # By this point the values, keys, and queries all have B * H as their first dimension

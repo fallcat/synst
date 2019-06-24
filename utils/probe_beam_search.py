@@ -205,6 +205,8 @@ class ProbeBeamSearchDecoder(object):
     def decode(self, encoded, beams):
         ''' Decodes the given inputs '''
         self.model.eval()
+        decoder_attn_weights_tensors = []
+        enc_dec_attn_weights_tensors = []
         with torch.no_grad():
             encoded = utils.split_or_chunk(encoded, len(beams))
             while not self.all_done(beams):
@@ -219,6 +221,10 @@ class ProbeBeamSearchDecoder(object):
                         result = self.model(encoded_batch, batch, cache=cache)
 
                         new_cache = result.get('cache')
+                        decoder_attn_weights_tensor = result.get('decoder_attn_weights_tensor')
+                        enc_dec_attn_weights_tensor = result.get('enc_dec_attn_weights_tensor')
+                        decoder_attn_weights_tensors.append(decoder_attn_weights_tensor)
+                        enc_dec_attn_weights_tensors.append(enc_dec_attn_weights_tensor)
                         if new_cache:
                             updated_cache.extend(utils.split_or_chunk(new_cache, len(batch)))
 
@@ -246,4 +252,6 @@ class ProbeBeamSearchDecoder(object):
                 log_prob = torch.cat(logits).log_softmax(1)
                 self.update_beams(log_prob, beam_map, updated_cache)
 
-            return beams
+            return {'beams': beams,
+                    'decoder_attn_weights_tensors': torch.cat(decoder_attn_weights_tensors, 1),
+                    'enc_dec_attn_weights_tensors': torch.cat(enc_dec_attn_weights_tensors, 1)}

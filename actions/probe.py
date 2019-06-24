@@ -73,7 +73,7 @@ class Prober(object):
             for batch in batches:
                 # run the data through the model
                 batches.set_description_str(get_description())
-                sequences = self.translator.translate(batch)
+                sequences, stats = self.translator.translate(batch)
 
                 if self.config.timed:
                     continue
