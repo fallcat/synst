@@ -410,7 +410,7 @@ def probe(attn_weights):
     argmax_i_size = argmax_i.size()
     small_argmax_i_size = np.array(argmax_i_size)
     small_argmax_i_size[:-1] = 1
-    original_i = torch.arange(argmax_i.size()[-1]).view(small_argmax_i_size).expand(argmax_i_size)
+    original_i = torch.arange(argmax_i.size()[-1]).view(tuple(small_argmax_i_size)).expand(argmax_i_size)
     argmax_distances = argmax_i - original_i
     return {'entropies': entropies,
             'argmax_probabilities': argmax_probabilities,
