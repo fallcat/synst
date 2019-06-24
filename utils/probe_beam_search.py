@@ -253,5 +253,5 @@ class ProbeBeamSearchDecoder(object):
                 self.update_beams(log_prob, beam_map, updated_cache)
 
             return {'beams': beams,
-                    'decoder_attn_weights_tensors': torch.cat(decoder_attn_weights_tensors, 1),
-                    'enc_dec_attn_weights_tensors': torch.cat(enc_dec_attn_weights_tensors, 1)}
+                    'decoder_attn_weights_tensors': decoder_attn_weights_tensors,
+                    'enc_dec_attn_weights_tensors': enc_dec_attn_weights_tensors}
