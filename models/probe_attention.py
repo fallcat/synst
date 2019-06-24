@@ -75,7 +75,6 @@ class MultiHeadedAttention(nn.Module):
             logits = logits.view(logits_shape)
 
         attn_weights = F.softmax(logits, dim=-1)
-        print("batch_size", batch_size)
         print("self.num_heads", self.num_heads)
         print("self.projection_dim", self.projection_dim)
         print("attn_weights", attn_weights.size())
@@ -83,6 +82,7 @@ class MultiHeadedAttention(nn.Module):
 
         # By this point the values, keys, and queries all have B * H as their first dimension
         batch_size = queries.shape[0] // self.num_heads
+        print("batch_size", batch_size)
         return attended.view(
             batch_size,
             self.num_heads,
