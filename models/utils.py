@@ -289,8 +289,6 @@ class ProbeTranslator(object):
             'model': model
         }
 
-        self.entropy = Entropy()
-
         # to report the stats
         self.mean = 0
         self.variance = 0
@@ -359,24 +357,6 @@ class ProbeTranslator(object):
                 ('gold_targets', gold_targets)
             ])
 
-    def probe(self, attn_weights):
-        # compute entropy
-        entropies = self.entropy(attn_weights)
-
-        topv, topi = attn_weights.topk(1, dim=-1)
-        # compute probabilities of argmax
-        argmax_probabilities = topv.squeeze(-1)
-
-        argmax_i = topi.squeeze(-1)
-        argmax_i_size = argmax_i.size()
-        small_argmax_i_size = argmax_i_size
-        small_argmax_i_size[:-1] = 1
-        original_i = torch.arange(argmax_i.size()[-1]).view(small_argmax_i_size).expand(argmax_i_size)
-        argmax_distances = argmax_i - original_i
-        return {'entropies': entropies,
-                'argmax_probabilities': argmax_probabilities,
-                'argmax_distances': argmax_distances}
-
 
 def get_final_state(x, mask, dim=1):
     ''' Collect the final state based on the passed in mask '''
@@ -399,3 +379,25 @@ class Entropy(nn.Module):
         plogp = x * torch.log(x)
         plogp[plogp != plogp] = 0
         return - torch.sum(plogp, dim=-1)
+
+
+entropy = Entropy()
+
+
+def probe(attn_weights):
+    # compute entropy
+    entropies = entropy(attn_weights)
+
+    topv, topi = attn_weights.topk(1, dim=-1)
+    # compute probabilities of argmax
+    argmax_probabilities = topv.squeeze(-1)
+
+    argmax_i = topi.squeeze(-1)
+    argmax_i_size = argmax_i.size()
+    small_argmax_i_size = argmax_i_size
+    small_argmax_i_size[:-1] = 1
+    original_i = torch.arange(argmax_i.size()[-1]).view(small_argmax_i_size).expand(argmax_i_size)
+    argmax_distances = argmax_i - original_i
+    return {'entropies': entropies,
+            'argmax_probabilities': argmax_probabilities,
+            'argmax_distances': argmax_distances}
