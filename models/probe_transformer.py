@@ -97,6 +97,7 @@ class TransformerEncoderLayer(nn.Module):
         ''' The forward pass '''
         mask = inputs['mask']
         state = inputs['state']
+        print("encoder attention")
         state, encoder_attn_weights = self.self_attention(
             state, # residual
             state, state, state, mask # passed to multiheaded attention
@@ -158,6 +159,8 @@ class TransformerDecoderLayer(nn.Module):
             kwargs['key_mask'] = mask
             kwargs['attention_mask'] = self.mask(state)
 
+        print("decoder attention")
+
         state, decoder_attn_weights = self.self_attention(
             residual, # residual
             state, state, state, **kwargs # passed to multiheaded attention
@@ -167,6 +170,8 @@ class TransformerDecoderLayer(nn.Module):
         kwargs = {'key_mask': sources['mask']}
         if self.causal and cache is not None:
             kwargs['num_queries'] = self.span
+
+        print("enc dec attention")
 
         state, enc_dec_attn_weights = self.source_attention(
             state, # residual
