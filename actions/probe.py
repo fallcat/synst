@@ -18,6 +18,8 @@ from tqdm import tqdm
 from utils import profile
 from utils import tqdm_wrap_stdout
 
+from models.utils import MODEL_STATS, STATS_TYPES
+
 
 class Prober(object):
     ''' An object that encapsulates model evaluation '''
@@ -31,6 +33,10 @@ class Prober(object):
         self.modules = {
             'model': model
         }
+
+        # stats
+        self.stats = {model_stat: {stats_type: {} for stats_type in STATS_TYPES}
+                      for model_stat in MODEL_STATS}
 
     @property
     def dataset(self):
@@ -108,13 +114,8 @@ class Prober(object):
         # print("stats", stats)
         for name in stats:
             print("Name:", name)
-            if name == "encoder_stats":
-                for name2 in stats[name]:
-                    print("name2", name2, "size", stats[name][name2].size())
-            else:
-                print("len", len(stats[name]))
-                for name2 in stats[name][0]:
-                    print("name2", name2, "size", stats[name][0][name2].size())
+            for name2 in stats[name]:
+                print("name2", name2, "size", stats[name][name2].size())
         # for name, stat in stats:
         #     print("Name:", name)
         #     if name == "encoder_stats":

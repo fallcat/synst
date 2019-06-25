@@ -16,6 +16,9 @@ from torch.nn import functional as F
 from utils.beam_search import BeamSearchDecoder
 from utils.probe_beam_search import ProbeBeamSearchDecoder
 
+MODEL_STATS = ['encoder_stats', 'decoder_stats', 'enc_dec_stats']
+STATS_TYPES = ['entropies', 'argmax_probabilities', 'argmax_distances']
+
 
 def restore(path, modules, num_checkpoints=1, map_location=None, strict=True):
     '''
@@ -368,8 +371,12 @@ class ProbeTranslator(object):
                 ('targets', targets),
                 ('gold_targets', gold_targets),
             ]), {'encoder_stats': encoder_stats,
-                 'decoder_stats': decoder_stats,
-                 'enc_dec_stats': enc_dec_stats}
+                 'decoder_stats': {stats_type: torch.cat([decoder_stat[stats_type]
+                                                          for decoder_stat in decoder_stats], dim=-1)
+                                   for stats_type in STATS_TYPES},
+                 'enc_dec_stats': {stats_type: torch.cat([enc_dec_stat[stats_type]
+                                                          for enc_dec_stat in enc_dec_stats], dim=-1)
+                                   for stats_type in STATS_TYPES}}
 
 
 def get_final_state(x, mask, dim=1):
