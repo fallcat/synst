@@ -115,15 +115,17 @@ class Prober(object):
             for _, outputs in sorted(ordered_outputs, key=lambda x: x[0]): # pylint:disable=consider-using-enumerate
                 output_file.writelines(outputs)
 
+        self.print_stats()
+
     def update_stats(self, stats):
         # print("stats", stats)
         for model_stat in stats:
-            print("Name:", model_stat)
+            # print("Name:", model_stat)
             current_count = stats[model_stat][STATS_TYPES[0]].size()[-1]
             old_count = self.count[model_stat]
             new_count = old_count + current_count
             for stat_type in stats[model_stat]:
-                print("name2", stat_type, "size", stats[model_stat][stat_type].size())
+                # print("name2", stat_type, "size", stats[model_stat][stat_type].size())
                 old_mean = self.stats[model_stat][stat_type]['mean']
                 current_mean = stats[model_stat][stat_type].sum(dim=-1) / current_count
                 new_mean = (old_mean * self.count[model_stat] + stats[model_stat][stat_type].sum(dim=-1)) / new_count
@@ -135,11 +137,11 @@ class Prober(object):
                 # print("(stats[model_stat][stat_type] - new_mean.unsqueeze(-1)) ** 2 / (new_count + 1)", ((stats[model_stat][stat_type] - new_mean.unsqueeze(-1)) ** 2 / (new_count + 1)).size())
                 # print("old_var", old_var.size())
                 current_var = torch.sum((stats[model_stat][stat_type] - new_mean.unsqueeze(-1)) ** 2, dim=-1) / (current_count - 1)
-                print("old_count * (old_var + (old_mean - new_mean) ** 2)", (old_count * (old_var + (old_mean - new_mean) ** 2)).size())
-                print("current_mean", current_mean.size())
-                print("new_mean", new_mean.size())
-                print("current_var", current_var.size())
-                print("current_count * (current_var + (current_mean - new_mean) ** 2)", (current_count * (current_var + (current_mean - new_mean) ** 2)).size())
+                # print("old_count * (old_var + (old_mean - new_mean) ** 2)", (old_count * (old_var + (old_mean - new_mean) ** 2)).size())
+                # print("current_mean", current_mean.size())
+                # print("new_mean", new_mean.size())
+                # print("current_var", current_var.size())
+                # print("current_count * (current_var + (current_mean - new_mean) ** 2)", (current_count * (current_var + (current_mean - new_mean) ** 2)).size())
                 new_var = (old_count * (old_var + (old_mean - new_mean) ** 2)
                            + current_count * (current_var + (current_mean - new_mean) ** 2)) / new_count
                 # new_var = old_count * (old_var + old_mean ** 2) + \
@@ -158,6 +160,12 @@ class Prober(object):
         #         print("len", len(stat))
         #         for name2, item in stat[0]:
         #             print("name2", name2, "size", stat.size())
+
+    def print_stats(self):
+        print("==========stats==========")
+        print(self.stats)
+        print("==========count==========")
+        print(self.count)
 
     def __call__(self, epoch, experiment, verbose=0):
         ''' Generate from the model '''
