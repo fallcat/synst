@@ -374,7 +374,10 @@ class ProbeTranslator(object):
             return OrderedDict([
                 ('targets', targets),
                 ('gold_targets', gold_targets),
-            ]), {'encoder_stats': encoder_stats,
+            ]), {'encoder_stats': {stats_type: encoder_stats[stats_type].view(self.num_layers,
+                                                                              self.num_heads,
+                                                                              -1)
+                                   for stats_type in STATS_TYPES},
                  'decoder_stats': {stats_type: torch.cat([decoder_stat[stats_type].view(self.num_layers,
                                                                                         self.num_heads,
                                                                                         -1)
