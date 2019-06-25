@@ -108,7 +108,6 @@ class Prober(object):
         # print("stats", stats)
         for name in stats:
             print("Name:", name)
-            print(stats[name])
             if name == "encoder_stats":
                 for name2 in stats[name]:
                     print("name2", name2, "size", stats[name][name2].size())
