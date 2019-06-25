@@ -370,8 +370,8 @@ class ProbeTranslator(object):
             print("decoder_stats")
             for stats_type in STATS_TYPES:
                 print(stats_type)
-                for i in decoder_stats:
-                    print(decoder_stats[i][stats_type].size())
+                for decoder_stat in decoder_stats:
+                    print(decoder_stat[stats_type].size())
 
             return OrderedDict([
                 ('targets', targets),
