@@ -92,7 +92,11 @@ class MultiHeadedAttention(nn.Module):
             batch_size,
             -1,
             self.num_heads * self.projection_dim
-        ), attn_weights
+        ), attn_weights.view(batch_size,
+                             self.num_heads,
+                             attn_weights.size()[1],
+                             -1
+                             ).transpose(2, 1).contiguous()
 
     def forward(self, values, keys, queries, # pylint:disable=arguments-differ
                 key_mask=None, attention_mask=None, num_queries=0):
