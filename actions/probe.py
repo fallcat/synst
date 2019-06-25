@@ -105,15 +105,26 @@ class Prober(object):
                 output_file.writelines(outputs)
 
     def update_stats(self, stats):
-        for name, stat in stats:
+        print("stats", stats)
+        for name in stats:
             print("Name:", name)
+            print(stats[name])
             if name == "encoder_stats":
-                for name2, item in stat:
+                for name2, item in stats[name]:
                     print("name2", name2, "size", stat.size())
             else:
-                print("len", len(stat))
+                print("len", len(stats[name]))
                 for name2, item in stat[0]:
                     print("name2", name2, "size", stat.size())
+        # for name, stat in stats:
+        #     print("Name:", name)
+        #     if name == "encoder_stats":
+        #         for name2, item in stat:
+        #             print("name2", name2, "size", stat.size())
+        #     else:
+        #         print("len", len(stat))
+        #         for name2, item in stat[0]:
+        #             print("name2", name2, "size", stat.size())
 
     def __call__(self, epoch, experiment, verbose=0):
         ''' Generate from the model '''
