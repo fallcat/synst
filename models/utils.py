@@ -432,4 +432,4 @@ def probe(attn_weights):
     argmax_distances = argmax_i - original_i
     return {'entropies': entropies,
             'argmax_probabilities': argmax_probabilities,
-            'argmax_distances': argmax_distances}
+            'argmax_distances': argmax_distances.float()}
