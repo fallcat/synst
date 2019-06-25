@@ -35,8 +35,13 @@ class Prober(object):
         }
 
         # stats
-        self.stats = {model_stat: {stats_type: {} for stats_type in STATS_TYPES}
+        self.stats = {model_stat: {stats_type: {'mean': torch.zeros((model.num_layers, model.num_heads),
+                                                                    dtype=torch.float32),
+                                                'var': torch.zeros((model.num_layers, model.num_heads),
+                                                                    dtype=torch.float32)}
+                                   for stats_type in STATS_TYPES}
                       for model_stat in MODEL_STATS}
+        self.count = {model_stat: 0 for model_stat in MODEL_STATS}
 
     @property
     def dataset(self):
@@ -112,10 +117,19 @@ class Prober(object):
 
     def update_stats(self, stats):
         # print("stats", stats)
-        for name in stats:
-            print("Name:", name)
-            for name2 in stats[name]:
-                print("name2", name2, "size", stats[name][name2].size())
+        for model_stat in stats:
+            print("Name:", model_stat)
+            current_count = stats[model_stat][STATS_TYPES[0]].size()[-1]
+            new_count = self.count[model_stat] + current_count
+            for stat_type in stats[model_stat]:
+                print("name2", stat_type, "size", stats[model_stat][stat_type].size())
+                old_mean = self.stats[model_stat][stat_type]['mean']
+                new_mean = (old_mean * self.count + stats[model_stat][stat_type].sum(dim=-1)) / new_count
+                old_var = self.stats[model_stat][stat_type]['var']
+                new_var = new_count / (new_count + 1) * (
+                        old_var + (stats[model_stat][stat_type] - new_mean.unsqueeze(-1)) ** 2 / (new_count + 1))
+                self.stats[model_stat][stat_type]['mean'] = new_mean
+                self.stats[model_stat][stat_type]['var'] = new_var
         # for name, stat in stats:
         #     print("Name:", name)
         #     if name == "encoder_stats":
