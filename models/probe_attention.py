@@ -96,7 +96,7 @@ class MultiHeadedAttention(nn.Module):
                              self.num_heads,
                              attn_weights.size()[1],
                              -1
-                             ).transpose(2, 1).contiguous()
+                             ).transpose(0, 1).contiguous()
 
     def forward(self, values, keys, queries, # pylint:disable=arguments-differ
                 key_mask=None, attention_mask=None, num_queries=0):
