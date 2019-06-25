@@ -365,11 +365,11 @@ class ProbeTranslator(object):
                 target_len = gold_target_lens[i]
                 gold_targets.append(target[:target_len].tolist())
 
-            print("decoder_stats")
-            for stats_type in STATS_TYPES:
-                print(stats_type)
-                for decoder_stat in decoder_stats:
-                    print(decoder_stat[stats_type].size())
+            # print("decoder_stats")
+            # for stats_type in STATS_TYPES:
+            #     print(stats_type)
+            #     for decoder_stat in decoder_stats:
+            #         print(decoder_stat[stats_type].size())
 
             return OrderedDict([
                 ('targets', targets),
