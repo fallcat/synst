@@ -75,6 +75,8 @@ class Prober(object):
                 batches.set_description_str(get_description())
                 sequences, stats = self.translator.translate(batch)
 
+                self.update_stats(stats)
+
                 if self.config.timed:
                     continue
 
@@ -101,6 +103,17 @@ class Prober(object):
 
             for _, outputs in sorted(ordered_outputs, key=lambda x: x[0]): # pylint:disable=consider-using-enumerate
                 output_file.writelines(outputs)
+
+    def update_stats(self, stats):
+        for name, stat in stats:
+            print("Name:", name)
+            if name == "encoder_stats":
+                for name2, item in stat:
+                    print("name2", name2, "size", stat.size())
+            else:
+                print("len", len(stat))
+                for name2, item in stat[0]:
+                    print("name2", name2, "size", stat.size())
 
     def __call__(self, epoch, experiment, verbose=0):
         ''' Generate from the model '''
