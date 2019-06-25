@@ -12,7 +12,7 @@ import torch
 
 from data import DATASETS
 from models import MODELS
-from actions import Trainer, Evaluator, Translator, Pass
+from actions import Trainer, Evaluator, Translator, Pass, Prober
 from utils import get_version_string, get_random_seed_fn
 
 
@@ -536,6 +536,85 @@ def add_translate_args(parser):
     return group
 
 
+def add_probe_args(parser):
+    ''' Defines the generation specific arguments '''
+    group = ArgGroup(parser.add_argument_group('Probe'))
+    group.add_argument(
+        '--beam-width',
+        default=4,
+        type=int,
+        help='Default beam width for beam search decoder.'
+    )
+    group.add_argument(
+        '--disable-cache',
+        default=False,
+        action='store_true',
+        help='Whether to disable the use of caching in beam search decoder'
+    )
+    group.add_argument(
+        '--length-penalty',
+        type=float,
+        default=0.6,
+        help='Divides the hypothesis log probabilities in beam search by length^<length penalty>.'
+    )
+    group.add_argument(
+        '--length-basis',
+        type=str,
+        default=None,
+        choices=['input_lens', 'target_lens'],
+        help='The basis for max decoding length. Default of None implies no basis, i.e. 0.'
+    )
+    group.add_argument(
+        '--max-decode-length',
+        default=50,
+        type=int,
+        help='How many tokens beyond the length basis to allow decoding to continue.'
+    )
+    group.add_argument(
+        '--output-directory',
+        type=str,
+        default='/tmp/synst/output',
+        help='Where to store translated strings'
+    )
+    group.add_argument(
+        '--output-filename',
+        type=str,
+        default=None,
+        help='Default output filename is translated_{step}.txt'
+    )
+    group.add_argument(
+        '--order-output',
+        default=False,
+        action='store_true',
+        help='Whether to print the translated strings in the original dataset ordering'
+    )
+    group.add_argument(
+        '--gold-annotations',
+        default=False,
+        action='store_true',
+        help='Whether to use gold annotations rather than have the network predict the annotations'
+    )
+    group.add_argument(
+        '--annotations-only',
+        default=False,
+        action='store_true',
+        help='Whether to only output annotations rather than the predicted translation'
+    )
+    group.add_argument(
+        '--timed',
+        type=int,
+        default=0,
+        const=1,
+        nargs='?',
+        help='How many times to run translation to gauge the translation speed'
+    )
+
+    group.set_defaults(gold_p=0)
+    group.set_defaults(dropout_p=0)
+
+    return group
+
+
 def add_pass_args(parser):
     ''' Defines the pass specific arguments '''
     group = ArgGroup(parser.add_argument_group('Pass'))
@@ -645,6 +724,15 @@ def parse_args(argv=None):
         action=Translator,
         action_type='translate',
         action_config=groups['translate'],
+        shuffle=False
+    )
+
+    probe_parser = subparsers.add_parser('probe', help='Probe a model')
+    groups['probe'] = add_probe_args(probe_parser)
+    probe_parser.set_defaults(
+        action=Prober,
+        action_type='probe',
+        action_config=groups['probe'],
         shuffle=False
     )
 

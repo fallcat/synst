@@ -4,6 +4,7 @@ Initialize the actions module
 from actions.train import Trainer
 from actions.evaluate import Evaluator
 from actions.translate import Translator
+from actions.probe import Prober
 
 class Pass(object):
     ''' Action that does nothing... '''
