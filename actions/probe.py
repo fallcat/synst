@@ -136,6 +136,9 @@ class Prober(object):
                 # print("old_var", old_var.size())
                 current_var = (stats[model_stat][stat_type] - new_mean.unsqueeze(-1)) ** 2 / (current_count - 1)
                 print("old_count * (old_var + (old_mean - new_mean) ** 2)", (old_count * (old_var + (old_mean - new_mean) ** 2)).size())
+                print("current_mean", current_mean.size())
+                print("new_mean", new_mean.size())
+                print("current_var", current_var.size())
                 print("current_count * (current_var + (current_mean - new_mean) ** 2)", (current_count * (current_var + (current_mean - new_mean) ** 2)).size())
                 new_var = (old_count * (old_var + (old_mean - new_mean) ** 2)
                            + current_count * (current_var + (current_mean - new_mean) ** 2)) / new_count
