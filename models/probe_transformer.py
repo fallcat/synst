@@ -247,6 +247,9 @@ class ProbeTransformer(nn.Module):
             reduction='none'
         )
 
+        self.num_layers = config.num_layers
+        self.num_heads = config.num_heads
+
     @classmethod
     def create_encoders(cls, config):
         ''' Create the transformer encoders '''
