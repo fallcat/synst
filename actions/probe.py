@@ -120,22 +120,30 @@ class Prober(object):
         for model_stat in stats:
             print("Name:", model_stat)
             current_count = stats[model_stat][STATS_TYPES[0]].size()[-1]
-            new_count = self.count[model_stat] + current_count
+            old_count = self.count[model_stat]
+            new_count = old_count + current_count
             for stat_type in stats[model_stat]:
                 print("name2", stat_type, "size", stats[model_stat][stat_type].size())
                 old_mean = self.stats[model_stat][stat_type]['mean']
+                current_mean = stats[model_stat][stat_type].sum(dim=-1) / current_count
                 new_mean = (old_mean * self.count[model_stat] + stats[model_stat][stat_type].sum(dim=-1)) / new_count
                 old_var = self.stats[model_stat][stat_type]['var']
-                print("stats[model_stat][stat_type]", stats[model_stat][stat_type].size())
-                print("new_mean.unsqueeze(-1)", new_mean.unsqueeze(-1).size())
-                print("stats[model_stat][stat_type] - new_mean.unsqueeze(-1)", (stats[model_stat][stat_type] - new_mean.unsqueeze(-1)).size())
-                print("(stats[model_stat][stat_type] - new_mean.unsqueeze(-1)) ** 2 ", ((stats[model_stat][stat_type] - new_mean.unsqueeze(-1)) ** 2).size() )
-                print("(stats[model_stat][stat_type] - new_mean.unsqueeze(-1)) ** 2 / (new_count + 1)", ((stats[model_stat][stat_type] - new_mean.unsqueeze(-1)) ** 2 / (new_count + 1)).size())
-                print("old_var", old_var.size())
-                new_var = new_count / (new_count + 1) * (
-                        old_var + (stats[model_stat][stat_type] - new_mean.unsqueeze(-1)) ** 2 / (new_count + 1))
+                # print("stats[model_stat][stat_type]", stats[model_stat][stat_type].size())
+                # print("new_mean.unsqueeze(-1)", new_mean.unsqueeze(-1).size())
+                # print("stats[model_stat][stat_type] - new_mean.unsqueeze(-1)", (stats[model_stat][stat_type] - new_mean.unsqueeze(-1)).size())
+                # print("(stats[model_stat][stat_type] - new_mean.unsqueeze(-1)) ** 2 ", ((stats[model_stat][stat_type] - new_mean.unsqueeze(-1)) ** 2).size() )
+                # print("(stats[model_stat][stat_type] - new_mean.unsqueeze(-1)) ** 2 / (new_count + 1)", ((stats[model_stat][stat_type] - new_mean.unsqueeze(-1)) ** 2 / (new_count + 1)).size())
+                # print("old_var", old_var.size())
+                current_var = (stats[model_stat][stat_type] - new_mean.unsqueeze(-1)) ** 2 / (current_count - 1)
+                new_var = (old_count * (old_var + (old_mean - new_mean) ** 2) \
+                    + current_count * (current_var + (current_mean - new_mean) ** 2)) / new_count
+                # new_var = old_count * (old_var + old_mean ** 2) + \
+                #           current_count * (stats[model_stat][stat_type] - new_mean.unsqueeze(-1)) ** 2 / ()
+                # new_var = new_count / (new_count + 1) * (
+                #         old_var.unsqueeze() + (stats[model_stat][stat_type] - new_mean.unsqueeze(-1)) ** 2 / (new_count + 1))
                 self.stats[model_stat][stat_type]['mean'] = new_mean
                 self.stats[model_stat][stat_type]['var'] = new_var
+            self.count[model_stat] = new_count
         # for name, stat in stats:
         #     print("Name:", name)
         #     if name == "encoder_stats":
