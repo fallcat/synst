@@ -105,17 +105,17 @@ class Prober(object):
                 output_file.writelines(outputs)
 
     def update_stats(self, stats):
-        print("stats", stats)
+        # print("stats", stats)
         for name in stats:
             print("Name:", name)
             print(stats[name])
             if name == "encoder_stats":
-                for name2, item in stats[name]:
-                    print("name2", name2, "size", stat.size())
+                for name2 in stats[name]:
+                    print("name2", name2, "size", stats[name][name2].size())
             else:
                 print("len", len(stats[name]))
-                for name2, item in stat[0]:
-                    print("name2", name2, "size", stat.size())
+                for name2 in stats[name][0]:
+                    print("name2", name2, "size", stats[name][0][name2].size())
         # for name, stat in stats:
         #     print("Name:", name)
         #     if name == "encoder_stats":
