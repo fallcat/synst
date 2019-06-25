@@ -126,6 +126,8 @@ class Prober(object):
                 old_mean = self.stats[model_stat][stat_type]['mean']
                 new_mean = (old_mean * self.count[model_stat] + stats[model_stat][stat_type].sum(dim=-1)) / new_count
                 old_var = self.stats[model_stat][stat_type]['var']
+                print("stats[model_stat][stat_type]", stats[model_stat][stat_type].size())
+                print("new_mean.unsqueeze(-1)", new_mean.unsqueeze(-1).size())
                 new_var = new_count / (new_count + 1) * (
                         old_var + (stats[model_stat][stat_type] - new_mean.unsqueeze(-1)) ** 2 / (new_count + 1))
                 self.stats[model_stat][stat_type]['mean'] = new_mean
