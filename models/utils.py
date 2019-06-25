@@ -293,11 +293,6 @@ class ProbeTranslator(object):
             'model': model
         }
 
-        # to report the stats
-        self.mean = 0
-        self.variance = 0
-        self.count = 0
-
     def to(self, device):
         ''' Move the translator to the specified device '''
         if 'cuda' in device.type:
@@ -377,10 +372,14 @@ class ProbeTranslator(object):
                 ('targets', targets),
                 ('gold_targets', gold_targets),
             ]), {'encoder_stats': encoder_stats,
-                 'decoder_stats': {stats_type: torch.cat([decoder_stat[stats_type]
+                 'decoder_stats': {stats_type: torch.cat([decoder_stat[stats_type].view(self.config.num_layers,
+                                                                                        self.config.num_heads,
+                                                                                        -1)
                                                           for decoder_stat in decoder_stats], dim=-1)
                                    for stats_type in STATS_TYPES},
-                 'enc_dec_stats': {stats_type: torch.cat([enc_dec_stat[stats_type]
+                 'enc_dec_stats': {stats_type: torch.cat([enc_dec_stat[stats_type].view(self.config.num_layers,
+                                                                                        self.config.num_heads,
+                                                                                        -1)
                                                           for enc_dec_stat in enc_dec_stats], dim=-1)
                                    for stats_type in STATS_TYPES}}
 
