@@ -36,9 +36,9 @@ class Prober(object):
 
         # stats
         self.stats = {model_stat: {stats_type: {'mean': torch.zeros((model.num_layers, model.num_heads),
-                                                                    dtype=torch.float32),
+                                                                    dtype=torch.float32).to(device),
                                                 'var': torch.zeros((model.num_layers, model.num_heads),
-                                                                    dtype=torch.float32)}
+                                                                    dtype=torch.float32).to(device)}
                                    for stats_type in STATS_TYPES}
                       for model_stat in MODEL_STATS}
         self.count = {model_stat: 0 for model_stat in MODEL_STATS}
