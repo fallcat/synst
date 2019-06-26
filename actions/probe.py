@@ -126,15 +126,33 @@ class Prober(object):
             new_count = old_count + current_count
             for stat_type in stats[model_stat]:
                 old_mean = self.stats[model_stat][stat_type]['mean']
-                current_mean = stats[model_stat][stat_type].sum(dim=-1) / current_count
+                current_mean = stats[model_stat][stat_type].mean(dim=-1)
                 new_mean = (old_mean * self.count[model_stat] + stats[model_stat][stat_type].sum(dim=-1)) / new_count
                 old_var = self.stats[model_stat][stat_type]['var']
-                current_var = torch.sum((stats[model_stat][stat_type] - new_mean.unsqueeze(-1)) ** 2, dim=-1) / (current_count - 1)
+                current_var = stats[model_stat][stat_type].var(dim=-1) # torch.sum((stats[model_stat][stat_type] - new_mean.unsqueeze(-1)) ** 2, dim=-1) / (current_count - 1)
                 new_var = (old_count * (old_var + (old_mean - new_mean) ** 2)
                            + current_count * (current_var + (current_mean - new_mean) ** 2)) / new_count
                 self.stats[model_stat][stat_type]['mean'] = new_mean
                 self.stats[model_stat][stat_type]['var'] = new_var
             self.count[model_stat] = new_count
+
+    # def update_stats(self, stats):
+    #     ''' Update stats after each batch '''
+    #     for model_stat in stats:
+    #         current_count = stats[model_stat][STATS_TYPES[0]].size()[-1]
+    #         old_count = self.count[model_stat]
+    #         new_count = old_count + current_count
+    #         for stat_type in stats[model_stat]:
+    #             old_mean = self.stats[model_stat][stat_type]['mean']
+    #             current_mean = stats[model_stat][stat_type].sum(dim=-1) / current_count
+    #             new_mean = (old_mean * self.count[model_stat] + stats[model_stat][stat_type].sum(dim=-1)) / new_count
+    #             old_var = self.stats[model_stat][stat_type]['var']
+    #             current_var = torch.sum((stats[model_stat][stat_type] - new_mean.unsqueeze(-1)) ** 2, dim=-1) / (current_count - 1)
+    #             new_var = (old_count * (old_var + (old_mean - new_mean) ** 2)
+    #                        + current_count * (current_var + (current_mean - new_mean) ** 2)) / new_count
+    #             self.stats[model_stat][stat_type]['mean'] = new_mean
+    #             self.stats[model_stat][stat_type]['var'] = new_var
+    #         self.count[model_stat] = new_count
 
     def save_stats(self, stats_file):
         ''' Save stats to file '''
