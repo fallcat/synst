@@ -22,6 +22,7 @@ def visualize(mean, std, num_layers, num_heads, fig_path, fig_name):
     ax.set_title(fig_name)
     ax.set_xticks(ind + width / 2)
     ax.set_xticklabels(np.arange(1, num_layers + 1))
+    ax.set_xlabel('Layer')
 
     ax.legend((pn[0] for pn in p), ("Head " + str(i) for i in range(1, num_heads + 1)))
     ax.autoscale_view()
