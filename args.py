@@ -477,6 +477,12 @@ def add_probe_train_args(parser):
         help='Where to store model checkpoints'
     )
     group.add_argument(
+        '--stats-directory',
+        type=str,
+        default='/tmp/synst/stats',
+        help='Where to store stats'
+    )
+    group.add_argument(
         '--checkpoint-interval',
         type=int,
         default=10*60,
