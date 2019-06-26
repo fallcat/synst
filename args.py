@@ -577,6 +577,12 @@ def add_probe_args(parser):
         help='Where to store translated strings'
     )
     group.add_argument(
+        '--stats-directory',
+        type=str,
+        default='/tmp/synst/stats',
+        help='Where to store stats'
+    )
+    group.add_argument(
         '--output-filename',
         type=str,
         default=None,

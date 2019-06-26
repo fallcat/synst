@@ -13,6 +13,7 @@ import timeit
 from contextlib import ExitStack
 
 import torch
+import pickle
 from tqdm import tqdm
 
 from utils import profile
@@ -63,7 +64,7 @@ class Prober(object):
         ''' Get the padding index '''
         return self.dataset.padding_idx
 
-    def translate_all(self, output_file, epoch, experiment, verbose=0):
+    def translate_all(self, output_file, stats_file, epoch, experiment, verbose=0):
         ''' Generate all predictions from the dataset '''
         def get_description():
             description = f'Generate #{epoch}'
@@ -115,57 +116,30 @@ class Prober(object):
             for _, outputs in sorted(ordered_outputs, key=lambda x: x[0]): # pylint:disable=consider-using-enumerate
                 output_file.writelines(outputs)
 
-        self.print_stats()
+        self.save_stats(stats_file)
 
     def update_stats(self, stats):
-        # print("stats", stats)
+        ''' Update stats after each batch '''
         for model_stat in stats:
-            # print("Name:", model_stat)
             current_count = stats[model_stat][STATS_TYPES[0]].size()[-1]
             old_count = self.count[model_stat]
             new_count = old_count + current_count
             for stat_type in stats[model_stat]:
-                # print("name2", stat_type, "size", stats[model_stat][stat_type].size())
                 old_mean = self.stats[model_stat][stat_type]['mean']
                 current_mean = stats[model_stat][stat_type].sum(dim=-1) / current_count
                 new_mean = (old_mean * self.count[model_stat] + stats[model_stat][stat_type].sum(dim=-1)) / new_count
                 old_var = self.stats[model_stat][stat_type]['var']
-                # print("stats[model_stat][stat_type]", stats[model_stat][stat_type].size())
-                # print("new_mean.unsqueeze(-1)", new_mean.unsqueeze(-1).size())
-                # print("stats[model_stat][stat_type] - new_mean.unsqueeze(-1)", (stats[model_stat][stat_type] - new_mean.unsqueeze(-1)).size())
-                # print("(stats[model_stat][stat_type] - new_mean.unsqueeze(-1)) ** 2 ", ((stats[model_stat][stat_type] - new_mean.unsqueeze(-1)) ** 2).size() )
-                # print("(stats[model_stat][stat_type] - new_mean.unsqueeze(-1)) ** 2 / (new_count + 1)", ((stats[model_stat][stat_type] - new_mean.unsqueeze(-1)) ** 2 / (new_count + 1)).size())
-                # print("old_var", old_var.size())
                 current_var = torch.sum((stats[model_stat][stat_type] - new_mean.unsqueeze(-1)) ** 2, dim=-1) / (current_count - 1)
-                # print("old_count * (old_var + (old_mean - new_mean) ** 2)", (old_count * (old_var + (old_mean - new_mean) ** 2)).size())
-                # print("current_mean", current_mean.size())
-                # print("new_mean", new_mean.size())
-                # print("current_var", current_var.size())
-                # print("current_count * (current_var + (current_mean - new_mean) ** 2)", (current_count * (current_var + (current_mean - new_mean) ** 2)).size())
                 new_var = (old_count * (old_var + (old_mean - new_mean) ** 2)
                            + current_count * (current_var + (current_mean - new_mean) ** 2)) / new_count
-                # new_var = old_count * (old_var + old_mean ** 2) + \
-                #           current_count * (stats[model_stat][stat_type] - new_mean.unsqueeze(-1)) ** 2 / ()
-                # new_var = new_count / (new_count + 1) * (
-                #         old_var.unsqueeze() + (stats[model_stat][stat_type] - new_mean.unsqueeze(-1)) ** 2 / (new_count + 1))
                 self.stats[model_stat][stat_type]['mean'] = new_mean
                 self.stats[model_stat][stat_type]['var'] = new_var
             self.count[model_stat] = new_count
-        # for name, stat in stats:
-        #     print("Name:", name)
-        #     if name == "encoder_stats":
-        #         for name2, item in stat:
-        #             print("name2", name2, "size", stat.size())
-        #     else:
-        #         print("len", len(stat))
-        #         for name2, item in stat[0]:
-        #             print("name2", name2, "size", stat.size())
 
-    def print_stats(self):
-        print("==========stats==========")
-        print(self.stats)
-        print("==========count==========")
-        print(self.count)
+    def save_stats(self, stats_file):
+        ''' Save stats to file '''
+        stats = {'stats': self.stats, 'count': self.count}
+        pickle.dump(stats, stats_file, protocol=pickle.HIGHEST_PROTOCOL)
 
     def __call__(self, epoch, experiment, verbose=0):
         ''' Generate from the model '''
@@ -191,7 +165,11 @@ class Prober(object):
                 output_path = os.path.join(self.config.output_directory, output_filename)
                 output_file = stack.enter_context(open(output_path, 'wt'))
 
+                stats_filename = self.config.stats_filename or f'stats_{step}.pickle'
+                stats_path = os.path.join(self.config.stats_directory, stats_filename)
+                stats_file = stack.enter_context(open(stats_path, 'wb'))
+
                 if verbose:
                     print(f'Outputting to {output_path}')
 
-                self.translate_all(output_file, epoch, experiment, verbose)
+                self.translate_all(output_file, stats_file, epoch, experiment, verbose)
