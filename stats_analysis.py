@@ -42,10 +42,10 @@ def main():
                 for stats_type in STATS_TYPES:
                     output_file.write("---------- " + stats_type + " ----------\n")
                     output_file.write("mean:\n")
-                    mean = stats['stats'][model_stat][stats_type]['mean'].numpy()
+                    mean = stats['stats'][model_stat][stats_type]['mean'].cpu().numpy()
                     print_matrix(mean, output_file)
                     output_file.write("std:\n")
-                    std = torch.sqrt(stats['stats'][model_stat][stats_type]['var']).numpy()
+                    std = torch.sqrt(stats['stats'][model_stat][stats_type]['var']).cpu().numpy()
                     print_matrix(std, output_file)
                     fig_path = base_path + stats_path + '_' + model_stat + '_' + stats_type
                     fig_name = model_stat.capitalize() + ' - ' + stats_type.capitalize()
