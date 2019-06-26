@@ -11,6 +11,7 @@ import os
 import sys
 import time
 import shutil
+import pickle
 from contextlib import ExitStack
 
 import torch
@@ -100,7 +101,7 @@ class ProbeTrainer(object):
         ''' Get the dataset '''
         return self.dataloader.dataset
 
-    def train_epoch(self, epoch, experiment, stats_file, verbose=0):
+    def train_epoch(self, epoch, experiment, verbose=0):
         ''' Run one training epoch '''
         oom = self.metric_store['oom']
         learning_rate = self.metric_store['lr']
@@ -212,6 +213,11 @@ class ProbeTrainer(object):
                 self.stats[model_stat][stat_type]['mean'] = new_mean
                 self.stats[model_stat][stat_type]['var'] = new_var
             self.count[model_stat] = new_count
+
+    def save_stats(self, stats_file):
+        ''' Save stats to file '''
+        stats = {'stats': self.stats, 'count': self.count}
+        pickle.dump(stats, stats_file, protocol=pickle.HIGHEST_PROTOCOL)
 
     def should_checkpoint(self):
         ''' Function which determines if a new checkpoint should be saved '''
@@ -325,9 +331,11 @@ class ProbeTrainer(object):
 
             while not self.is_done(experiment, epoch):
                 experiment.log_current_epoch(epoch)
-                self.train_epoch(epoch, experiment, stats_file, verbose)
+                self.train_epoch(epoch, experiment, verbose)
                 experiment.log_epoch_end(epoch)
                 epoch += 1
+
+            self.save_stats(stats_file)
 
             if self.stopped_early:
                 print('Stopping early!')
