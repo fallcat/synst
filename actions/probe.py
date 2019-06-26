@@ -171,5 +171,6 @@ class Prober(object):
 
                 if verbose:
                     print(f'Outputting to {output_path}')
+                    print(f'Stats saving to {stats_path}')
 
                 self.translate_all(output_file, stats_file, epoch, experiment, verbose)
