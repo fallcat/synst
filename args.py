@@ -12,7 +12,7 @@ import torch
 
 from data import DATASETS
 from models import MODELS
-from actions import Trainer, Evaluator, Translator, Pass, Prober
+from actions import Trainer, Evaluator, Translator, Pass, Prober, ProbeTrainer
 from utils import get_version_string, get_random_seed_fn
 
 
@@ -434,6 +434,115 @@ def add_train_args(parser):
     return group
 
 
+def add_probe_train_args(parser):
+    ''' Defines the training specific arguments '''
+    group = ArgGroup(parser.add_argument_group('Training'))
+    group.add_argument(
+        '-A',
+        '--accumulate-steps',
+        type=int,
+        default=1,
+        help='How many batches of data to accumulate gradients over'
+    )
+    group.add_argument(
+        '--gold-p',
+        type=float,
+        default=1.0,
+        help='The percentage of time to select gold targets during training (for LSTMs)'
+    )
+    group.add_argument(
+        '--dropout-p',
+        type=float,
+        default=0.1,
+        help='The dropout percentage during training'
+    )
+    group.add_argument(
+        '--early-stopping',
+        type=_integer_geq(),
+        default=0,
+        help='If > 0, stop training after this many checkpoints of increasing nll on the validation'
+        ' set. This also implies storing of the best_checkpoint.'
+    )
+    group.add_argument(
+        '--label-smoothing',
+        type=float,
+        default=0.1,
+        help='The amount of label smoothing'
+    )
+    group.add_argument(
+        '-c',
+        '--checkpoint-directory',
+        type=str,
+        default='/tmp/synst/checkpoints',
+        help='Where to store model checkpoints'
+    )
+    group.add_argument(
+        '--checkpoint-interval',
+        type=int,
+        default=10*60,
+        help='Generate a checkpoint every `n` seconds'
+    )
+    group.add_argument(
+        '--max-checkpoints',
+        type=int,
+        default=5,
+        help='The maximum number of checkpoints to keep'
+    )
+    group.add_argument(
+        '-e',
+        '--max-epochs',
+        type=int,
+        default=0,
+        help='Maximum number of epochs for training the model'
+    )
+    group.add_argument(
+        '--max-steps',
+        type=int,
+        default=100000,
+        help='Maximum number of steps for training the model'
+    )
+    group.add_argument(
+        '-l',
+        '--learning-rate',
+        dest='base_lr',
+        type=float,
+        default=None,
+        help='The initial learning rate of the optimizer. Defaults to embedding_size ** -0.5'
+    )
+    group.add_argument(
+        '-L',
+        '--learning-rate-decay',
+        dest='lr_decay',
+        type=float,
+        default=.999995,
+        help='The learning rate decay of the optimizer'
+    )
+    group.add_argument(
+        '--final-learning-rate',
+        dest='final_lr',
+        type=float,
+        default=1e-5,
+        help='For the linear annealing schedule'
+    )
+    group.add_argument(
+        '--learning-rate-scheduler',
+        dest='lr_scheduler',
+        type=str,
+        default='warmup',
+        choices=['exponential', 'warmup', 'linear'],
+        help='The learning rate schedule of the optimizer'
+    )
+    group.add_argument(
+        '-w',
+        '--warmup-steps',
+        type=int,
+        default=4000,
+        help='Number of warmup steps for the Transformer learning rate'
+    )
+
+    return group
+
+
 def add_evaluate_args(parser):
     ''' Defines the evaluation specific arguments '''
     group = ArgGroup(parser.add_argument_group('Evaluation'))
@@ -712,6 +821,15 @@ def parse_args(argv=None):
         action=Trainer,
         action_type='train',
         action_config=groups['train'],
+        shuffle=True
+    )
+
+    probe_train_parser = subparsers.add_parser('probe_train', help='Train a model while probing')
+    groups['probe_train'] = add_probe_train_args(probe_train_parser)
+    probe_train_parser.set_defaults(
+        action=ProbeTrainer,
+        action_type='probe_train',
+        action_config=groups['probe_train'],
         shuffle=True
     )
 

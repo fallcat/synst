@@ -5,6 +5,7 @@ from actions.train import Trainer
 from actions.evaluate import Evaluator
 from actions.translate import Translator
 from actions.probe import Prober
+from actions.probe_train import ProbeTrainer
 
 class Pass(object):
     ''' Action that does nothing... '''
