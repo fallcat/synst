@@ -314,7 +314,6 @@ class ProbeTrainer(object):
             stack.enter_context(experiment.train())
 
             if start_epoch > 0 or experiment.curr_step > 0:
-                # TODO: Hacky approach to decide if the metric store should be loaded. Revisit later
                 self.metric_store = self.metric_store.load()
 
             epoch = start_epoch
