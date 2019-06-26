@@ -6,7 +6,7 @@ from models.utils import MODEL_STATS, STATS_TYPES
 def print_matrix(matrix, output_file):
     for row in matrix:
         for item in row:
-            output_file.write(item.item() + "\t")
+            output_file.write(f"{item.item()} \t")
         output_file.write("\n")
 
 
