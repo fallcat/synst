@@ -17,7 +17,7 @@ from utils.beam_search import BeamSearchDecoder
 from utils.probe_beam_search import ProbeBeamSearchDecoder
 
 MODEL_STATS = ['encoder_stats', 'decoder_stats', 'enc_dec_stats']
-STATS_TYPES = ['entropies', 'argmax_probabilities', 'argmax_distances']
+STATS_TYPES = ['entropies', 'argmax_probabilities', 'argmax_distances', 'abs_argmax_distances']
 
 
 def restore(path, modules, num_checkpoints=1, map_location=None, strict=True):
@@ -432,4 +432,5 @@ def probe(attn_weights):
     argmax_distances = argmax_i - original_i
     return {'entropies': entropies,
             'argmax_probabilities': argmax_probabilities,
-            'argmax_distances': argmax_distances.float()}
+            'argmax_distances': argmax_distances.float(),
+            'abs_argmax_distances': torch.abs(argmax_distances.float())}
