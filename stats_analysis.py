@@ -21,7 +21,7 @@ def main():
                     output_file.write("mean:\n")
                     print_matrix(stats['stats'][model_stat][stats_type]['mean'], output_file)
                     output_file.write("std:\n")
-                    print_matrix(torch.sqer(stats['stats'][model_stat][stats_type]['var']), output_file)
+                    print_matrix(torch.sqrt(stats['stats'][model_stat][stats_type]['var']), output_file)
 
 
 if __name__ == "__main__":
