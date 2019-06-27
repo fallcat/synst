@@ -13,6 +13,7 @@ import timeit
 from contextlib import ExitStack
 
 import torch
+import torch.nn as nn
 import pickle
 from tqdm import tqdm
 
@@ -34,6 +35,11 @@ class Prober(object):
         self.modules = {
             'model': model
         }
+
+        self.model = model
+
+        if 'cuda' in device.type:
+            self.model = nn.DataParallel(model.cuda())
 
         # stats
         self.train_stats = {model_stat: {stats_type: {'mean': torch.zeros((model.num_layers, model.num_heads),
@@ -94,31 +100,31 @@ class Prober(object):
         with tqdm_wrap_stdout():
             ordered_outputs = []
             with torch.no_grad():
-                self.modules['model'].eval()
+                self.model.eval()
                 for batch in batches:
                     # run the data through the model
                     batches.set_description_str(get_description())
 
-                    # result = self.modules['model'](batch)
+                    result = self.model(batch)
                     #
-                    # # stats
-                    # encoder_stats = probe(result['encoder_attn_weights_tensor'])
-                    # decoder_stats = probe(result['decoder_attn_weights_tensor'])
-                    # enc_dec_stats = probe(result['enc_dec_attn_weights_tensor'])
-                    # train_stats = {'encoder_stats': {stats_type: encoder_stats[stats_type].view(self.num_layers,
-                    #                                                                       self.num_heads,
-                    #                                                                       -1)
-                    #                                  for stats_type in STATS_TYPES},
-                    #                'decoder_stats': {stats_type: decoder_stats[stats_type].view(self.num_layers,
-                    #                                                                             self.num_heads,
-                    #                                                                             -1)
-                    #                                  for stats_type in STATS_TYPES},
-                    #                'enc_dec_stats': {stats_type: enc_dec_stats[stats_type].view(self.num_layers,
-                    #                                                                             self.num_heads,
-                    #                                                                             -1)
-                    #                                  for stats_type in STATS_TYPES}}
-                    #
-                    # self.update_stats(train_stats, self.train_stats, self.train_count)
+                    # stats
+                    encoder_stats = probe(result['encoder_attn_weights_tensor'])
+                    decoder_stats = probe(result['decoder_attn_weights_tensor'])
+                    enc_dec_stats = probe(result['enc_dec_attn_weights_tensor'])
+                    train_stats = {'encoder_stats': {stats_type: encoder_stats[stats_type].view(self.num_layers,
+                                                                                          self.num_heads,
+                                                                                          -1)
+                                                     for stats_type in STATS_TYPES},
+                                   'decoder_stats': {stats_type: decoder_stats[stats_type].view(self.num_layers,
+                                                                                                self.num_heads,
+                                                                                                -1)
+                                                     for stats_type in STATS_TYPES},
+                                   'enc_dec_stats': {stats_type: enc_dec_stats[stats_type].view(self.num_layers,
+                                                                                                self.num_heads,
+                                                                                                -1)
+                                                     for stats_type in STATS_TYPES}}
+
+                    self.update_stats(train_stats, self.train_stats, self.train_count)
 
                     sequences, test_stats = self.translator.translate(batch)
 
