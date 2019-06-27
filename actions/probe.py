@@ -19,7 +19,7 @@ from tqdm import tqdm
 from utils import profile
 from utils import tqdm_wrap_stdout
 
-from models.utils import MODEL_STATS, STATS_TYPES
+from models.utils import MODEL_STATS, STATS_TYPES, probe
 
 
 class Prober(object):
@@ -36,13 +36,21 @@ class Prober(object):
         }
 
         # stats
-        self.stats = {model_stat: {stats_type: {'mean': torch.zeros((model.num_layers, model.num_heads),
+        self.train_stats = {model_stat: {stats_type: {'mean': torch.zeros((model.num_layers, model.num_heads),
                                                                     dtype=torch.float32).to(device),
                                                 'var': torch.zeros((model.num_layers, model.num_heads),
                                                                     dtype=torch.float32).to(device)}
                                    for stats_type in STATS_TYPES}
                       for model_stat in MODEL_STATS}
-        self.count = {model_stat: 0 for model_stat in MODEL_STATS}
+        self.train_count = {model_stat: 0 for model_stat in MODEL_STATS}
+
+        self.test_stats = {model_stat: {stats_type: {'mean': torch.zeros((model.num_layers, model.num_heads),
+                                                                         dtype=torch.float32).to(device),
+                                                     'var': torch.zeros((model.num_layers, model.num_heads),
+                                                                        dtype=torch.float32).to(device)}
+                                        for stats_type in STATS_TYPES}
+                           for model_stat in MODEL_STATS}
+        self.test_count = {model_stat: 0 for model_stat in MODEL_STATS}
 
     @property
     def dataset(self):
@@ -85,9 +93,30 @@ class Prober(object):
             for batch in batches:
                 # run the data through the model
                 batches.set_description_str(get_description())
-                sequences, stats = self.translator.translate(batch)
+                sequences, test_stats = self.translator.translate(batch)
 
-                self.update_stats(stats)
+                self.update_stats(test_stats, self.test_stats, self.test_count)
+
+                result = self.modules['model'](batch)
+
+                # stats
+                encoder_stats = probe(result['encoder_attn_weights_tensor'])
+                decoder_stats = probe(result['decoder_attn_weights_tensor'])
+                enc_dec_stats = probe(result['enc_dec_attn_weights_tensor'])
+                train_stats = {'encoder_stats': {stats_type: encoder_stats[stats_type].view(self.num_layers,
+                                                                                      self.num_heads,
+                                                                                      -1)
+                                                 for stats_type in STATS_TYPES},
+                               'decoder_stats': {stats_type: decoder_stats[stats_type].view(self.num_layers,
+                                                                                            self.num_heads,
+                                                                                            -1)
+                                                 for stats_type in STATS_TYPES},
+                               'enc_dec_stats': {stats_type: enc_dec_stats[stats_type].view(self.num_layers,
+                                                                                            self.num_heads,
+                                                                                            -1)
+                                                 for stats_type in STATS_TYPES}}
+
+                self.update_stats(train_stats, self.train_stats, self.train_count)
 
                 if self.config.timed:
                     continue
@@ -118,23 +147,23 @@ class Prober(object):
 
         self.save_stats(stats_file)
 
-    def update_stats(self, stats):
+    def update_stats(self, stats, self_stats, self_count):
         ''' Update stats after each batch '''
         for model_stat in stats:
             current_count = stats[model_stat][STATS_TYPES[0]].size()[-1]
-            old_count = self.count[model_stat]
+            old_count = self_count[model_stat]
             new_count = old_count + current_count
             for stat_type in stats[model_stat]:
-                old_mean = self.stats[model_stat][stat_type]['mean']
+                old_mean = self_stats[model_stat][stat_type]['mean']
                 current_mean = stats[model_stat][stat_type].mean(dim=-1)
-                new_mean = (old_mean * self.count[model_stat] + stats[model_stat][stat_type].sum(dim=-1)) / new_count
-                old_var = self.stats[model_stat][stat_type]['var']
+                new_mean = (old_mean * self_count[model_stat] + stats[model_stat][stat_type].sum(dim=-1)) / new_count
+                old_var = self_stats[model_stat][stat_type]['var']
                 current_var = stats[model_stat][stat_type].var(dim=-1) # torch.sum((stats[model_stat][stat_type] - new_mean.unsqueeze(-1)) ** 2, dim=-1) / (current_count - 1)
                 new_var = (old_count * (old_var + (old_mean - new_mean) ** 2)
                            + current_count * (current_var + (current_mean - new_mean) ** 2)) / new_count
-                self.stats[model_stat][stat_type]['mean'] = new_mean
-                self.stats[model_stat][stat_type]['var'] = new_var
-            self.count[model_stat] = new_count
+                self_stats[model_stat][stat_type]['mean'] = new_mean
+                self_stats[model_stat][stat_type]['var'] = new_var
+            self_count[model_stat] = new_count
 
     # def update_stats(self, stats):
     #     ''' Update stats after each batch '''
@@ -156,7 +185,8 @@ class Prober(object):
 
     def save_stats(self, stats_file):
         ''' Save stats to file '''
-        stats = {'stats': self.stats, 'count': self.count}
+        stats = {'train_stats': self.train_stats, 'train_count': self.train_count,
+                 'test_stats': self.test_stats, 'test_count': self.test_count}
         pickle.dump(stats, stats_file, protocol=pickle.HIGHEST_PROTOCOL)
 
     def __call__(self, epoch, experiment, verbose=0):
