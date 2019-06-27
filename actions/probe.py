@@ -99,8 +99,8 @@ class Prober(object):
                     # run the data through the model
                     batches.set_description_str(get_description())
 
-                    print("trnslator", self.translator.device)
-                    print("model", self.modules['model'].device)
+                    print("trnslator", self.translator.is_cuda())
+                    print("model", self.modules['model'].is_cuda())
 
 
                     # result = self.modules['model'](batch)
