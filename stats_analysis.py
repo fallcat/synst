@@ -32,7 +32,7 @@ def visualize(mean, std, num_layers, num_heads, fig_path, fig_name):
 
 def main():
     base_path = '//mnt/nfs/work1/miyyer/wyou/synst/experiments/iwslt01/'
-    stats_path = 'stats_100000'
+    stats_path = 'stats_probe_evaluate'
     with open(base_path + stats_path + '.pickle', 'rb') as stats_file:
         with open(base_path + stats_path + '.txt', 'wt') as output_file:
             stats = pickle.load(stats_file)
