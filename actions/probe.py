@@ -32,13 +32,13 @@ class Prober(object):
         self.translator = model.translator(config).to(device)
 
         self.modules = {
-            'model': model.to(device)
+            'model': model
         }
 
         # stats
         self.train_stats = {model_stat: {stats_type: {'mean': torch.zeros((model.num_layers, model.num_heads),
                                                                     dtype=torch.float32).to(device),
-                                                'var': torch.zeros((model.num_layers, model.num_heads),
+                                                      'var': torch.zeros((model.num_layers, model.num_heads),
                                                                     dtype=torch.float32).to(device)}
                                    for stats_type in STATS_TYPES}
                       for model_stat in MODEL_STATS}
@@ -95,9 +95,7 @@ class Prober(object):
                 for batch in batches:
                     # run the data through the model
                     batches.set_description_str(get_description())
-                    sequences, test_stats = self.translator.translate(batch)
 
-                    self.update_stats(test_stats, self.test_stats, self.test_count)
 
                     result = self.modules['model'](batch)
 
@@ -119,6 +117,10 @@ class Prober(object):
                                                      for stats_type in STATS_TYPES}}
 
                     self.update_stats(train_stats, self.train_stats, self.train_count)
+
+                    sequences, test_stats = self.translator.translate(batch)
+
+                    self.update_stats(test_stats, self.test_stats, self.test_count)
 
                     if self.config.timed:
                         continue
