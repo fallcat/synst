@@ -100,26 +100,26 @@ class Prober(object):
                     batches.set_description_str(get_description())
 
 
-                    result = self.modules['model'](batch)
-
-                    # stats
-                    encoder_stats = probe(result['encoder_attn_weights_tensor'])
-                    decoder_stats = probe(result['decoder_attn_weights_tensor'])
-                    enc_dec_stats = probe(result['enc_dec_attn_weights_tensor'])
-                    train_stats = {'encoder_stats': {stats_type: encoder_stats[stats_type].view(self.num_layers,
-                                                                                          self.num_heads,
-                                                                                          -1)
-                                                     for stats_type in STATS_TYPES},
-                                   'decoder_stats': {stats_type: decoder_stats[stats_type].view(self.num_layers,
-                                                                                                self.num_heads,
-                                                                                                -1)
-                                                     for stats_type in STATS_TYPES},
-                                   'enc_dec_stats': {stats_type: enc_dec_stats[stats_type].view(self.num_layers,
-                                                                                                self.num_heads,
-                                                                                                -1)
-                                                     for stats_type in STATS_TYPES}}
-
-                    self.update_stats(train_stats, self.train_stats, self.train_count)
+                    # result = self.modules['model'](batch)
+                    #
+                    # # stats
+                    # encoder_stats = probe(result['encoder_attn_weights_tensor'])
+                    # decoder_stats = probe(result['decoder_attn_weights_tensor'])
+                    # enc_dec_stats = probe(result['enc_dec_attn_weights_tensor'])
+                    # train_stats = {'encoder_stats': {stats_type: encoder_stats[stats_type].view(self.num_layers,
+                    #                                                                       self.num_heads,
+                    #                                                                       -1)
+                    #                                  for stats_type in STATS_TYPES},
+                    #                'decoder_stats': {stats_type: decoder_stats[stats_type].view(self.num_layers,
+                    #                                                                             self.num_heads,
+                    #                                                                             -1)
+                    #                                  for stats_type in STATS_TYPES},
+                    #                'enc_dec_stats': {stats_type: enc_dec_stats[stats_type].view(self.num_layers,
+                    #                                                                             self.num_heads,
+                    #                                                                             -1)
+                    #                                  for stats_type in STATS_TYPES}}
+                    #
+                    # self.update_stats(train_stats, self.train_stats, self.train_count)
 
                     sequences, test_stats = self.translator.translate(batch)
 
