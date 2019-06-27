@@ -32,7 +32,7 @@ class Prober(object):
         self.translator = model.translator(config).to(device)
 
         self.modules = {
-            'model': model
+            'model': model.to(device)
         }
 
         # stats
