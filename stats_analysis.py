@@ -53,7 +53,7 @@ def main():
                         std = torch.sqrt(stats[split + '_stats'][model_stat][stats_type]['var']).cpu().numpy()
                         print_matrix(std, output_file)
                         fig_path = base_path + stats_path + '_' + split + '_' + model_stat + '_' + stats_type
-                        fig_name = model_stat.capitalize() + ' - ' + stats_type.capitalize()
+                        fig_name = split.capitalize() + ' - ' + model_stat.capitalize() + ' - ' + stats_type.capitalize()
                         visualize(mean, std, num_layers, num_heads, fig_path, fig_name)
 
 
