@@ -52,6 +52,9 @@ class Prober(object):
                            for model_stat in MODEL_STATS}
         self.test_count = {model_stat: 0 for model_stat in MODEL_STATS}
 
+        self.num_layers = model.num_layers
+        self.num_heads = model.num_heads
+
     @property
     def dataset(self):
         ''' Get the dataset '''
