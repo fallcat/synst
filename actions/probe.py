@@ -90,57 +90,59 @@ class Prober(object):
 
         with tqdm_wrap_stdout():
             ordered_outputs = []
-            for batch in batches:
-                # run the data through the model
-                batches.set_description_str(get_description())
-                sequences, test_stats = self.translator.translate(batch)
+            with torch.no_grad():
+                self.modules['model'].eval()
+                for batch in batches:
+                    # run the data through the model
+                    batches.set_description_str(get_description())
+                    sequences, test_stats = self.translator.translate(batch)
 
-                self.update_stats(test_stats, self.test_stats, self.test_count)
+                    self.update_stats(test_stats, self.test_stats, self.test_count)
 
-                result = self.modules['model'](batch)
+                    result = self.modules['model'](batch)
 
-                # stats
-                encoder_stats = probe(result['encoder_attn_weights_tensor'])
-                decoder_stats = probe(result['decoder_attn_weights_tensor'])
-                enc_dec_stats = probe(result['enc_dec_attn_weights_tensor'])
-                train_stats = {'encoder_stats': {stats_type: encoder_stats[stats_type].view(self.num_layers,
-                                                                                      self.num_heads,
-                                                                                      -1)
-                                                 for stats_type in STATS_TYPES},
-                               'decoder_stats': {stats_type: decoder_stats[stats_type].view(self.num_layers,
-                                                                                            self.num_heads,
-                                                                                            -1)
-                                                 for stats_type in STATS_TYPES},
-                               'enc_dec_stats': {stats_type: enc_dec_stats[stats_type].view(self.num_layers,
-                                                                                            self.num_heads,
-                                                                                            -1)
-                                                 for stats_type in STATS_TYPES}}
+                    # stats
+                    encoder_stats = probe(result['encoder_attn_weights_tensor'])
+                    decoder_stats = probe(result['decoder_attn_weights_tensor'])
+                    enc_dec_stats = probe(result['enc_dec_attn_weights_tensor'])
+                    train_stats = {'encoder_stats': {stats_type: encoder_stats[stats_type].view(self.num_layers,
+                                                                                          self.num_heads,
+                                                                                          -1)
+                                                     for stats_type in STATS_TYPES},
+                                   'decoder_stats': {stats_type: decoder_stats[stats_type].view(self.num_layers,
+                                                                                                self.num_heads,
+                                                                                                -1)
+                                                     for stats_type in STATS_TYPES},
+                                   'enc_dec_stats': {stats_type: enc_dec_stats[stats_type].view(self.num_layers,
+                                                                                                self.num_heads,
+                                                                                                -1)
+                                                     for stats_type in STATS_TYPES}}
 
-                self.update_stats(train_stats, self.train_stats, self.train_count)
+                    self.update_stats(train_stats, self.train_stats, self.train_count)
 
-                if self.config.timed:
-                    continue
+                    if self.config.timed:
+                        continue
 
-                target_sequences = next(iter(sequences.values()))
-                for i, example_id in enumerate(batch['example_ids']):
-                    outputs = []
-                    if verbose > 1:
-                        trim = verbose < 2
-                        join = verbose < 3
-                        for key in sequences.keys():
-                            sequence = sequences[key][i]
-                            sequence = ' '.join(self.dataset.decode(sequence, join, trim))
-                            outputs.append(f'{key}: {sequence}\n')
-                        outputs.append(f'+++++++++++++++++++++++++++++\n')
-                    else:
-                        sequence = target_sequences[i]
-                        decoded = ' '.join(self.dataset.decode(sequence, trim=not verbose))
-                        outputs.append(f'{decoded}\n')
+                    target_sequences = next(iter(sequences.values()))
+                    for i, example_id in enumerate(batch['example_ids']):
+                        outputs = []
+                        if verbose > 1:
+                            trim = verbose < 2
+                            join = verbose < 3
+                            for key in sequences.keys():
+                                sequence = sequences[key][i]
+                                sequence = ' '.join(self.dataset.decode(sequence, join, trim))
+                                outputs.append(f'{key}: {sequence}\n')
+                            outputs.append(f'+++++++++++++++++++++++++++++\n')
+                        else:
+                            sequence = target_sequences[i]
+                            decoded = ' '.join(self.dataset.decode(sequence, trim=not verbose))
+                            outputs.append(f'{decoded}\n')
 
-                    if self.config.order_output:
-                        ordered_outputs.append((example_id, outputs))
-                    else:
-                        output_file.writelines(outputs)
+                        if self.config.order_output:
+                            ordered_outputs.append((example_id, outputs))
+                        else:
+                            output_file.writelines(outputs)
 
             for _, outputs in sorted(ordered_outputs, key=lambda x: x[0]): # pylint:disable=consider-using-enumerate
                 output_file.writelines(outputs)
