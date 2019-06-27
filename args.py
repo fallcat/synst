@@ -878,8 +878,8 @@ def parse_args(argv=None):
         shuffle=False
     )
 
-    probe_evaluate_parser = subparsers.add_parser('probeevaluate', help='Probe Evaluate a model')
-    groups['probe_evaluate'] = add_probe_evaluate_args(evaluate_parser)
+    probe_evaluate_parser = subparsers.add_parser('probe_evaluate', help='Probe Evaluate a model')
+    groups['probe_evaluate'] = add_probe_evaluate_args(probe_evaluate_parser)
     probe_evaluate_parser.set_defaults(
         action=ProbeEvaluator,
         action_type='probe_evaluate',
