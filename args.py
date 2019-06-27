@@ -12,7 +12,7 @@ import torch
 
 from data import DATASETS
 from models import MODELS
-from actions import Trainer, Evaluator, Translator, Pass, Prober, ProbeTrainer
+from actions import Trainer, Evaluator, Translator, Pass, Prober, ProbeTrainer, ProbeEvaluator
 from utils import get_version_string, get_random_seed_fn
 
 
@@ -572,6 +572,36 @@ def add_evaluate_args(parser):
     return group
 
 
+def add_probe_evaluate_args(parser):
+    ''' Defines the evaluation specific arguments '''
+    group = ArgGroup(parser.add_argument_group('Evaluation'))
+    group.add_argument(
+        '--polling',
+        default=False,
+        action='store_true',
+        help='Use a polling observer rather than the default inotify based observer.'
+    )
+    group.add_argument(
+        '--watch-directory',
+        type=str,
+        default=None,
+        help='What directory to watch for new checkpoints.'
+        ' If not provided, run a single evaluation using the restore parameter.'
+    )
+
+    group.add_argument(
+        '--stats-directory',
+        type=str,
+        default='/tmp/synst/stats',
+        help='Where to store stats'
+    )
+
+    group.set_defaults(gold_p=0)
+    group.set_defaults(dropout_p=0)
+
+    return group
+
+
 def add_translate_args(parser):
     ''' Defines the generation specific arguments '''
     group = ArgGroup(parser.add_argument_group('Generation'))
@@ -845,6 +875,15 @@ def parse_args(argv=None):
         action=Evaluator,
         action_type='evaluate',
         action_config=groups['evaluate'],
+        shuffle=False
+    )
+
+    probe_evaluate_parser = subparsers.add_parser('probeevaluate', help='Probe Evaluate a model')
+    groups['probe_evaluate'] = add_probe_evaluate_args(evaluate_parser)
+    probe_evaluate_parser.set_defaults(
+        action=ProbeEvaluator,
+        action_type='probe_evaluate',
+        action_config=groups['probe_evaluate'],
         shuffle=False
     )
 
