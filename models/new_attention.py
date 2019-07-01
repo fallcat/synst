@@ -71,50 +71,54 @@ class NewAttention(nn.Module):
 
     def attention(self, values, keys, queries, key_mask=None, mask=None):
         ''' Scaled dot product attention with optional masks '''
-        logits = self.scale * torch.bmm(queries, keys.transpose(2, 1))
-        if mask is not None:
-            logits += mask
+        # logits = self.scale * torch.bmm(queries, keys.transpose(2, 1))
+        # if mask is not None:
+        #     logits += mask
+        #
+        # if key_mask is not None:
+        #     logits_shape = logits.shape
+        #     batch_size = logits_shape[0] // self.num_heads
+        #     logits = logits.view(batch_size, self.num_heads, logits_shape[1], logits_shape[2])
+        #     logits.masked_fill_(key_mask[:, None, None], float('-inf'))
+        #     logits = logits.view(logits_shape)
 
-        if key_mask is not None:
-            logits_shape = logits.shape
-            batch_size = logits_shape[0] // self.num_heads
-            logits = logits.view(batch_size, self.num_heads, logits_shape[1], logits_shape[2])
-            logits.masked_fill_(key_mask[:, None, None], float('-inf'))
-            logits = logits.view(logits_shape)
-
-        attn_weights = F.softmax(logits, dim=-1)
-
-        print("values", values.size())
-        print("keys", keys.size())
-        print("queries", queries.size())
-        print("attn_weights", attn_weights.size())
+        # attn_weights = F.softmax(logits, dim=-1)
+        #
+        # print("values", values.size())
+        # print("keys", keys.size())
+        # print("queries", queries.size())
+        # print("attn_weights", attn_weights.size())
 
         # By this point the values, keys, and queries all have B * H as their first dimension
         batch_size = queries.shape[0] // self.num_heads
 
         logits = values.new_zeros((queries.shape[0], queries.shape[1], values.shape[1]))
 
+        indices_q = torch.arange(queries.shape[1]).view(-1, 1).to(dtype=torch.float32)
+        indices_v = torch.arange(values.shape[1]).view(1, -1).to(dtype=torch.float32)
+
+        if self.attn_position == 'left':
+            indices_q = indices_q + 1
+        elif self.attn_position == 'right':
+            indices_q = indices_q - 1
+        elif self.attn_position == 'first':
+            indices_q[:] = 0
+        elif self.attn_position == 'last':
+            indices_q[:] = indices_q.size()[1] - 1
+
+        distance_diff = indices_v - indices_q
+
         if self.attn_type == 'normal':
             std = 1 / (self.max_prob * math.sqrt(2 * math.pi))
-            indices_q = torch.arange(queries.shape[1]).view(-1, 1).to(dtype=torch.float32)
-            indices_v = torch.arange(values.shape[1]).view(1, -1).to(dtype=torch.float32)
-            distance_diff = indices_v - indices_q
-            # print("(1 / (std * math.sqrt(2 * math.pi)) * torch.exp(- 1 / 2 * ((distance_diff) / std) ** 2))", (1 / (std * math.sqrt(2 * math.pi)) * torch.exp(- 1 / 2 * ((distance_diff) / std) ** 2)).size())
-            # print("logits[:]", logits[:].size())
+
             logits[:] = (1 / (std * math.sqrt(2 * math.pi)) * torch.exp(- 1 / 2 * ((distance_diff) / std) ** 2))
-            # for i in range(queries.shape[1]):
-            #     for j in range(values.shape[1]):
-            #         logits[:, i, j] = 1 / (std * math.sqrt(2 * math.pi)) * math.exp(- 1/2 * ((j - i) / std) ** 2)
         else:
-            indices_q = torch.arange(queries.shape[1]).view(-1, 1).to(dtype=torch.float32)
-            indices_v = torch.arange(values.shape[1]).view(1, -1).to(dtype=torch.float32)
-            distance_diff = torch.abs(indices_v - indices_q)
+            distance_diff = torch.abs(distance_diff)
             distance_diff[distance_diff <= self.window_size] = 0
             distance_diff[distance_diff > self.window_size] = 1
             logits[:] = 1 - distance_diff
-            print(logits[0])
 
-        print("logits", logits.size())
+        # print("logits", logits.size())
 
         attn_weights = F.softmax(logits, dim=-1)
 
