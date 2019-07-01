@@ -99,7 +99,7 @@ class NewAttention(nn.Module):
             indices_q = torch.arange(queries.shape[1]).view(-1, 1).to(dtype=torch.float32)
             indices_v = torch.arange(values.shape[1]).view(1, -1).to(dtype=torch.float32)
             distance_diff = indices_v - indices_q
-            logits = (1 / (std * math.sqrt(2 * math.pi)) * torch.exp(- 1 / 2 * ((distance_diff) / std) ** 2)).unsqueeze(0)
+            logits[:] = (1 / (std * math.sqrt(2 * math.pi)) * torch.exp(- 1 / 2 * ((distance_diff) / std) ** 2)).unsqueeze(0)
             # for i in range(queries.shape[1]):
             #     for j in range(values.shape[1]):
             #         logits[:, i, j] = 1 / (std * math.sqrt(2 * math.pi)) * math.exp(- 1/2 * ((j - i) / std) ** 2)
