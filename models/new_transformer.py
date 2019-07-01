@@ -209,7 +209,7 @@ class TransformerDecoderLayer(nn.Module):
 
 
 class NewTransformer(nn.Module):
-    ''' The Transformer module '''
+    ''' The New Transformer module '''
     def __init__(self, config, dataset):
         ''' Initialize the Transformer '''
         super(NewTransformer, self).__init__()
@@ -242,7 +242,7 @@ class NewTransformer(nn.Module):
     def create_encoders(cls, config):
         ''' Create the transformer encoders '''
         kwargs = {'dropout_p': config.dropout_p}
-        attn_config = {'type': 'normal', 'position': 'center'}
+        attn_config = {'type': config.attn_type, 'position': config.attn_position}
         args = [attn_config, config.num_heads, config.embedding_size, config.hidden_dim]
         return nn.ModuleList([
             TransformerEncoderLayer(*args, **kwargs)

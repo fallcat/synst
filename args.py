@@ -108,7 +108,7 @@ def add_transformer_args(parser):
 
 def add_probe_transformer_args(parser):
     ''' Defines Transformer model specific arguments '''
-    group = ArgGroup(parser.add_argument_group('Transformer Model'))
+    group = ArgGroup(parser.add_argument_group('Probe Transformer Model'))
     group.add_argument(
         '--num-layers',
         type=int,
@@ -138,6 +138,57 @@ def add_probe_transformer_args(parser):
         type=int,
         default=1,
         help='How many tokens to decode at once'
+    )
+
+    return group
+
+
+def add_new_transformer_args(parser):
+    ''' Defines Transformer model specific arguments '''
+    group = ArgGroup(parser.add_argument_group('New Transformer Model'))
+    group.add_argument(
+        '--num-layers',
+        type=int,
+        default=6,
+        help='Number of layers in each Transformer stack'
+    )
+    group.add_argument(
+        '--num-heads',
+        type=int,
+        default=8,
+        help='Number of heads in each Transformer layer for multi-headed attention'
+    )
+    group.add_argument(
+        '--embedding-size',
+        type=int,
+        default=512,
+        help='The size of the Transformer model dimension'
+    )
+    group.add_argument(
+        '--hidden-dim',
+        type=int,
+        default=2048,
+        help='The size of the Transformer feed-forward hidden layer'
+    )
+    group.add_argument(
+        '--span',
+        type=int,
+        default=1,
+        help='How many tokens to decode at once'
+    )
+    group.add_argument(
+        '--attn-type',
+        type=str,
+        default='normal',
+        choices=['normal', 'uniform'],
+        help='What type of attention we are using for the rules'
+    )
+    group.add_argument(
+        '--attn-position',
+        type=str,
+        default='center',
+        choices=['center', 'left', 'right', 'first', 'last'],
+        help='Where to put the attention'
     )
 
     return group
@@ -848,6 +899,7 @@ def parse_args(argv=None):
     model_groups = {}
     model_groups['transformer'] = add_transformer_args(parser)
     model_groups['probe_transformer'] = add_probe_transformer_args(parser)
+    model_groups['new_transformer'] = add_new_transformer_args(parser)
     model_groups['parse_transformer'] = add_parse_transformer_args(parser)
 
     subparsers = parser.add_subparsers()
