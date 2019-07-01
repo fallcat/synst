@@ -1,6 +1,7 @@
 '''
 A module which implements various attention mechanisms
 '''
+import math
 import torch
 from torch import nn
 from torch.nn import functional as F
@@ -26,7 +27,10 @@ class NewAttention(nn.Module):
         self.num_heads = num_heads
         self.projection_dim = embed_dim // num_heads
         self.scale = self.projection_dim ** -0.5
-        self.attn_config = attn_config
+        self.attn_type = attn_config['attn_type']
+        self.attn_position = attn_config['attn_position']
+        self.max_prob = attn_config['max_prob']
+        self.window_size = attn_config['window_size']
 
         # Combine projections for multiple heads into a single linear layer for efficiency
         self.input_weights = nn.Parameter(torch.Tensor(3 * embed_dim, embed_dim))
@@ -88,7 +92,19 @@ class NewAttention(nn.Module):
         # By this point the values, keys, and queries all have B * H as their first dimension
         batch_size = queries.shape[0] // self.num_heads
 
-        logits = values.new((queries.shape[0], queries.shape[1]))
+        logits = values.new((queries.shape[0], queries.shape[1], values.shape[1]))
+
+        if self.attn_type == 'normal':
+            std = 1 / (self.max_prob * math.sqrt(2 * math.pi))
+            indices_q = torch.arange(queries.shape[1]).view(-1, 1)
+            indices_v = torch.arange(values.shape[1]).view(1, -1)
+            distance_diff = indices_v - indices_q
+            logits = (1 / (std * math.sqrt(2 * math.pi)) * math.exp(- 1 / 2 * ((distance_diff) / std) ** 2)).unsqueeze(0)
+            # for i in range(queries.shape[1]):
+            #     for j in range(values.shape[1]):
+            #         logits[:, i, j] = 1 / (std * math.sqrt(2 * math.pi)) * math.exp(- 1/2 * ((j - i) / std) ** 2)
+        else:
+            window_size = self.window_size
 
         attn_weights = F.softmax(logits, dim=-1)
 

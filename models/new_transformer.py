@@ -242,7 +242,10 @@ class NewTransformer(nn.Module):
     def create_encoders(cls, config):
         ''' Create the transformer encoders '''
         kwargs = {'dropout_p': config.dropout_p}
-        attn_config = {'type': config.attn_type, 'position': config.attn_position}
+        attn_config = {'type': config.attn_type,
+                       'position': config.attn_position,
+                       'max_prob': config.max_prob,
+                       'window_size': config.window_size}
         args = [attn_config, config.num_heads, config.embedding_size, config.hidden_dim]
         return nn.ModuleList([
             TransformerEncoderLayer(*args, **kwargs)
