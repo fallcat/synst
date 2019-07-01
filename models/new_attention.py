@@ -92,7 +92,7 @@ class NewAttention(nn.Module):
         # By this point the values, keys, and queries all have B * H as their first dimension
         batch_size = queries.shape[0] // self.num_heads
 
-        logits = values.new((queries.shape[0], queries.shape[1], values.shape[1]))
+        logits = values.new_zeros((queries.shape[0], queries.shape[1], values.shape[1]))
 
         if self.attn_type == 'normal':
             std = 1 / (self.max_prob * math.sqrt(2 * math.pi))
