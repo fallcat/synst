@@ -118,7 +118,7 @@ class NewAttention(nn.Module):
             distance_diff[distance_diff > self.window_size] = 1
             logits[:] = 1 - distance_diff
 
-        # print("logits", logits.size())
+        print("logits[0]", logits[0].size())
 
         attn_weights = F.softmax(logits, dim=-1)
 
