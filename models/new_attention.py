@@ -99,14 +99,20 @@ class NewAttention(nn.Module):
             indices_q = torch.arange(queries.shape[1]).view(-1, 1).to(dtype=torch.float32)
             indices_v = torch.arange(values.shape[1]).view(1, -1).to(dtype=torch.float32)
             distance_diff = indices_v - indices_q
-            print("(1 / (std * math.sqrt(2 * math.pi)) * torch.exp(- 1 / 2 * ((distance_diff) / std) ** 2))", (1 / (std * math.sqrt(2 * math.pi)) * torch.exp(- 1 / 2 * ((distance_diff) / std) ** 2)).size())
-            print("logits[:]", logits[:].size())
+            # print("(1 / (std * math.sqrt(2 * math.pi)) * torch.exp(- 1 / 2 * ((distance_diff) / std) ** 2))", (1 / (std * math.sqrt(2 * math.pi)) * torch.exp(- 1 / 2 * ((distance_diff) / std) ** 2)).size())
+            # print("logits[:]", logits[:].size())
             logits[:] = (1 / (std * math.sqrt(2 * math.pi)) * torch.exp(- 1 / 2 * ((distance_diff) / std) ** 2))
             # for i in range(queries.shape[1]):
             #     for j in range(values.shape[1]):
             #         logits[:, i, j] = 1 / (std * math.sqrt(2 * math.pi)) * math.exp(- 1/2 * ((j - i) / std) ** 2)
         else:
-            window_size = self.window_size
+            indices_q = torch.arange(queries.shape[1]).view(-1, 1).to(dtype=torch.float32)
+            indices_v = torch.arange(values.shape[1]).view(1, -1).to(dtype=torch.float32)
+            distance_diff = torch.abs(indices_v - indices_q)
+            distance_diff[distance_diff <= self.window_size] = 0
+            distance_diff[distance_diff > self.window_size] = 1
+            logits[:] = 1 - distance_diff
+            print(logits[0])
 
         print("logits", logits.size())
 
