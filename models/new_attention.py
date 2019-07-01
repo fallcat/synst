@@ -106,6 +106,8 @@ class NewAttention(nn.Module):
         else:
             window_size = self.window_size
 
+        print("logits", logits.size())
+
         attn_weights = F.softmax(logits, dim=-1)
 
         attended = torch.bmm(attn_weights, values)
