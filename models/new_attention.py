@@ -96,8 +96,8 @@ class NewAttention(nn.Module):
 
         if self.attn_type == 'normal':
             std = 1 / (self.max_prob * math.sqrt(2 * math.pi))
-            indices_q = torch.arange(queries.shape[1]).view(-1, 1)
-            indices_v = torch.arange(values.shape[1]).view(1, -1)
+            indices_q = torch.arange(queries.shape[1]).view(-1, 1).to(dtype=torch.float32)
+            indices_v = torch.arange(values.shape[1]).view(1, -1).to(dtype=torch.float32)
             distance_diff = indices_v - indices_q
             logits = (1 / (std * math.sqrt(2 * math.pi)) * math.exp(- 1 / 2 * ((distance_diff) / std) ** 2)).unsqueeze(0)
             # for i in range(queries.shape[1]):
