@@ -34,7 +34,8 @@ class NewAttention(nn.Module):
         self.window_size = attn_config['window_size']
 
         # Combine projections for multiple heads into a single linear layer for efficiency
-        self.input_weights = nn.Parameter(torch.Tensor(3 * embed_dim, embed_dim))
+        # self.input_weights = nn.Parameter(torch.Tensor(3 * embed_dim, embed_dim))
+        self.input_weights = nn.Parameter(torch.Tensor(embed_dim, embed_dim))
         self.output_projection = nn.Linear(embed_dim, embed_dim, bias=False)
         self.reset_parameters()
 
@@ -126,7 +127,7 @@ class NewAttention(nn.Module):
 
         attn_weights = F.softmax(logits, dim=-1)
 
-        print("time", time.time() - start)
+        print("new attention time", time.time() - start)
 
         attended = torch.bmm(attn_weights, values)
 
@@ -145,19 +146,43 @@ class NewAttention(nn.Module):
                 key_mask=None, attention_mask=None, num_queries=0):
         ''' Forward pass of the attention '''
         # pylint:disable=unbalanced-tuple-unpacking
-        if same_tensor(values, keys, queries):
-            values, keys, queries = self.project(values, chunks=3)
-        elif same_tensor(values, keys):
-            values, keys = self.project(values, chunks=2)
-            queries, = self.project(queries, 2)
-        else:
-            values, = self.project(values, 0)
-            keys, = self.project(keys, 1)
-            queries, = self.project(queries, 2)
+        # if same_tensor(values, keys, queries):
+        #     values, keys, queries = self.project(values, chunks=3)
+        # elif same_tensor(values, keys):
+        #     values, keys = self.project(values, chunks=2)
+        #     queries, = self.project(queries, 2)
+        # else:
+        #     values, = self.project(values, 0)
+        #     keys, = self.project(keys, 1)
+        #     queries, = self.project(queries, 2)
         # pylint:enable=unbalanced-tuple-unpacking
 
-        if num_queries:
-            queries = queries[:, -num_queries:]
+        # if num_queries:
+        #     queries = queries[:, -num_queries:]
+
+        batch_size = values.shape[0]
+
+        values = F.linear(values, self.input_weights).view(
+                    batch_size,
+                    -1,
+                    self.num_heads,
+                    self.projection_dim
+                ).transpose(2, 1).contiguous().view(
+                    batch_size * self.num_heads,
+                    -1,
+                    self.projection_dim
+                )
+
+        queries = queries.view(
+                    batch_size,
+                    -1,
+                    self.num_heads,
+                    self.projection_dim
+                ).transpose(2, 1).contiguous().view(
+                    batch_size * self.num_heads,
+                    -1,
+                    self.projection_dim
+                )
 
         attended = self.attention(values, keys, queries, key_mask, attention_mask)
         return self.output_projection(attended)
