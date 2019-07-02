@@ -64,7 +64,7 @@ class MultiHeadedAttention(nn.Module):
 
     def attention(self, values, keys, queries, key_mask=None, mask=None):
         ''' Scaled dot product attention with optional masks '''
-        start = time.time()
+        # start = time.time()
         logits = self.scale * torch.bmm(queries, keys.transpose(2, 1))
         if mask is not None:
             logits += mask
@@ -78,7 +78,7 @@ class MultiHeadedAttention(nn.Module):
 
         attn_weights = F.softmax(logits, dim=-1)
 
-        print("time", time.time() - start)
+        # print("time", time.time() - start)
         attended = torch.bmm(attn_weights, values)
 
         # By this point the values, keys, and queries all have B * H as their first dimension
