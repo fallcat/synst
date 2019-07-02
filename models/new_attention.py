@@ -103,8 +103,6 @@ class NewAttention(nn.Module):
         if self.attn_position not in self.attn_weights[self.attn_type] \
                 or (queries.shape[1] > self.attn_weights[self.attn_type][self.attn_position].shape[0]
                     or values.shape[1] > self.attn_weights[self.attn_type][self.attn_position].shape[1]):
-            logits = values.new_zeros((queries.shape[1], values.shape[1]))
-
             indices_q = torch.arange(queries.shape[1]).view(-1, 1).to(dtype=torch.float32)
             indices_v = torch.arange(values.shape[1]).view(1, -1).to(dtype=torch.float32)
 
@@ -135,7 +133,7 @@ class NewAttention(nn.Module):
 
         # print("logits[0]", logits[0])
 
-        attn_weights = F.softmax(logits, dim=-1)
+        attn_weights = F.softmax(logits.type_as(values), dim=-1)
 
         # print("new attention time", time.time() - start)
 
