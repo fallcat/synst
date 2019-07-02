@@ -107,7 +107,7 @@ class NewAttention(nn.Module):
             indices_q[:] = indices_q.size()[0] - 1
 
         distance_diff = indices_v - indices_q
-        print("distance_diff", distance_diff)
+        # print("distance_diff", distance_diff)
 
         if self.attn_type == 'normal':
             std = 1 / (self.max_prob * math.sqrt(2 * math.pi))
@@ -119,7 +119,7 @@ class NewAttention(nn.Module):
             distance_diff[distance_diff > self.window_size] = 1
             logits[:] = 1 - distance_diff
 
-        print("logits[0]", logits[0])
+        # print("logits[0]", logits[0])
 
         attn_weights = F.softmax(logits, dim=-1)
 
