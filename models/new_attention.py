@@ -101,8 +101,8 @@ class NewAttention(nn.Module):
         if self.attn_type not in self.attn_weights:
             self.attn_weights[self.attn_type] = {}
         if self.attn_position not in self.attn_weights[self.attn_type] \
-                or (queries.shape[1] > self.attn_weights[self.attn_type].shape[0]
-                    or values.shape[1] > self.attn_weights[self.attn_type].shape[1]):
+                or (queries.shape[1] > self.attn_weights[self.attn_type][self.attn_position].shape[0]
+                    or values.shape[1] > self.attn_weights[self.attn_type][self.attn_position].shape[1]):
             logits = values.new_zeros((queries.shape[0], queries.shape[1], values.shape[1]))
 
             indices_q = torch.arange(queries.shape[1]).view(-1, 1).to(dtype=torch.float32)
