@@ -2,6 +2,7 @@
 A module which implements various attention mechanisms
 '''
 import torch
+import time
 from torch import nn
 from torch.nn import functional as F
 
@@ -63,6 +64,7 @@ class MultiHeadedAttention(nn.Module):
 
     def attention(self, values, keys, queries, key_mask=None, mask=None):
         ''' Scaled dot product attention with optional masks '''
+        start = time.time()
         logits = self.scale * torch.bmm(queries, keys.transpose(2, 1))
         if mask is not None:
             logits += mask
@@ -74,7 +76,10 @@ class MultiHeadedAttention(nn.Module):
             logits.masked_fill_(key_mask[:, None, None], float('-inf'))
             logits = logits.view(logits_shape)
 
-        attended = torch.bmm(F.softmax(logits, dim=-1), values)
+        attn_weights = F.softmax(logits, dim=-1)
+
+        print("time", time.time() - start)
+        attended = torch.bmm(attn_weights, values)
 
         # By this point the values, keys, and queries all have B * H as their first dimension
         batch_size = queries.shape[0] // self.num_heads
