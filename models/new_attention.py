@@ -98,9 +98,9 @@ class NewAttention(nn.Module):
         indices_v = torch.arange(values.shape[1]).view(1, -1).to(dtype=torch.float32)
 
         if self.attn_position == 'left':
-            indices_q = indices_q + 1
-        elif self.attn_position == 'right':
             indices_q = indices_q - 1
+        elif self.attn_position == 'right':
+            indices_q = indices_q + 1
         elif self.attn_position == 'first':
             indices_q[:] = 0
         elif self.attn_position == 'last':
