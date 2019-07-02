@@ -103,7 +103,7 @@ class NewAttention(nn.Module):
         if self.attn_position not in self.attn_weights[self.attn_type] \
                 or (queries.shape[1] > self.attn_weights[self.attn_type][self.attn_position].shape[0]
                     or values.shape[1] > self.attn_weights[self.attn_type][self.attn_position].shape[1]):
-            logits = values.new_zeros((queries.shape[0], queries.shape[1], values.shape[1]))
+            logits = values.new_zeros((queries.shape[1], values.shape[1]))
 
             indices_q = torch.arange(queries.shape[1]).view(-1, 1).to(dtype=torch.float32)
             indices_v = torch.arange(values.shape[1]).view(1, -1).to(dtype=torch.float32)
@@ -123,12 +123,12 @@ class NewAttention(nn.Module):
             if self.attn_type == 'normal':
                 std = 1 / (self.max_prob * math.sqrt(2 * math.pi))
 
-                logits[:] = (1 / (std * math.sqrt(2 * math.pi)) * torch.exp(- 1 / 2 * ((distance_diff) / std) ** 2))
+                logits = (1 / (std * math.sqrt(2 * math.pi)) * torch.exp(- 1 / 2 * ((distance_diff) / std) ** 2))
             else:
                 distance_diff = torch.abs(distance_diff)
                 distance_diff[distance_diff <= self.window_size] = 0
                 distance_diff[distance_diff > self.window_size] = 1
-                logits[:] = 1 - distance_diff
+                logits = 1 - distance_diff
             self.attn_weights[self.attn_type][self.attn_position] = logits
         else:
             logits = self.attn_weights[self.attn_type][self.attn_position][:queries.shape[1], :values.shape[1]]
@@ -139,7 +139,7 @@ class NewAttention(nn.Module):
 
         # print("new attention time", time.time() - start)
 
-        attended = torch.bmm(attn_weights, values)
+        attended = torch.bmm(attn_weights.expand(values.shape[0], attn_weights.shape[0], attn_weights.shape[1]), values)
 
         return attended.view(
             batch_size,
