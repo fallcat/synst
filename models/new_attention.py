@@ -96,7 +96,7 @@ class NewAttention(nn.Module):
         # By this point the values, keys, and queries all have B * H as their first dimension
         batch_size = queries.shape[0] // self.num_heads
 
-        start = time.time()
+        # start = time.time()
 
         if self.attn_type not in self.attn_weights:
             self.attn_weights[self.attn_type] = {}
@@ -135,7 +135,7 @@ class NewAttention(nn.Module):
 
         attn_weights = F.softmax(logits.type_as(values), dim=-1)
 
-        print("new attention time", time.time() - start)
+        # print("new attention time", time.time() - start)
 
         attended = torch.bmm(attn_weights.expand(values.shape[0], attn_weights.shape[0], attn_weights.shape[1]), values)
 
