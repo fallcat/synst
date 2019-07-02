@@ -107,6 +107,7 @@ class NewAttention(nn.Module):
             indices_q[:] = indices_q.size()[1] - 1
 
         distance_diff = indices_v - indices_q
+        print("distance_diff", distance_diff)
 
         if self.attn_type == 'normal':
             std = 1 / (self.max_prob * math.sqrt(2 * math.pi))
