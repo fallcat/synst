@@ -3,6 +3,7 @@ A module which implements various attention mechanisms
 '''
 import math
 import torch
+import time
 from torch import nn
 from torch.nn import functional as F
 
@@ -92,6 +93,8 @@ class NewAttention(nn.Module):
         # By this point the values, keys, and queries all have B * H as their first dimension
         batch_size = queries.shape[0] // self.num_heads
 
+        start = time.time()
+
         logits = values.new_zeros((queries.shape[0], queries.shape[1], values.shape[1]))
 
         indices_q = torch.arange(queries.shape[1]).view(-1, 1).to(dtype=torch.float32)
@@ -122,6 +125,8 @@ class NewAttention(nn.Module):
         # print("logits[0]", logits[0])
 
         attn_weights = F.softmax(logits, dim=-1)
+
+        print("time", time.time() - start)
 
         attended = torch.bmm(attn_weights, values)
 
