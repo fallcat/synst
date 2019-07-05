@@ -179,6 +179,7 @@ def add_new_transformer_args(parser):
     group.add_argument(
         '--attn-type',
         type=str,
+        nargs='+',
         default='normal',
         choices=['normal', 'uniform'],
         help='What type of attention we are using for the rules'
@@ -186,21 +187,31 @@ def add_new_transformer_args(parser):
     group.add_argument(
         '--attn-position',
         type=str,
+        nargs='+',
         default='center',
         choices=['center', 'left', 'right', 'first', 'last'],
         help='Where to put the attention'
     )
+    # group.add_argument(
+    #     '--max-prob',
+    #     type=float,
+    #     default=0.6,
+    #     help='Only in use when attention type is normal. The probability of the peak before normalizing.'
+    # )
+    # group.add_argument(
+    #     '--window-size',
+    #     type=int,
+    #     default=2,
+    #     help='Only in use when attention type is uniform. The number of tokens to focus on to each direction.'
+    #          'If window size is 2, then we have uniform distribution on 5 words.'
+    # )
     group.add_argument(
-        '--max-prob',
+        '--attn-param',
         type=float,
+        nargs='+',
         default=0.6,
-        help='Only in use when attention type is normal. The probability of the peak before normalizing.'
-    )
-    group.add_argument(
-        '--window-size',
-        type=int,
-        default=2,
-        help='Only in use when attention type is uniform. The number of tokens to focus on to each direction.'
+        help='when attention type is normal. The probability of the peak before normalizing.'
+             'when attention type is uniform. The number of tokens to focus on to each direction.'
              'If window size is 2, then we have uniform distribution on 5 words.'
     )
 

@@ -30,8 +30,9 @@ class NewAttention(nn.Module):
         self.scale = self.projection_dim ** -0.5
         self.attn_type = attn_config['attn_type']
         self.attn_position = attn_config['attn_position']
-        self.max_prob = attn_config['max_prob']
-        self.window_size = attn_config['window_size']
+        self.attn_param = attn_config['attn_param']
+        # self.max_prob = attn_config['max_prob']
+        # self.window_size = attn_config['window_size']
 
         # Combine projections for multiple heads into a single linear layer for efficiency
         # self.input_weights = nn.Parameter(torch.Tensor(3 * embed_dim, embed_dim))
@@ -73,63 +74,55 @@ class NewAttention(nn.Module):
 
         return output_projections
 
-    def attention(self, values, keys, queries, key_mask=None, mask=None):
+    def attention(self, values, keys, queries, layer_i, key_mask=None, mask=None):
         ''' Scaled dot product attention with optional masks '''
-        # logits = self.scale * torch.bmm(queries, keys.transpose(2, 1))
-        # if mask is not None:
-        #     logits += mask
-        #
-        # if key_mask is not None:
-        #     logits_shape = logits.shape
-        #     batch_size = logits_shape[0] // self.num_heads
-        #     logits = logits.view(batch_size, self.num_heads, logits_shape[1], logits_shape[2])
-        #     logits.masked_fill_(key_mask[:, None, None], float('-inf'))
-        #     logits = logits.view(logits_shape)
-
-        # attn_weights = F.softmax(logits, dim=-1)
-        #
-        # print("values", values.size())
-        # print("keys", keys.size())
-        # print("queries", queries.size())
-        # print("attn_weights", attn_weights.size())
 
         # By this point the values, keys, and queries all have B * H as their first dimension
         batch_size = queries.shape[0] // self.num_heads
 
+        if len(self.attn_type) > 1:
+            attn_type = self.attn_type[layer_i]
+            attn_position = self.attn_position[layer_i]
+            attn_param = self.attn_position[layer_i]
+        else:
+            attn_type = self.attn_type[0]
+            attn_position = self.attn_position[0]
+            attn_param = self.attn_position[0]
+
         # start = time.time()
 
-        if self.attn_type not in self.attn_weights:
-            self.attn_weights[self.attn_type] = {}
-        if self.attn_position not in self.attn_weights[self.attn_type] \
-                or (queries.shape[1] > self.attn_weights[self.attn_type][self.attn_position].shape[0]
-                    or values.shape[1] > self.attn_weights[self.attn_type][self.attn_position].shape[1]):
+        if attn_type not in self.attn_weights:
+            self.attn_weights[attn_type] = {}
+        if attn_position not in self.attn_weights[attn_type] \
+                or (queries.shape[1] > self.attn_weights[attn_type][attn_position].shape[0]
+                    or values.shape[1] > self.attn_weights[attn_type][attn_position].shape[1]):
             indices_q = torch.arange(queries.shape[1]).view(-1, 1).to(dtype=torch.float32)
             indices_v = torch.arange(values.shape[1]).view(1, -1).to(dtype=torch.float32)
 
-            if self.attn_position == 'left':
+            if attn_position == 'left':
                 indices_q = indices_q - 1
-            elif self.attn_position == 'right':
+            elif attn_position == 'right':
                 indices_q = indices_q + 1
-            elif self.attn_position == 'first':
+            elif attn_position == 'first':
                 indices_q[:] = 0
-            elif self.attn_position == 'last':
+            elif attn_position == 'last':
                 indices_q[:] = indices_q.size()[0] - 1
 
             distance_diff = indices_v - indices_q
             # print("distance_diff", distance_diff)
 
-            if self.attn_type == 'normal':
-                std = 1 / (self.max_prob * math.sqrt(2 * math.pi))
+            if attn_type == 'normal':
+                std = 1 / (attn_param * math.sqrt(2 * math.pi))
 
                 logits = (1 / (std * math.sqrt(2 * math.pi)) * torch.exp(- 1 / 2 * ((distance_diff) / std) ** 2))
             else:
                 distance_diff = torch.abs(distance_diff)
-                distance_diff[distance_diff <= self.window_size] = 0
-                distance_diff[distance_diff > self.window_size] = 1
+                distance_diff[distance_diff <= attn_param] = 0
+                distance_diff[distance_diff > attn_param] = 1
                 logits = 1 - distance_diff
-            self.attn_weights[self.attn_type][self.attn_position] = logits
+            self.attn_weights[attn_type][attn_position] = logits
         else:
-            logits = self.attn_weights[self.attn_type][self.attn_position][:queries.shape[1], :values.shape[1]]
+            logits = self.attn_weights[attn_type][attn_position][:queries.shape[1], :values.shape[1]]
 
         # print("logits[0]", logits[0])
 

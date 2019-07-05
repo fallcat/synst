@@ -87,13 +87,14 @@ class TransformerEncoderLayer(nn.Module):
         self.ffn.reset_parameters()
         self.self_attention.reset_parameters()
 
-    def forward(self, inputs): # pylint:disable=arguments-differ
+    def forward(self, inputs, layer_i): # pylint:disable=arguments-differ
         ''' The forward pass '''
         mask = inputs['mask']
         state = inputs['state']
         state = self.self_attention(
             state, # residual
-            state, state, state, mask # passed to multiheaded attention
+            state, state, state, mask, # passed to multiheaded attention
+            layer_i
         )
 
         state = self.ffn(
@@ -244,8 +245,7 @@ class NewTransformer(nn.Module):
         kwargs = {'dropout_p': config.dropout_p}
         attn_config = {'attn_type': config.attn_type,
                        'attn_position': config.attn_position,
-                       'max_prob': config.max_prob,
-                       'window_size': config.window_size}
+                       'attn_param': config.attn_param}
         args = [attn_config, config.num_heads, config.embedding_size, config.hidden_dim]
         return nn.ModuleList([
             TransformerEncoderLayer(*args, **kwargs)
@@ -308,8 +308,8 @@ class NewTransformer(nn.Module):
             'state': self.embed(inputs, self.embedding),
             'mask': inputs.eq(self.padding_idx)
         }
-        for encoder in self.encoders:
-            encoded = encoder(encoded)
+        for i, encoder in enumerate(self.encoders):
+            encoded = encoder(encoded, i)
 
         return encoded
 
