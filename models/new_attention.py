@@ -83,11 +83,11 @@ class NewAttention(nn.Module):
         if len(self.attn_type) > 1:
             attn_type = self.attn_type[layer_i]
             attn_position = self.attn_position[layer_i]
-            attn_param = self.attn_position[layer_i]
+            attn_param = self.attn_param[layer_i]
         else:
             attn_type = self.attn_type[0]
             attn_position = self.attn_position[0]
-            attn_param = self.attn_position[0]
+            attn_param = self.attn_param[0]
 
         # start = time.time()
 
