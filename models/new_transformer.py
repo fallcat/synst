@@ -91,6 +91,7 @@ class TransformerEncoderLayer(nn.Module):
         ''' The forward pass '''
         mask = inputs['mask']
         state = inputs['state']
+
         state = self.self_attention(
             state, # residual
             state, state, state, mask, # passed to multiheaded attention

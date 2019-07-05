@@ -163,17 +163,17 @@ class NewAttention(nn.Module):
 
         batch_size = values.shape[0]
 
-        # values = F.linear(values, self.input_weights).view(
-        #             batch_size,
-        #             -1,
-        #             self.num_heads,
-        #             self.projection_dim
-        #         ).transpose(2, 1).contiguous().view(
-        #             batch_size * self.num_heads,
-        #             -1,
-        #             self.projection_dim
-        #         )
-
+        values = F.linear(values, self.input_weights).view(
+                    batch_size,
+                    -1,
+                    self.num_heads,
+                    self.projection_dim
+                ).transpose(2, 1).contiguous().view(
+                    batch_size * self.num_heads,
+                    -1,
+                    self.projection_dim
+                )
+        """
         values = values.view(
             batch_size,
             -1,
@@ -184,7 +184,7 @@ class NewAttention(nn.Module):
             -1,
             self.projection_dim
         )
-
+        """
         queries = queries.view(
                     batch_size,
                     -1,
