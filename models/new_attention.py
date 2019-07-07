@@ -90,9 +90,9 @@ class NewAttention(nn.Module):
             attn_position = self.attn_position[layer_i]
             attn_param = self.attn_param[layer_i]
         else:
-            attn_type = self.attn_type[0]
-            attn_position = self.attn_position[0]
-            attn_param = self.attn_param[0]
+            attn_type = self.attn_type
+            attn_position = self.attn_position
+            attn_param = self.attn_param
 
         # start = time.time()
 
