@@ -74,7 +74,7 @@ class NewAttention(nn.Module):
 
         return output_projections
 
-    def attention(self, values, keys, queries, layer_i, key_mask=None, mask=None):
+    def attention(self, values, keys, queries, key_mask=None, mask=None, layer_i=0):
         ''' Scaled dot product attention with optional masks '''
 
         # By this point the values, keys, and queries all have B * H as their first dimension
@@ -146,7 +146,7 @@ class NewAttention(nn.Module):
         )
 
     def forward(self, values, keys, queries, # pylint:disable=arguments-differ
-                key_mask=None, attention_mask=None, num_queries=0):
+                key_mask=None, attention_mask=None, num_queries=0, layer_i=0):
         ''' Forward pass of the attention '''
         # pylint:disable=unbalanced-tuple-unpacking
         # if same_tensor(values, keys, queries):
@@ -198,5 +198,5 @@ class NewAttention(nn.Module):
                     self.projection_dim
                 )
 
-        attended = self.attention(values, keys, queries, key_mask, attention_mask)
+        attended = self.attention(values, keys, queries, key_mask, attention_mask, layer_i)
         return self.output_projection(attended)
