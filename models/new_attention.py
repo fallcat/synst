@@ -99,7 +99,7 @@ class NewAttention(nn.Module):
                 attn_position = self.attn_position[0]
         else:
             attn_position = self.attn_position
-        if type(self.att_param) is list:
+        if type(self.attn_param) is list:
             if len(self.attn_param) > layer_i:
                 attn_param = self.attn_param[layer_i]
             else:
