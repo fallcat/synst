@@ -86,12 +86,25 @@ class NewAttention(nn.Module):
         print("self.attn_param", self.attn_param)
 
         if type(self.attn_type) is list:
-            attn_type = self.attn_type[layer_i]
-            attn_position = self.attn_position[layer_i]
-            attn_param = self.attn_param[layer_i]
+            if len(self.attn_type) > layer_i:
+                attn_type = self.attn_type[layer_i]
+            else:
+                attn_type = self.attn_type[0]
         else:
             attn_type = self.attn_type
+        if type(self.attn_position) is list:
+            if len(self.attn_position) > layer_i:
+                attn_position = self.attn_position[layer_i]
+            else:
+                attn_position = self.attn_position[0]
+        else:
             attn_position = self.attn_position
+        if type(self.att_param) is list:
+            if len(self.attn_param) > layer_i:
+                attn_param = self.attn_param[layer_i]
+            else:
+                attn_param = self.attn_param[0]
+        else:
             attn_param = self.attn_param
 
         # start = time.time()
