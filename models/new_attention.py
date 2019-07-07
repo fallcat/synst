@@ -80,11 +80,6 @@ class NewAttention(nn.Module):
         # By this point the values, keys, and queries all have B * H as their first dimension
         batch_size = queries.shape[0] // self.num_heads
 
-        print("layer_i", layer_i)
-        print("self.attn_type", self.attn_type)
-        print("self.attn_position", self.attn_position)
-        print("self.attn_param", self.attn_param)
-
         if type(self.attn_type) is list:
             if len(self.attn_type) > layer_i:
                 attn_type = self.attn_type[layer_i]
