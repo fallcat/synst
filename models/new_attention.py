@@ -81,6 +81,9 @@ class NewAttention(nn.Module):
         batch_size = queries.shape[0] // self.num_heads
 
         print("layer_i", layer_i)
+        print("self.attn_type", self.attn_type)
+        print("self.attn_position", self.attn_position)
+        print("self.attn_param", self.attn_param)
 
         if type(self.attn_type) is list:
             attn_type = self.attn_type[layer_i]
