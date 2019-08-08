@@ -127,7 +127,7 @@ class NewAttention(nn.Module):
             if attn_type == 'normal':
                 std = 1 / (attn_param * math.sqrt(2 * math.pi))
 
-                logits = (1 / (std * math.sqrt(2 * math.pi)) * torch.exp(- 1 / 2 * ((distance_diff) / std) ** 2))
+                logits = (1 / (std * math.sqrt(2 * math.pi)) * torch.exp(- 1 / 2 * (distance_diff / std) ** 2))
             else:
                 distance_diff = torch.abs(distance_diff)
                 distance_diff[distance_diff <= attn_param] = 0
@@ -140,6 +140,9 @@ class NewAttention(nn.Module):
         print("logits", logits)
 
         attn_weights = F.softmax(logits.type_as(values), dim=-1)
+
+        print("attn_weights", attn_weights)
+        print("attn_weights shape", attn_weights.shape)
 
         # print("new attention time", time.time() - start)
 
