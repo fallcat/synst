@@ -175,6 +175,10 @@ class NewAttention(nn.Module):
         #     queries = queries[:, -num_queries:]
 
         batch_size = values.shape[0]
+        print("values", values.shape)
+        print("batch_size", batch_size)
+        print("num_heads", self.num_heads)
+        print("projection_dim", self.projection_dim)
 
         values = F.linear(values, self.input_weights).view(
                     batch_size,
