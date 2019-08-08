@@ -140,7 +140,7 @@ class NewAttention(nn.Module):
         # print("logits", logits)
 
         # attn_weights = F.softmax(logits.type_as(values), dim=-1)
-        attn_weights = logits
+        attn_weights = logits.type_as(values)
 
         # print("attn_weights", attn_weights)
         # print("attn_weights shape", attn_weights.shape)
