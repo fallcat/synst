@@ -140,7 +140,7 @@ class NewAttention(nn.Module):
         else:
             logits = self.attn_weights[attn_type][attn_position][:queries.shape[1], :values.shape[1]]
 
-        print("logits", logits)
+        # print("logits", logits)
 
         # attn_weights = F.softmax(logits.type_as(values), dim=-1)
         attn_weights = logits.type_as(values)
@@ -182,10 +182,10 @@ class NewAttention(nn.Module):
         #     queries = queries[:, -num_queries:]
 
         batch_size = values.shape[0]
-        print("values", values.shape)
-        print("batch_size", batch_size)
-        print("num_heads", self.num_heads)
-        print("projection_dim", self.projection_dim)
+        # print("values", values.shape)
+        # print("batch_size", batch_size)
+        # print("num_heads", self.num_heads)
+        # print("projection_dim", self.projection_dim)
 
         values = F.linear(values, self.input_weights).view(
                     batch_size,
