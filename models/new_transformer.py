@@ -246,7 +246,9 @@ class NewTransformer(nn.Module):
         kwargs = {'dropout_p': config.dropout_p}
         attn_config = {'attn_type': config.attn_type,
                        'attn_position': config.attn_position,
-                       'attn_param': config.attn_param}
+                       'attn_param': config.attn_param,
+                       'num_layers': config.num_layers,
+                       'num_heads': config.num_heads}
         args = [attn_config, config.num_heads, config.embedding_size, config.hidden_dim]
         return nn.ModuleList([
             TransformerEncoderLayer(*args, **kwargs)

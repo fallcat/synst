@@ -31,6 +31,7 @@ class NewAttention(nn.Module):
         self.attn_type = attn_config['attn_type']
         self.attn_position = attn_config['attn_position']
         self.attn_param = attn_config['attn_param']
+        self.num_layers = attn_config['num_layers']
         # self.max_prob = attn_config['max_prob']
         # self.window_size = attn_config['window_size']
 
@@ -133,6 +134,7 @@ class NewAttention(nn.Module):
                 distance_diff[distance_diff <= attn_param] = 0
                 distance_diff[distance_diff > attn_param] = 1
                 logits = 1 - distance_diff
+                logits = F.softmax(logits, dim=-1)
             self.attn_weights[attn_type][attn_position] = logits
         else:
             logits = self.attn_weights[attn_type][attn_position][:queries.shape[1], :values.shape[1]]
