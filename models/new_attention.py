@@ -139,7 +139,7 @@ class NewAttention(nn.Module):
         else:
             logits = self.attn_weights[attn_type][attn_position][:queries.shape[1], :values.shape[1]]
 
-        # print("logits", logits)
+        print("logits", logits)
 
         # attn_weights = F.softmax(logits.type_as(values), dim=-1)
         attn_weights = logits.type_as(values)
