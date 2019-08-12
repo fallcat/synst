@@ -213,7 +213,7 @@ class NewAttention(nn.Module):
             attended = torch.bmm(attn_weights.expand(int(values.shape[0] / self.num_heads),
                                                      self.num_heads,
                                                      attn_weights.shape[2],
-                                                     attn_weights.shape[3])
+                                                     attn_weights.shape[3]).contiguous()
                                  .view(values.shape[0],
                                        attn_weights.shape[2],
                                        attn_weights.shape[3]),
