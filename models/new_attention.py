@@ -173,7 +173,7 @@ class NewAttention(nn.Module):
                     self.attn_weights[attn_type][attn_position] = logits
                 else:
                     logits = self.attn_weights[attn_type][attn_position][:queries.shape[1], :values.shape[1]]
-            print("logits", logits)
+            # print("logits", logits)
             attn_weights = logits.type_as(values)
             attended = torch.bmm(attn_weights.expand(values.shape[0], attn_weights.shape[0], attn_weights.shape[1]),
                                  values)
@@ -235,9 +235,9 @@ class NewAttention(nn.Module):
                         logits = self.attn_weights[attn_type[i]][attn_position[i]][:queries.shape[1], :values.shape[1]]
                 logits_list.append(logits)
             logits = torch.stack(logits_list)
-            print("logits size", logits.size())
-            print("logits[0]", logits[0])
-            print("logits[1]", logits[1])
+            # print("logits size", logits.size())
+            # print("logits[0]", logits[0])
+            # print("logits[1]", logits[1])
             attn_weights = logits.type_as(values).unsqueeze(0)
             # print("attn_weights", attn_weights.size())
             # print("values", values.size())
