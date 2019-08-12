@@ -208,7 +208,7 @@ class NewAttention(nn.Module):
             print("logits[0]", logits[0])
             print("logits[1]", logits[1])
             attn_weights = logits.type_as(values).unsqueeze(0)
-            attended = torch.bmm(attn_weights.expand(values.shape[0] / self.num_heads,
+            attended = torch.bmm(attn_weights.expand(int(values.shape[0] / self.num_heads),
                                                      self.num_heads,
                                                      attn_weights.shape[0],
                                                      attn_weights.shape[1])
