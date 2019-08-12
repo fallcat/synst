@@ -158,13 +158,13 @@ class NewAttention(nn.Module):
 
         else:
             if type(attn_type) is not list:
-                print("attn_type not list")
+                # print("attn_type not list")
                 attn_type = [attn_type] * self.num_heads
             if type(attn_position) is not list:
-                print("attn_position not list")
+                # print("attn_position not list")
                 attn_position = [attn_position] * self.num_heads
             if type(attn_param) is not list:
-                print("attn_param not list")
+                # print("attn_param not list")
                 attn_param = [attn_param] * self.num_heads
             logits_list = []
             for i in range(self.num_heads):
@@ -204,12 +204,12 @@ class NewAttention(nn.Module):
                     logits = self.attn_weights[attn_type[i]][attn_position[i]][:queries.shape[1], :values.shape[1]]
                 logits_list.append(logits)
             logits = torch.stack(logits_list)
-            print("logits size", logits.size())
-            print("logits[0]", logits[0])
-            print("logits[1]", logits[1])
+            # print("logits size", logits.size())
+            # print("logits[0]", logits[0])
+            # print("logits[1]", logits[1])
             attn_weights = logits.type_as(values).unsqueeze(0)
-            print("attn_weights", attn_weights.size())
-            print("values", values.size())
+            # print("attn_weights", attn_weights.size())
+            # print("values", values.size())
             attended = torch.bmm(attn_weights.expand(int(values.shape[0] / self.num_heads),
                                                      self.num_heads,
                                                      attn_weights.shape[2],
