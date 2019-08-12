@@ -212,11 +212,11 @@ class NewAttention(nn.Module):
             print("values", values.size())
             attended = torch.bmm(attn_weights.expand(int(values.shape[0] / self.num_heads),
                                                      self.num_heads,
-                                                     attn_weights.shape[0],
-                                                     attn_weights.shape[1])
+                                                     attn_weights.shape[1],
+                                                     attn_weights.shape[2])
                                  .view(values.shape[0],
-                                       attn_weights.shape[0],
-                                       attn_weights.shape[1]),
+                                       attn_weights.shape[1],
+                                       attn_weights.shape[2]),
                                  values)
 
         # print("logits", logits)
