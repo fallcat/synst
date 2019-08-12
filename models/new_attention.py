@@ -87,15 +87,15 @@ class NewAttention(nn.Module):
         for i, attn_config_i in enumerate([self.attn_type, self.attn_position, self.attn_param, self.attn_displacement]):
             if type(attn_config_i) is list:
                 if len(attn_config_i) == 1:
-                    attn_configs[i] = attn_config_i[0]
+                    attn_configs.append(attn_config_i[0])
                 elif len(attn_config_i) == self.num_heads:
-                    attn_configs[i] = self.attn_config_i
+                    attn_configs.append(attn_config_i)
                 elif len(attn_config_i) == self.num_layers:
-                    attn_configs[i] = attn_config_i[layer_i]
+                    attn_configs.append(attn_config_i[layer_i])
                 else:
-                    attn_configs[i] = attn_config_i[layer_i * self.num_heads:(layer_i + 1) * self.num_heads]
+                    attn_configs.append(attn_config_i[layer_i * self.num_heads:(layer_i + 1) * self.num_heads])
             else:
-                attn_configs[i] = attn_config_i
+                attn_configs.append(attn_config_i)
         attn_type, attn_position, attn_param, attn_displacement = attn_configs
         # if type(self.attn_type) is list:
         #     if len(self.attn_type) == 1:
