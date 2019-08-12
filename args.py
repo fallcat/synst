@@ -209,8 +209,8 @@ def add_new_transformer_args(parser):
         '--attn-param',
         type=float,
         nargs='+',
-        default=0.6,
-        help='when attention type is normal. The probability of the peak before normalizing.'
+        default=1,
+        help='when attention type is normal. The standard deviation.'
              'when attention type is uniform. The number of tokens to focus on to each direction.'
              'If window size is 2, then we have uniform distribution on 5 words.'
     )

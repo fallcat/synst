@@ -160,7 +160,8 @@ class NewAttention(nn.Module):
                     # print("distance_diff", distance_diff)
 
                     if attn_type == 'normal':
-                        std = 1 / (attn_param * math.sqrt(2 * math.pi))
+                        # std = 1 / (attn_param * math.sqrt(2 * math.pi))
+                        std = attn_param
 
                         logits = (1 / (std * math.sqrt(2 * math.pi)) * torch.exp(- 1 / 2 * (distance_diff / std) ** 2))
                     else:
@@ -220,7 +221,8 @@ class NewAttention(nn.Module):
                         # print("distance_diff", distance_diff)
 
                         if attn_type[i] == 'normal':
-                            std = 1 / (attn_param[i] * math.sqrt(2 * math.pi))
+                            # std = 1 / (attn_param[i] * math.sqrt(2 * math.pi))
+                            std = attn_param
 
                             logits = (1 / (std * math.sqrt(2 * math.pi)) * torch.exp(- 1 / 2 * (distance_diff / std) ** 2))
                         else:
