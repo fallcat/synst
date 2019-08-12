@@ -181,7 +181,7 @@ def add_new_transformer_args(parser):
         type=str,
         nargs='+',
         default='normal',
-        choices=['normal', 'uniform'],
+        choices=['normal', 'uniform', 'whole', 'no', 'learned'],
         help='What type of attention we are using for the rules'
     )
     group.add_argument(
@@ -189,8 +189,8 @@ def add_new_transformer_args(parser):
         type=str,
         nargs='+',
         default='center',
-        choices=['center', 'left', 'right', 'first', 'last'],
-        help='Where to put the attention'
+        choices=['center', 'left', 'right', 'first', 'last', 'middle'],
+        help='Where to put the attention. Center is centered at the word. Middle is the middle of sentence'
     )
     # group.add_argument(
     #     '--max-prob',
@@ -213,6 +213,15 @@ def add_new_transformer_args(parser):
         help='when attention type is normal. The probability of the peak before normalizing.'
              'when attention type is uniform. The number of tokens to focus on to each direction.'
              'If window size is 2, then we have uniform distribution on 5 words.'
+    )
+
+    group.add_argument(
+        '--attn-displacement',
+        type=int,
+        nargs='+',
+        default=1,
+        help='Only works when corresponding attn-position is left or right.'
+             'The number of steps to take to that direction.'
     )
 
     return group
