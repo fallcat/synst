@@ -20,8 +20,8 @@ class NewAttention(nn.Module):
         super(NewAttention, self).__init__()
 
         # ensure valid inputs
-        assert embed_dim % num_heads == 0, \
-            f'num_heads={num_heads} should evenly divide embed_dim={embed_dim}'
+        # assert embed_dim % num_heads == 0, \
+        #     f'num_heads={num_heads} should evenly divide embed_dim={embed_dim}'
 
         # store off the scale and input params
         self.embed_dim = embed_dim
