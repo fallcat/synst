@@ -89,11 +89,16 @@ class NewAttention(nn.Module):
                 if len(attn_config_i) == 1:
                     attn_configs.append(attn_config_i[0])
                 elif len(attn_config_i) == self.num_heads:
+                    if len(set(attn_config_i)) == 1:
+                        attn_configs.append(attn_config_i[0])
                     attn_configs.append(attn_config_i)
                 elif len(attn_config_i) == self.num_layers:
                     attn_configs.append(attn_config_i[layer_i])
                 else:
-                    attn_configs.append(attn_config_i[layer_i * self.num_heads:(layer_i + 1) * self.num_heads])
+                    if len(set(attn_config_i[layer_i * self.num_heads:(layer_i + 1) * self.num_heads])) == 1:
+                        attn_configs.append(attn_config_i[layer_i * self.num_heads])
+                    else:
+                        attn_configs.append(attn_config_i[layer_i * self.num_heads:(layer_i + 1) * self.num_heads])
             else:
                 attn_configs.append(attn_config_i)
         attn_type, attn_position, attn_param, attn_displacement = attn_configs
