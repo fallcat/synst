@@ -83,6 +83,18 @@ class MultiHeadedAttention(nn.Module):
 
         # By this point the values, keys, and queries all have B * H as their first dimension
         batch_size = queries.shape[0] // self.num_heads
+
+        print("attended", attended.shape)
+        print("attended view", attended.view(
+            batch_size,
+            self.num_heads,
+            -1,
+            self.projection_dim
+        ).transpose(2, 1).contiguous().view(
+            batch_size,
+            -1,
+            self.num_heads * self.projection_dim
+        ).shape)
         return attended.view(
             batch_size,
             self.num_heads,
@@ -98,6 +110,7 @@ class MultiHeadedAttention(nn.Module):
                 key_mask=None, attention_mask=None, num_queries=0):
         ''' Forward pass of the attention '''
         # pylint:disable=unbalanced-tuple-unpacking
+        print("values", values.shape)
         if same_tensor(values, keys, queries):
             values, keys, queries = self.project(values, chunks=3)
         elif same_tensor(values, keys):

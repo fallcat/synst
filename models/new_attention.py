@@ -263,6 +263,17 @@ class NewAttention(nn.Module):
         # print("new attention time", time.time() - start)
 
         # attended = torch.bmm(attn_weights.expand(values.shape[0], attn_weights.shape[0], attn_weights.shape[1]), values)
+        print("attended", attended.shape)
+        print("attended view", attended.view(
+            batch_size,
+            self.num_heads,
+            -1,
+            self.projection_dim
+        ).transpose(2, 1).contiguous().view(
+            batch_size,
+            -1,
+            self.num_heads * self.projection_dim
+        ).shape)
 
         return attended.view(
             batch_size,
@@ -298,6 +309,8 @@ class NewAttention(nn.Module):
         # print("batch_size", batch_size)
         # print("num_heads", self.num_heads)
         # print("projection_dim", self.projection_dim)
+
+        print("values", values.shape)
 
         values = F.linear(values, self.input_weights).view(
                     batch_size,
