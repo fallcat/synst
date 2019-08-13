@@ -310,6 +310,7 @@ class NewAttention(nn.Module):
         # print("num_heads", self.num_heads)
         # print("projection_dim", self.projection_dim)
 
+        print("new attention")
         print("values", values.shape)
 
         values = F.linear(values, self.input_weights).view(

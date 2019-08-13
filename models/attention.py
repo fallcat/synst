@@ -110,6 +110,7 @@ class MultiHeadedAttention(nn.Module):
                 key_mask=None, attention_mask=None, num_queries=0):
         ''' Forward pass of the attention '''
         # pylint:disable=unbalanced-tuple-unpacking
+        print("multiheaded attention")
         print("values", values.shape)
         if same_tensor(values, keys, queries):
             values, keys, queries = self.project(values, chunks=3)
