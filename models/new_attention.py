@@ -87,7 +87,6 @@ class NewAttention(nn.Module):
                            -1,
                            self.projection_dim)[:, learned_idx].contiguous()\
             .view(batch_size * len(learned_idx),
-                  self.num_heads,
                   -1,
                   self.projection_dim)
 
