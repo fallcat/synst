@@ -286,7 +286,7 @@ class NewAttention(nn.Module):
                                                values.shape[1])
                 logits_list.append(logits)
             for l in logits_list:
-                print(l.type)
+                print(l.is_cuda())
             logits = torch.stack(logits_list, dim=1)
             # print("logits size", logits.size())
             # print("logits[0]", logits[0])
