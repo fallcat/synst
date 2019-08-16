@@ -4,6 +4,7 @@ A module which implements various attention mechanisms
 import math
 import torch
 import time
+import numpy as np
 from torch import nn
 from torch.nn import functional as F
 
@@ -38,7 +39,10 @@ class NewAttention(nn.Module):
 
         # Combine projections for multiple heads into a single linear layer for efficiency
         # self.input_weights = nn.Parameter(torch.Tensor(3 * embed_dim, embed_dim))
-        self.input_weights = nn.Parameter(torch.Tensor(embed_dim, embed_dim))
+        if 'learned' in self.attn_type:
+            self.input_weights = nn.Parameter(torch.Tensor(3 * embed_dim, embed_dim))
+        else:
+            self.input_weights = nn.Parameter(torch.Tensor(embed_dim, embed_dim))
         self.output_projection = nn.Linear(embed_dim, embed_dim, bias=False)
         self.reset_parameters()
 
@@ -76,6 +80,17 @@ class NewAttention(nn.Module):
 
         return output_projections
 
+    def project_learned(self, inputs, learned_idx):
+        batch_size = int(inputs.shape[0] / self.num_heads)
+        return inputs.view(batch_size,
+                           self.num_heads,
+                           -1,
+                           self.projection_dim)[:, learned_idx].contiguous()\
+            .view(batch_size * len(learned_idx),
+                  self.num_heads,
+                  -1,
+                  self.projection_dim)
+
     def attention(self, values, keys, queries, key_mask=None, mask=None, layer_i=0):
         ''' Scaled dot product attention with optional masks '''
 
@@ -102,41 +117,59 @@ class NewAttention(nn.Module):
             else:
                 attn_configs.append(attn_config_i)
         attn_type, attn_position, attn_param, attn_displacement = attn_configs
-        # if type(self.attn_type) is list:
-        #     if len(self.attn_type) == 1:
-        #         attn_type = self.attn_type[0]
-        #     elif len(self.attn_type) == self.num_heads:
-        #         attn_type = self.attn_type
-        #     elif len(self.attn_type) == self.num_layers:
-        #         attn_type = self.attn_type[layer_i]
-        #     else:
-        #         attn_type = self.attn_type[layer_i * self.num_heads:(layer_i + 1) * self.num_heads]
-        # else:
-        #     attn_type = self.attn_type
-        # if type(self.attn_position) is list:
-        #     if len(self.attn_position) == 1:
-        #         attn_position = self.attn_position[0]
-        #     elif len(self.attn_position) == self.num_heads:
-        #         attn_position = self.attn_position
-        #     elif len(self.attn_position) == self.num_layers:
-        #         attn_position = self.attn_position[layer_i]
-        #     else:
-        #         attn_position = self.attn_position[layer_i * self.num_heads:(layer_i + 1) * self.num_heads]
-        # else:
-        #     attn_position = self.attn_position
-        # if type(self.attn_param) is list:
-        #     if len(self.attn_param) == 1:
-        #         attn_param = self.attn_param[0]
-        #     elif len(self.attn_param) == self.num_heads:
-        #         attn_param = self.attn_param
-        #     elif len(self.attn_param) == self.num_layers:
-        #         attn_param = self.attn_param[layer_i]
-        #     else:
-        #         attn_param = self.attn_param[layer_i * self.num_heads:(layer_i + 1) * self.num_heads]
-        # else:
-        #     attn_param = self.attn_param
 
-        # start = time.time()
+        if attn_type == 'learned':
+            logits = self.scale * torch.bmm(queries, keys.transpose(2, 1))
+            if mask is not None:
+                logits += mask
+
+            if key_mask is not None:
+                logits_shape = logits.shape
+                batch_size = logits_shape[0] // self.num_heads
+                logits = logits.view(batch_size, self.num_heads, logits_shape[1], logits_shape[2])
+                logits.masked_fill_(key_mask[:, None, None], float('-inf'))
+                logits = logits.view(logits_shape)
+
+            attn_weights = F.softmax(logits, dim=-1)
+
+            attended = torch.bmm(attn_weights, values)
+
+            batch_size = queries.shape[0] // self.num_heads
+
+            return attended.view(
+                        batch_size,
+                        self.num_heads,
+                        -1,
+                        self.projection_dim
+                    ).transpose(2, 1).contiguous().view(
+                        batch_size,
+                        -1,
+                        self.num_heads * self.projection_dim
+                    )
+
+        elif 'learned' in attn_type:
+            learned_idx = np.where(np.array(attn_type) == 'learned')[0]
+            queries_ = self.project_learned(queries, learned_idx)
+            keys_ = self.project_learned(keys, learned_idx)
+            values_ = self.project_learned(values, learned_idx)
+
+            logits_ = self.scale * torch.bmm(queries_, keys_.transpose(2, 1))
+            if mask is not None:
+                logits_ += mask
+
+            if key_mask is not None:
+                logits_shape_ = logits_.shape
+                batch_size = logits_shape_[0] // self.num_heads
+                logits_ = logits_.view(batch_size, self.num_heads, logits_shape_[1], logits_shape_[2])
+                logits_.masked_fill_(key_mask[:, None, None], float('-inf'))
+                logits_ = logits_.view(logits_shape_)
+
+            logits_ = F.softmax(logits_, dim=-1).view(batch_size,
+                                                      len(learned_idx),
+                                                      logits_.shape[-2],
+                                                      logits_.shape[-1])
+
+            learned_count = 0
 
         if type(attn_type) is not list and type(attn_position) is not list:
             if attn_type == 'whole':
@@ -201,7 +234,14 @@ class NewAttention(nn.Module):
             for i in range(self.num_heads):
                 if attn_type[i] == 'whole':
                     logits = torch.full((queries.shape[1], values.shape[1]), 1 / values.shape[1]).to(
-                        dtype=torch.float32)
+                        dtype=torch.float32)\
+                        .unsqueeze(0)\
+                        .expand(int(values.shape[0] / self.num_heads),
+                                queries.shape[1],
+                                values.shape[1])
+                elif attn_type[i] == 'learned':
+                    logits = logits_[:, learned_count]
+                    learned_count += 1
                 else:
                     if attn_type[i] not in self.attn_weights:
                         self.attn_weights[attn_type[i]] = {}
@@ -240,18 +280,21 @@ class NewAttention(nn.Module):
                         self.attn_weights[attn_type[i]][attn_position[i]] = logits
                     else:
                         logits = self.attn_weights[attn_type[i]][attn_position[i]][:queries.shape[1], :values.shape[1]]
+                    logits.unsqueeze(0).expand(int(values.shape[0] / self.num_heads),
+                                               queries.shape[1],
+                                               values.shape[1])
                 logits_list.append(logits)
-            logits = torch.stack(logits_list)
+            logits = torch.stack(logits_list, dim=1)
             # print("logits size", logits.size())
             # print("logits[0]", logits[0])
             # print("logits[1]", logits[1])
-            attn_weights = logits.type_as(values).unsqueeze(0)
+            attn_weights = logits.type_as(values)
             # print("attn_weights", attn_weights.size())
             # print("values", values.size())
-            attended = torch.bmm(attn_weights.expand(int(values.shape[0] / self.num_heads),
-                                                     self.num_heads,
-                                                     attn_weights.shape[2],
-                                                     attn_weights.shape[3]).contiguous()
+            attended = torch.bmm(attn_weights # .expand(int(values.shape[0] / self.num_heads),
+                                              #         self.num_heads,
+                                              #         attn_weights.shape[2],
+                                              #         attn_weights.shape[3]).contiguous()
                                  .view(values.shape[0],
                                        attn_weights.shape[2],
                                        attn_weights.shape[3]),
@@ -295,21 +338,46 @@ class NewAttention(nn.Module):
                 key_mask=None, attention_mask=None, num_queries=0, layer_i=0):
         ''' Forward pass of the attention '''
         # pylint:disable=unbalanced-tuple-unpacking
-        # if same_tensor(values, keys, queries):
-        #     values, keys, queries = self.project(values, chunks=3)
-        # elif same_tensor(values, keys):
-        #     values, keys = self.project(values, chunks=2)
-        #     queries, = self.project(queries, 2)
-        # else:
-        #     values, = self.project(values, 0)
-        #     keys, = self.project(keys, 1)
-        #     queries, = self.project(queries, 2)
+        if 'learned' in self.attn_type:
+            if same_tensor(values, keys, queries):
+                values, keys, queries = self.project(values, chunks=3)
+            elif same_tensor(values, keys):
+                values, keys = self.project(values, chunks=2)
+                queries, = self.project(queries, 2)
+            else:
+                values, = self.project(values, 0)
+                keys, = self.project(keys, 1)
+                queries, = self.project(queries, 2)
+        else:
+            batch_size = values.shape[0]
+
+            values = F.linear(values, self.input_weights).view(
+                batch_size,
+                -1,
+                self.num_heads,
+                self.projection_dim
+            ).transpose(2, 1).contiguous().view(
+                batch_size * self.num_heads,
+                -1,
+                self.projection_dim
+            )
+
+            queries = queries.view(
+                batch_size,
+                -1,
+                self.num_heads,
+                self.projection_dim
+            ).transpose(2, 1).contiguous().view(
+                batch_size * self.num_heads,
+                -1,
+                self.projection_dim
+            )
         # pylint:enable=unbalanced-tuple-unpacking
 
-        # if num_queries:
-        #     queries = queries[:, -num_queries:]
+        if num_queries:
+            queries = queries[:, -num_queries:]
 
-        batch_size = values.shape[0]
+
         # print("values", values.shape)
         # print("batch_size", batch_size)
         # print("num_heads", self.num_heads)
@@ -317,39 +385,6 @@ class NewAttention(nn.Module):
 
         print("new attention")
         print("values", values.shape)
-
-        values = F.linear(values, self.input_weights).view(
-                    batch_size,
-                    -1,
-                    self.num_heads,
-                    self.projection_dim
-                ).transpose(2, 1).contiguous().view(
-                    batch_size * self.num_heads,
-                    -1,
-                    self.projection_dim
-                )
-        """
-        values = values.view(
-            batch_size,
-            -1,
-            self.num_heads,
-            self.projection_dim
-        ).transpose(2, 1).contiguous().view(
-            batch_size * self.num_heads,
-            -1,
-            self.projection_dim
-        )
-        """
-        queries = queries.view(
-                    batch_size,
-                    -1,
-                    self.num_heads,
-                    self.projection_dim
-                ).transpose(2, 1).contiguous().view(
-                    batch_size * self.num_heads,
-                    -1,
-                    self.projection_dim
-                )
 
         attended = self.attention(values, keys, queries, key_mask, attention_mask, layer_i)
         return self.output_projection(attended)
