@@ -283,9 +283,9 @@ class NewAttention(nn.Module):
                         self.attn_weights[attn_type[i]][attn_position[i]] = logits
                     else:
                         logits = self.attn_weights[attn_type[i]][attn_position[i]][:queries.shape[1], :values.shape[1]]
-                    logits.unsqueeze(0).expand(int(values.shape[0] / self.num_heads),
-                                               queries.shape[1],
-                                               values.shape[1]).type_as(values)
+                    logits = logits.unsqueeze(0).expand(int(values.shape[0] / self.num_heads),
+                                                        queries.shape[1],
+                                                        values.shape[1]).type_as(values)
                     print("other", logits.is_cuda)
                 logits_list.append(logits)
             for l in logits_list:
