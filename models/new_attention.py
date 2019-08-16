@@ -148,6 +148,7 @@ class NewAttention(nn.Module):
 
         elif 'learned' in attn_type:
             learned_idx = np.where(np.array(attn_type) == 'learned')[0]
+            len_learned_idex = len(learned_idx)
             queries_ = self.project_learned(queries, learned_idx)
             keys_ = self.project_learned(keys, learned_idx)
             print("keys", keys.shape)
@@ -155,20 +156,19 @@ class NewAttention(nn.Module):
             values_ = self.project_learned(values, learned_idx)
 
             logits_ = self.scale * torch.bmm(queries_, keys_.transpose(2, 1))
+            logits_shape_ = logits_.shape
             if mask is not None:
                 logits_ += mask
 
             if key_mask is not None:
-                logits_shape_ = logits_.shape
-                batch_size = logits_shape_[0] // self.num_heads
-                logits_ = logits_.view(batch_size, self.num_heads, logits_shape_[1], logits_shape_[2])
+                batch_size = logits_shape_[0] // len_learned_idex
+                logits_ = logits_.view(batch_size, len_learned_idex, logits_shape_[1], logits_shape_[2])
                 logits_.masked_fill_(key_mask[:, None, None], float('-inf'))
                 logits_ = logits_.view(logits_shape_)
-
             logits_ = F.softmax(logits_, dim=-1).view(batch_size,
                                                       len(learned_idx),
-                                                      logits_.shape[-2],
-                                                      logits_.shape[-1])
+                                                      logits_shape_[-2],
+                                                      logits_shape_[-1])
 
             learned_count = 0
 
