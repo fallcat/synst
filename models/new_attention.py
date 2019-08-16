@@ -239,7 +239,7 @@ class NewAttention(nn.Module):
                         .unsqueeze(0)\
                         .expand(int(values.shape[0] / self.num_heads),
                                 queries.shape[1],
-                                values.shape[1])
+                                values.shape[1]).type_as(values)
                 elif attn_type[i] == 'learned':
                     logits = logits_[:, learned_count]
                     learned_count += 1
@@ -283,15 +283,15 @@ class NewAttention(nn.Module):
                         logits = self.attn_weights[attn_type[i]][attn_position[i]][:queries.shape[1], :values.shape[1]]
                     logits.unsqueeze(0).expand(int(values.shape[0] / self.num_heads),
                                                queries.shape[1],
-                                               values.shape[1])
+                                               values.shape[1]).type_as(values)
                 logits_list.append(logits)
             for l in logits_list:
                 print(l.is_cuda)
-            logits = torch.stack(logits_list, dim=1)
+            attn_weights = torch.stack(logits_list, dim=1)
             # print("logits size", logits.size())
             # print("logits[0]", logits[0])
             # print("logits[1]", logits[1])
-            attn_weights = logits.type_as(values)
+            # attn_weights = logits.type_as(values)
             # print("attn_weights", attn_weights.size())
             # print("values", values.size())
             attended = torch.bmm(attn_weights # .expand(int(values.shape[0] / self.num_heads),
