@@ -151,6 +151,8 @@ class NewAttention(nn.Module):
             learned_idx = np.where(np.array(attn_type) == 'learned')[0]
             queries_ = self.project_learned(queries, learned_idx)
             keys_ = self.project_learned(keys, learned_idx)
+            print("keys", keys.shape)
+            print("keys_", keys_.shape)
             values_ = self.project_learned(values, learned_idx)
 
             logits_ = self.scale * torch.bmm(queries_, keys_.transpose(2, 1))
