@@ -285,6 +285,8 @@ class NewAttention(nn.Module):
                                                queries.shape[1],
                                                values.shape[1])
                 logits_list.append(logits)
+            for l in logits_list:
+                print(l.type)
             logits = torch.stack(logits_list, dim=1)
             # print("logits size", logits.size())
             # print("logits[0]", logits[0])
