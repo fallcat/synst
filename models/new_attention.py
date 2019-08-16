@@ -240,9 +240,11 @@ class NewAttention(nn.Module):
                         .expand(int(values.shape[0] / self.num_heads),
                                 queries.shape[1],
                                 values.shape[1]).type_as(values)
+                    print("whole", logits.is_cuda)
                 elif attn_type[i] == 'learned':
                     logits = logits_[:, learned_count]
                     learned_count += 1
+                    print("learned", logits.is_cuda)
                 else:
                     if attn_type[i] not in self.attn_weights:
                         self.attn_weights[attn_type[i]] = {}
@@ -284,6 +286,7 @@ class NewAttention(nn.Module):
                     logits.unsqueeze(0).expand(int(values.shape[0] / self.num_heads),
                                                queries.shape[1],
                                                values.shape[1]).type_as(values)
+                    print("other", logits.is_cuda)
                 logits_list.append(logits)
             for l in logits_list:
                 print(l.is_cuda)
