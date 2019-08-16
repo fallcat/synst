@@ -151,8 +151,6 @@ class NewAttention(nn.Module):
             len_learned_idex = len(learned_idx)
             queries_ = self.project_learned(queries, learned_idx)
             keys_ = self.project_learned(keys, learned_idx)
-            print("keys", keys.shape)
-            print("keys_", keys_.shape)
             values_ = self.project_learned(values, learned_idx)
 
             logits_ = self.scale * torch.bmm(queries_, keys_.transpose(2, 1))
@@ -240,11 +238,9 @@ class NewAttention(nn.Module):
                         .expand(int(values.shape[0] / self.num_heads),
                                 queries.shape[1],
                                 values.shape[1]).type_as(values)
-                    print("whole", logits.is_cuda)
                 elif attn_type[i] == 'learned':
                     logits = logits_[:, learned_count]
                     learned_count += 1
-                    print("learned", logits.is_cuda)
                 else:
                     if attn_type[i] not in self.attn_weights:
                         self.attn_weights[attn_type[i]] = {}
@@ -286,10 +282,8 @@ class NewAttention(nn.Module):
                     logits = logits.unsqueeze(0).expand(int(values.shape[0] / self.num_heads),
                                                         queries.shape[1],
                                                         values.shape[1]).type_as(values)
-                    print("other", logits.is_cuda)
+                    # print("other", logits.is_cuda)
                 logits_list.append(logits)
-            for l in logits_list:
-                print(l.is_cuda)
             attn_weights = torch.stack(logits_list, dim=1)
             # print("logits size", logits.size())
             # print("logits[0]", logits[0])
@@ -317,17 +311,6 @@ class NewAttention(nn.Module):
         # print("new attention time", time.time() - start)
 
         # attended = torch.bmm(attn_weights.expand(values.shape[0], attn_weights.shape[0], attn_weights.shape[1]), values)
-        print("attended", attended.shape)
-        print("attended view", attended.view(
-            batch_size,
-            self.num_heads,
-            -1,
-            self.projection_dim
-        ).transpose(2, 1).contiguous().view(
-            batch_size,
-            -1,
-            self.num_heads * self.projection_dim
-        ).shape)
 
         return attended.view(
             batch_size,
@@ -388,9 +371,6 @@ class NewAttention(nn.Module):
         # print("batch_size", batch_size)
         # print("num_heads", self.num_heads)
         # print("projection_dim", self.projection_dim)
-
-        print("new attention")
-        print("values", values.shape)
 
         attended = self.attention(values, keys, queries, key_mask, attention_mask, layer_i)
         return self.output_projection(attended)
