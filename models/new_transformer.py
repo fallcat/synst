@@ -108,7 +108,7 @@ class TransformerEncoderLayer(nn.Module):
 
 class TransformerDecoderLayer(nn.Module):
     ''' Implements a single decoder layer in a transformer decoder stack '''
-    def __init__(self, num_heads, dim, hidden_dim, causal=True, span=1, dropout_p=0.1):
+    def __init__(self, dec_attn_config, enc_dec_attn_config, num_heads, dim, hidden_dim, causal=True, span=1, dropout_p=0.1):
         ''' Initialize the transformer layer '''
         super(TransformerDecoderLayer, self).__init__()
 
@@ -122,12 +122,12 @@ class TransformerDecoderLayer(nn.Module):
         )
 
         self.self_attention = TransformerSublayer(
-            MultiHeadedAttention(dim, num_heads),
+            NewAttention(dec_attn_config, dim, num_heads),
             dim, dropout_p
         )
 
         self.source_attention = TransformerSublayer(
-            MultiHeadedAttention(dim, num_heads),
+            NewAttention(enc_dec_attn_config, dim, num_heads),
             dim, dropout_p
         )
 
@@ -260,7 +260,19 @@ class NewTransformer(nn.Module):
     def create_decoders(cls, config):
         ''' Create the transformer decoders '''
         kwargs = {'dropout_p': config.dropout_p, 'span': config.span}
-        args = [config.num_heads, config.embedding_size, config.hidden_dim]
+        dec_attn_config = {'dec_attn_type': config.dec_attn_type,
+                       'dec_attn_position': config.dec_attn_position,
+                       'dec_attn_param': config.dec_attn_param,
+                       'dec_attn_displacement': config.dec_attn_displacement,
+                       'dec_num_layers': config.dec_num_layers,
+                       'dec_num_heads': config.dec_num_heads}
+        enc_dec_attn_config = {'enc_dec_attn_type': config.enc_dec_attn_type,
+                               'enc_dec_attn_position': config.enc_dec_attn_position,
+                               'enc_dec_attn_param': config.enc_dec_attn_param,
+                               'enc_dec_attn_displacement': config.enc_dec_attn_displacement,
+                               'enc_dec_num_layers': config.enc_dec_num_layers,
+                               'enc_dec_num_heads': config.enc_dec_num_heads}
+        args = [dec_attn_config, enc_dec_attn_config, config.num_heads, config.embedding_size, config.hidden_dim]
         return nn.ModuleList([
             TransformerDecoderLayer(*args, **kwargs)
             for _ in range(config.num_layers)
