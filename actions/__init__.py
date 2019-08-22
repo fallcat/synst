@@ -7,6 +7,7 @@ from actions.translate import Translator
 from actions.probe import Prober
 from actions.probe_train import ProbeTrainer
 from actions.probe_evaluate import ProbeEvaluator
+from actions.probe_new_translate import ProbeNewTranslator
 
 class Pass(object):
     ''' Action that does nothing... '''
