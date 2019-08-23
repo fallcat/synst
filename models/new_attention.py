@@ -361,7 +361,7 @@ class NewAttention(nn.Module):
             )
         # pylint:enable=unbalanced-tuple-unpacking
 
-        print("num_queries", num_queriesv)
+        print("num_queries", num_queries)
 
         if num_queries:
             queries = queries[:, -num_queries:]
