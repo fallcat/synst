@@ -93,11 +93,11 @@ class NewAttention(nn.Module):
     def attention(self, values, keys, queries, key_mask=None, mask=None, layer_i=0, decoder_position=-1):
         ''' Scaled dot product attention with optional masks '''
 
-        print("values", values.shape)
-        print("keys", keys.shape)
-        print("queries", queries.shape)
-        print("attn_type", self.attn_type)
-        print("attn_position", self.attn_position)
+        # print("values", values.shape)
+        # print("keys", keys.shape)
+        # print("queries", queries.shape)
+        # print("attn_type", self.attn_type)
+        # print("attn_position", self.attn_position)
 
         # By this point the values, keys, and queries all have B * H as their first dimension
         batch_size = queries.shape[0] // self.num_heads
@@ -307,8 +307,8 @@ class NewAttention(nn.Module):
                                        attn_weights.shape[3]),
                                  values)
 
-        print("attn_weights", attn_weights)
-        print("attn_weights shape", attn_weights.shape)
+        # print("attn_weights", attn_weights)
+        # print("attn_weights shape", attn_weights.shape)
 
         return attended.view(
             batch_size,
