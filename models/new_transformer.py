@@ -92,6 +92,8 @@ class TransformerEncoderLayer(nn.Module):
         mask = inputs['mask']
         state = inputs['state']
 
+        print("encoder self attention")
+
         state = self.self_attention(
             state, # residual
             state, state, state, mask, # passed to multiheaded attention
