@@ -90,7 +90,7 @@ class NewAttention(nn.Module):
                   -1,
                   self.projection_dim)
 
-    def attention(self, values, keys, queries, key_mask=None, mask=None, layer_i=0):
+    def attention(self, values, keys, queries, key_mask=None, mask=None, layer_i=0, decoder_position=-1):
         ''' Scaled dot product attention with optional masks '''
 
         print("values", values.shape)
@@ -189,6 +189,9 @@ class NewAttention(nn.Module):
                     indices_q = torch.arange(queries.shape[1]).view(-1, 1).to(dtype=torch.float32)
                     indices_v = torch.arange(values.shape[1]).view(1, -1).to(dtype=torch.float32)
 
+                    if decoder_position > -1:
+                        indices_q = decoder_position
+
                     if attn_position == 'left':
                         indices_q = indices_q - attn_displacement
                     elif attn_position == 'right':
@@ -257,6 +260,9 @@ class NewAttention(nn.Module):
                         indices_q = torch.arange(queries.shape[1]).view(-1, 1).to(dtype=torch.float32)
                         indices_v = torch.arange(values.shape[1]).view(1, -1).to(dtype=torch.float32)
 
+                        if decoder_position > -1:
+                            indices_q = decoder_position
+
                         if attn_position[i] == 'left':
                             indices_q = indices_q - attn_displacement[i]
                         elif attn_position[i] == 'right':
@@ -314,7 +320,7 @@ class NewAttention(nn.Module):
         )
 
     def forward(self, values, keys, queries, # pylint:disable=arguments-differ
-                key_mask=None, attention_mask=None, num_queries=0, layer_i=0):
+                key_mask=None, attention_mask=None, num_queries=0, layer_i=0, decoder_position=-1):
         ''' Forward pass of the attention '''
         # pylint:disable=unbalanced-tuple-unpacking
         if 'learned' in self.attn_type:
@@ -362,5 +368,5 @@ class NewAttention(nn.Module):
         # print("num_heads", self.num_heads)
         # print("projection_dim", self.projection_dim)
 
-        attended = self.attention(values, keys, queries, key_mask, attention_mask, layer_i)
+        attended = self.attention(values, keys, queries, key_mask, attention_mask, layer_i, decoder_position)
         return self.output_projection(attended)
