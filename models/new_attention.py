@@ -96,6 +96,8 @@ class NewAttention(nn.Module):
         print("values", values.shape)
         print("keys", keys.shape)
         print("queries", queries.shape)
+        print("attn_type", self.attn_type)
+        print("attn_position", self.attn_position)
 
         # By this point the values, keys, and queries all have B * H as their first dimension
         batch_size = queries.shape[0] // self.num_heads
@@ -358,6 +360,8 @@ class NewAttention(nn.Module):
                 self.projection_dim
             )
         # pylint:enable=unbalanced-tuple-unpacking
+
+        print("num_queries", num_queriesv)
 
         if num_queries:
             queries = queries[:, -num_queries:]
