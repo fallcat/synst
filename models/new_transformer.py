@@ -154,6 +154,8 @@ class TransformerDecoderLayer(nn.Module):
             kwargs['key_mask'] = mask
             kwargs['attention_mask'] = self.mask(state)
 
+        print("decoder self attention")
+
         state = self.self_attention(
             residual, # residual
             state, state, state, **kwargs # passed to multiheaded attention
@@ -163,6 +165,8 @@ class TransformerDecoderLayer(nn.Module):
         kwargs = {'key_mask': sources['mask']}
         if self.causal and cache is not None:
             kwargs['num_queries'] = self.span
+
+        print("decoder source attention")
 
         state = self.source_attention(
             state, # residual
@@ -261,11 +265,11 @@ class NewTransformer(nn.Module):
         ''' Create the transformer decoders '''
         kwargs = {'dropout_p': config.dropout_p, 'span': config.span}
         dec_attn_config = {'attn_type': config.dec_attn_type,
-                       'attn_position': config.dec_attn_position,
-                       'attn_param': config.dec_attn_param,
-                       'attn_displacement': config.dec_attn_displacement,
-                       'num_layers': config.dec_num_layers,
-                       'num_heads': config.dec_num_heads}
+                           'attn_position': config.dec_attn_position,
+                           'attn_param': config.dec_attn_param,
+                           'attn_displacement': config.dec_attn_displacement,
+                           'num_layers': config.dec_num_layers,
+                           'num_heads': config.dec_num_heads}
         enc_dec_attn_config = {'attn_type': config.enc_dec_attn_type,
                                'attn_position': config.enc_dec_attn_position,
                                'attn_param': config.enc_dec_attn_param,

@@ -285,32 +285,15 @@ class NewAttention(nn.Module):
                     # print("other", logits.is_cuda)
                 logits_list.append(logits)
             attn_weights = torch.stack(logits_list, dim=1)
-            # print("logits size", logits.size())
-            # print("logits[0]", logits[0])
-            # print("logits[1]", logits[1])
-            # attn_weights = logits.type_as(values)
-            # print("attn_weights", attn_weights.size())
-            # print("values", values.size())
-            attended = torch.bmm(attn_weights # .expand(int(values.shape[0] / self.num_heads),
-                                              #         self.num_heads,
-                                              #         attn_weights.shape[2],
-                                              #         attn_weights.shape[3]).contiguous()
+
+            attended = torch.bmm(attn_weights
                                  .view(values.shape[0],
                                        attn_weights.shape[2],
                                        attn_weights.shape[3]),
                                  values)
 
-        # print("logits", logits)
-
-        # attn_weights = F.softmax(logits.type_as(values), dim=-1)
-        # attn_weights = logits.type_as(values)
-
-        # print("attn_weights", attn_weights)
-        # print("attn_weights shape", attn_weights.shape)
-
-        # print("new attention time", time.time() - start)
-
-        # attended = torch.bmm(attn_weights.expand(values.shape[0], attn_weights.shape[0], attn_weights.shape[1]), values)
+        print("attn_weights", attn_weights)
+        print("attn_weights shape", attn_weights.shape)
 
         return attended.view(
             batch_size,
