@@ -192,7 +192,7 @@ class NewAttention(nn.Module):
                     indices_v = torch.arange(values.shape[1]).view(1, -1).to(dtype=torch.float32)
 
                     if decoder_position > -1:
-                        indices_q = decoder_position
+                        indices_q[:] = decoder_position
 
                     if attn_position == 'left':
                         indices_q = indices_q - attn_displacement
