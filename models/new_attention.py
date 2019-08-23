@@ -135,6 +135,9 @@ class NewAttention(nn.Module):
 
             batch_size = queries.shape[0] // self.num_heads
 
+            print("attn_weights", attn_weights)
+            print("attn_weights shape", attn_weights.shape)
+
             return attended.view(
                         batch_size,
                         self.num_heads,
