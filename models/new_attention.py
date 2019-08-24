@@ -180,7 +180,7 @@ class NewAttention(nn.Module):
             learned_count = 0
 
         if type(attn_type) is not list and type(attn_position) is not list:
-            print("enter first")
+            # print("enter first")
             if attn_type == 'whole':
                 logits = torch.full((queries.shape[1], values.shape[1]), 1 / values.shape[1]).to(dtype=torch.float32)
             else:
@@ -192,8 +192,8 @@ class NewAttention(nn.Module):
                 indices_q = torch.arange(queries.shape[1]).view(-1, 1).to(dtype=torch.float32)
                 indices_v = torch.arange(values.shape[1]).view(1, -1).to(dtype=torch.float32)
 
-                print("decoder_position", decoder_position)
-                print("indices_v", indices_v.shape)
+                # print("decoder_position", decoder_position)
+                # print("indices_v", indices_v.shape)
 
                 if decoder_position > -1:
                     indices_q[:] = decoder_position
@@ -233,7 +233,7 @@ class NewAttention(nn.Module):
                                  values)
 
         else:
-            print("enter second")
+            # print("enter second")
             if type(attn_type) is not list:
                 # print("attn_type not list")
                 attn_type = [attn_type] * self.num_heads
@@ -267,8 +267,8 @@ class NewAttention(nn.Module):
                     indices_q = torch.arange(queries.shape[1]).view(-1, 1).to(dtype=torch.float32)
                     indices_v = torch.arange(values.shape[1]).view(1, -1).to(dtype=torch.float32)
 
-                    print("decoder_position", decoder_position)
-                    print("indices_v", indices_v.shape)
+                    # print("decoder_position", decoder_position)
+                    # print("indices_v", indices_v.shape)
 
                     if decoder_position > -1:
                         indices_q[:] = decoder_position
@@ -315,8 +315,8 @@ class NewAttention(nn.Module):
                                        attn_weights.shape[3]),
                                  values)
 
-        print("attn_weights", attn_weights)
-        print("attn_weights shape", attn_weights.shape)
+        # print("attn_weights", attn_weights)
+        # print("attn_weights shape", attn_weights.shape)
 
         return attended.view(
             batch_size,
