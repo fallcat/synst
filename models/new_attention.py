@@ -180,6 +180,7 @@ class NewAttention(nn.Module):
             learned_count = 0
 
         if type(attn_type) is not list and type(attn_position) is not list:
+            print("enter first")
             if attn_type == 'whole':
                 logits = torch.full((queries.shape[1], values.shape[1]), 1 / values.shape[1]).to(dtype=torch.float32)
             else:
@@ -232,6 +233,7 @@ class NewAttention(nn.Module):
                                  values)
 
         else:
+            print("enter second")
             if type(attn_type) is not list:
                 # print("attn_type not list")
                 attn_type = [attn_type] * self.num_heads
