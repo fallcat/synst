@@ -310,8 +310,8 @@ class NewAttention(nn.Module):
                                        attn_weights.shape[3]),
                                  values)
 
-        # print("attn_weights", attn_weights)
-        # print("attn_weights shape", attn_weights.shape)
+        print("attn_weights", attn_weights)
+        print("attn_weights shape", attn_weights.shape)
 
         return attended.view(
             batch_size,
