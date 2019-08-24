@@ -201,9 +201,9 @@ class NewAttention(nn.Module):
                     elif attn_position == 'first':
                         indices_q[:] = 0
                     elif attn_position == 'last':
-                        indices_q[:] = indices_q.size()[0] - 1
+                        indices_q[:] = indices_v.size()[0] - 1
                     elif attn_position == 'middle':
-                        indices_q[:] = (indices_q.size()[0] + 1) / 2 - 1
+                        indices_q[:] = (indices_v.size()[0] + 1) / 2 - 1
 
                     distance_diff = indices_v - indices_q
                     # print("distance_diff", distance_diff)
