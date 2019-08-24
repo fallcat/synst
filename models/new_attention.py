@@ -265,6 +265,9 @@ class NewAttention(nn.Module):
                         indices_q = torch.arange(queries.shape[1]).view(-1, 1).to(dtype=torch.float32)
                         indices_v = torch.arange(values.shape[1]).view(1, -1).to(dtype=torch.float32)
 
+                        print("decoder_position", decoder_position)
+                        print("indices_v", indices_v.shape)
+
                         if decoder_position > -1:
                             indices_q[:] = decoder_position
 
