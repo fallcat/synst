@@ -39,7 +39,7 @@ class NewAttention(nn.Module):
 
         # Combine projections for multiple heads into a single linear layer for efficiency
         # self.input_weights = nn.Parameter(torch.Tensor(3 * embed_dim, embed_dim))
-        if 'learned' in self.attn_type:
+        if 'learned' in self.attn_type or 'learned' == self.attn_type:
             print("here")
             self.input_weights = nn.Parameter(torch.Tensor(3 * embed_dim, embed_dim))
         else:
