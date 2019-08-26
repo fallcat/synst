@@ -96,8 +96,8 @@ class NewAttention(nn.Module):
         # print("values", values.shape)
         # print("keys", keys.shape)
         # print("queries", queries.shape)
-        # print("attn_type", self.attn_type)
-        # print("attn_position", self.attn_position)
+        print("attn_type", self.attn_type)
+        print("attn_position", self.attn_position)
 
         # By this point the values, keys, and queries all have B * H as their first dimension
         batch_size = queries.shape[0] // self.num_heads

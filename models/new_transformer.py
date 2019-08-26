@@ -279,6 +279,7 @@ class NewTransformer(nn.Module):
                                'attn_displacement': config.enc_dec_attn_displacement,
                                'num_layers': config.enc_dec_num_layers,
                                'num_heads': config.enc_dec_num_heads}
+        print("enc_dec_attn_config")
         args = [dec_attn_config, enc_dec_attn_config, config.num_heads, config.embedding_size, config.hidden_dim]
         return nn.ModuleList([
             TransformerDecoderLayer(*args, **kwargs)
