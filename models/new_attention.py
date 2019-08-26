@@ -130,6 +130,12 @@ class NewAttention(nn.Module):
             print("queries", queries)
             print("keys", keys)
             print("logits", logits)
+            print("queries", queries.shape)
+            print("keys", keys.shape)
+            print("logits", logits.shape)
+            print("queries 0", queries[0])
+            print("keys 0", keys.transpose(2,1)[0])
+            print("q x k", torch.dot(queries[0], keys.transpose(2, 1)[0]))
             if mask is not None:
                 logits += mask
 
