@@ -84,6 +84,8 @@ class MultiHeadedAttention(nn.Module):
         # By this point the values, keys, and queries all have B * H as their first dimension
         batch_size = queries.shape[0] // self.num_heads
 
+        print("multiheaded attention")
+        print("attn_weights")
         print("attended", attended.shape)
         print("attended view", attended.view(
             batch_size,

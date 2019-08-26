@@ -128,8 +128,13 @@ class TransformerDecoderLayer(nn.Module):
             dim, dropout_p
         )
 
+        # self.source_attention = TransformerSublayer(
+        #     NewAttention(enc_dec_attn_config, dim, num_heads),
+        #     dim, dropout_p
+        # )
+
         self.source_attention = TransformerSublayer(
-            NewAttention(enc_dec_attn_config, dim, num_heads),
+            MultiHeadedAttention(dim, num_heads),
             dim, dropout_p
         )
 
