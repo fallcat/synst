@@ -98,6 +98,7 @@ class NewAttention(nn.Module):
         # print("queries", queries.shape)
         print("attn_type", self.attn_type)
         print("attn_position", self.attn_position)
+        print("input weights", self.input_weights)
 
         # By this point the values, keys, and queries all have B * H as their first dimension
         batch_size = queries.shape[0] // self.num_heads
@@ -124,6 +125,7 @@ class NewAttention(nn.Module):
         attn_type, attn_position, attn_param, attn_displacement = attn_configs
 
         if attn_type == 'learned':
+            print("in learned")
             logits = self.scale * torch.bmm(queries, keys.transpose(2, 1))
             if mask is not None:
                 logits += mask
