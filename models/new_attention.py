@@ -127,6 +127,9 @@ class NewAttention(nn.Module):
         if attn_type == 'learned':
             print("in learned")
             logits = self.scale * torch.bmm(queries, keys.transpose(2, 1))
+            print("queries", queries)
+            print("keys", keys)
+            print("logits", logits)
             if mask is not None:
                 logits += mask
 
