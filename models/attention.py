@@ -87,6 +87,7 @@ class MultiHeadedAttention(nn.Module):
         print("multiheaded attention")
         print("attn_weights", attn_weights)
         print("attended", attended.shape)
+        print("input weights", self.input_weights)
         print("attended view", attended.view(
             batch_size,
             self.num_heads,
