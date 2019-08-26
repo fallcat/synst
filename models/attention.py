@@ -85,7 +85,7 @@ class MultiHeadedAttention(nn.Module):
         batch_size = queries.shape[0] // self.num_heads
 
         print("multiheaded attention")
-        print("attn_weights")
+        print("attn_weights", attn_weights)
         print("attended", attended.shape)
         print("attended view", attended.view(
             batch_size,
