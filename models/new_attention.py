@@ -126,6 +126,8 @@ class NewAttention(nn.Module):
                 attn_configs.append(attn_config_i)
         attn_type, attn_position, attn_param, attn_displacement = attn_configs
 
+        print("attn_type", attn_type)
+
         if attn_type == 'learned':
             print("in learned")
             logits = self.scale * torch.bmm(queries, keys.transpose(2, 1))
@@ -349,6 +351,14 @@ class NewAttention(nn.Module):
         ''' Forward pass of the attention '''
         # pylint:disable=unbalanced-tuple-unpacking
         print("self.attn_type", self.attn_type)
+        print("start forward in new attention")
+        print("============================")
+        print("values", values)
+        print("keys", keys)
+        print("queries", queries)
+        print("key_mask", key_mask)
+        print("attention_mask", attention_mask)
+        print("num_queries", num_queries)
         if 'learned' in self.attn_type or 'learned' == self.attn_type:
             print("in")
             if same_tensor(values, keys, queries):

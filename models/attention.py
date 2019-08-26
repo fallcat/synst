@@ -115,6 +115,15 @@ class MultiHeadedAttention(nn.Module):
         # pylint:disable=unbalanced-tuple-unpacking
         print("multiheaded attention")
         print("values", values.shape)
+
+        print("start forward in multihead attention")
+        print("============================")
+        print("values", values)
+        print("keys", keys)
+        print("queries", queries)
+        print("key_mask", key_mask)
+        print("attention_mask", attention_mask)
+        print("num_queries", num_queries)
         if same_tensor(values, keys, queries):
             values, keys, queries = self.project(values, chunks=3)
         elif same_tensor(values, keys):
