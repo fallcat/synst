@@ -348,7 +348,9 @@ class NewAttention(nn.Module):
                 key_mask=None, attention_mask=None, num_queries=0, layer_i=0, decoder_position=-1):
         ''' Forward pass of the attention '''
         # pylint:disable=unbalanced-tuple-unpacking
-        if 'learned' in self.attn_type:
+        print("self.attn_type", self.attn_type)
+        if 'learned' in self.attn_type or 'learned' == self.attn_type:
+            print("in")
             if same_tensor(values, keys, queries):
                 values, keys, queries = self.project(values, chunks=3)
             elif same_tensor(values, keys):
