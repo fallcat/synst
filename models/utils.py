@@ -357,9 +357,9 @@ class ProbeTranslator(object):
             targets = [beam.best_hypothesis.sequence[self.span - 1:] for beam in decoder_results['beams']]
 
             decoder_stats = [probe(decoder_attn_weights_tensor)
-                             for decoder_attn_weights_tensor in decoder_results['decoder_attn_weights_tensor']]
+                             for decoder_attn_weights_tensor in decoder_results['decoder_attn_weights_tensors']]
             enc_dec_stats = [probe(enc_dec_attn_weights_tensor)
-                             for enc_dec_attn_weights_tensor in decoder_results['enc_dec_attn_weights_tensor']]
+                             for enc_dec_attn_weights_tensor in decoder_results['enc_dec_attn_weights_tensors']]
 
             gold_targets = []
             gold_target_lens = batch['target_lens']
@@ -478,8 +478,8 @@ class ProbeNewTranslator(object):
                 ('targets', targets),
                 ('gold_targets', gold_targets),
                 ('enc_attn_weights_tensor', enc_attn_weights_tensor),
-                ('dec_attn_weights_tensor', decoder_results['dec_attn_weights_tensor']),
-                ('enc_dec_attn_weights_tensor', decoder_results['enc_dec_attn_weights_tensor'])
+                ('dec_attn_weights_tensors', decoder_results['dec_attn_weights_tensors']),
+                ('enc_dec_attn_weights_tensors', decoder_results['enc_dec_attn_weights_tensors'])
             ])
 
 
