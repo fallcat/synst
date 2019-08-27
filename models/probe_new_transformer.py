@@ -321,7 +321,7 @@ class ProbeNewTransformer(nn.Module):
 
     def forward(self, batch): # pylint:disable=arguments-differ
         ''' A batch of inputs and targets '''
-        encoded, enc_attn_weights_tensor = self.encode(batch['inputs'])
+        encoded, encoder_attn_weights_tensor = self.encode(batch['inputs'])
         decoded = self.decode(
             encoded,
             right_shift(right_shift(batch['targets']), shift=self.span - 1, fill=self.sos_idx),
@@ -335,8 +335,8 @@ class ProbeNewTransformer(nn.Module):
 
         return {'smoothed_nll': smoothed_nll,
                 'nll': nll,
-                'encoder_attn_weights_tensor': enc_attn_weights_tensor,
-                'decoder_attn_weights_tensor': decoded['dec_attn_weights_tensor'],
+                'encoder_attn_weights_tensor': encoder_attn_weights_tensor,
+                'decoder_attn_weights_tensor': decoded['decoder_attn_weights_tensor'],
                 'enc_dec_attn_weights_tensor': decoded['enc_dec_attn_weights_tensor']}
 
     def encode(self, inputs):
@@ -350,9 +350,9 @@ class ProbeNewTransformer(nn.Module):
             encoded = encoder(encoded, i)
             enc_attn_weights_list.append(encoded['enc_attn_weights'])
 
-        enc_attn_weights_tensor = torch.stack(enc_attn_weights_list)
+        encoder_attn_weights_tensor = torch.stack(enc_attn_weights_list)
 
-        return encoded, enc_attn_weights_tensor
+        return encoded, encoder_attn_weights_tensor
 
     def decode(self, encoded, targets, decoders=None, embedding=None, cache=None, mask=None):
         ''' Decode the encoded sequence to the targets '''
@@ -367,14 +367,14 @@ class ProbeNewTransformer(nn.Module):
             'state': self.embed(targets, embedding),
             'mask': targets.eq(self.padding_idx) if mask is None else mask
         }
-        dec_attn_weights_list = []
+        decoder_attn_weights_list = []
         enc_dec_attn_weights_list = []
         for decoder in decoders:
             decoded = decoder(decoded, encoded)
-            dec_attn_weights_list.append(decoded['dec_attn_weights'])
+            decoder_attn_weights_list.append(decoded['decoder_attn_weights'])
             enc_dec_attn_weights_list.append(decoded['enc_dec_attn_weights'])
 
-        dec_attn_weights_tensor = torch.stack(dec_attn_weights_list)
+        decoder_attn_weights_tensor = torch.stack(decoder_attn_weights_list)
         enc_dec_attn_weights_tensor = torch.stack(enc_dec_attn_weights_list)
 
         # compute projection to the vocabulary
@@ -385,7 +385,7 @@ class ProbeNewTransformer(nn.Module):
         return {
             'cache': decoded.get('cache'),
             'logits': embedding(state, transpose=True).transpose(2, 1),  # transpose to B x C x ...
-            'dec_attn_weights_tensor': dec_attn_weights_tensor,
+            'decoder_attn_weights_tensor': decoder_attn_weights_tensor,
             'enc_dec_attn_weights_tensor': enc_dec_attn_weights_tensor
         }
 

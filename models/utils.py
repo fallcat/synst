@@ -448,7 +448,7 @@ class ProbeNewTranslator(object):
                 self.span
             )
 
-            encoded, enc_attn_weights_tensor = self.encoder(batch['inputs'])
+            encoded, encoder_attn_weights_tensor = self.encoder(batch['inputs'])
 
             beams = decoder.initialize_search(
                 [[self.sos_idx] * self.span for _ in range(len(batch['inputs']))],
@@ -477,8 +477,8 @@ class ProbeNewTranslator(object):
             return OrderedDict([
                 ('targets', targets),
                 ('gold_targets', gold_targets),
-                ('enc_attn_weights_tensor', enc_attn_weights_tensor),
-                ('dec_attn_weights_tensors', decoder_results['decoder_attn_weights_tensors']),
+                ('encoder_attn_weights_tensor', encoder_attn_weights_tensor),
+                ('decoder_attn_weights_tensors', decoder_results['decoder_attn_weights_tensors']),
                 ('enc_dec_attn_weights_tensors', decoder_results['enc_dec_attn_weights_tensors'])
             ])
 
