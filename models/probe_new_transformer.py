@@ -98,7 +98,7 @@ class TransformerEncoderLayer(nn.Module):
 
         print("encoder self attention")
 
-        state, enc_attn_weights = self.self_attention(
+        state, encoder_attn_weights = self.self_attention(
             state, # residual
             state, state, state, mask, # passed to multiheaded attention
             layer_i
@@ -109,7 +109,7 @@ class TransformerEncoderLayer(nn.Module):
             state # passed to feed-forward network
         )
 
-        return {'state': state, 'mask': mask, 'enc_attn_weights': enc_attn_weights}
+        return {'state': state, 'mask': mask, 'encoder_attn_weights': encoder_attn_weights}
 
 
 class TransformerDecoderLayer(nn.Module):
@@ -165,7 +165,7 @@ class TransformerDecoderLayer(nn.Module):
 
         print("decoder self attention")
 
-        state, dec_attn_weights = self.self_attention(
+        state, decoder_attn_weights = self.self_attention(
             residual, # residual
             state, state, state, **kwargs # passed to multiheaded attention
         )
@@ -195,7 +195,7 @@ class TransformerDecoderLayer(nn.Module):
                 state = cache[self.uuid] = torch.cat((cached, state), 1)
 
         return {'state': state, 'mask': mask, 'cache': cache,
-                'dec_attn_weights': dec_attn_weights,
+                'decoder_attn_weights': decoder_attn_weights,
                 'enc_dec_attn_weights': enc_dec_attn_weights}
 
     _masks = threading.local()
@@ -345,12 +345,12 @@ class ProbeNewTransformer(nn.Module):
             'state': self.embed(inputs, self.embedding),
             'mask': inputs.eq(self.padding_idx)
         }
-        enc_attn_weights_list = []
+        encoder_attn_weights_list = []
         for i, encoder in enumerate(self.encoders):
             encoded = encoder(encoded, i)
-            enc_attn_weights_list.append(encoded['enc_attn_weights'])
+            encoder_attn_weights_list.append(encoded['encoder_attn_weights'])
 
-        encoder_attn_weights_tensor = torch.stack(enc_attn_weights_list)
+        encoder_attn_weights_tensor = torch.stack(encoder_attn_weights_list)
 
         return encoded, encoder_attn_weights_tensor
 
