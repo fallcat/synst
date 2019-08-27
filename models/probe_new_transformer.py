@@ -7,7 +7,7 @@ import threading
 import torch
 from torch import nn
 
-from models.new_attention import NewAttention
+from models.probe_new_attention import ProbeNewAttention
 from models.attention import MultiHeadedAttention
 from models.embeddings import PositionEmbedding, TokenEmbedding
 from models.utils import LabelSmoothingLoss, Translator
@@ -78,7 +78,7 @@ class TransformerEncoderLayer(nn.Module):
         )
 
         self.self_attention = TransformerSublayer(
-            NewAttention(attn_config, dim, num_heads),
+            ProbeNewAttention(attn_config, dim, num_heads),
             dim, dropout_p
         )
 
@@ -92,7 +92,9 @@ class TransformerEncoderLayer(nn.Module):
         mask = inputs['mask']
         state = inputs['state']
 
-        state = self.self_attention(
+        # print("encoder self attention")
+
+        state, enc_attn_weights = self.self_attention(
             state, # residual
             state, state, state, mask, # passed to multiheaded attention
             layer_i
@@ -103,12 +105,12 @@ class TransformerEncoderLayer(nn.Module):
             state # passed to feed-forward network
         )
 
-        return {'state': state, 'mask': mask}
+        return {'state': state, 'mask': mask, 'enc_attn_weights': enc_attn_weights}
 
 
 class TransformerDecoderLayer(nn.Module):
     ''' Implements a single decoder layer in a transformer decoder stack '''
-    def __init__(self, num_heads, dim, hidden_dim, causal=True, span=1, dropout_p=0.1):
+    def __init__(self, dec_attn_config, enc_dec_attn_config, num_heads, dim, hidden_dim, causal=True, span=1, dropout_p=0.1):
         ''' Initialize the transformer layer '''
         super(TransformerDecoderLayer, self).__init__()
 
@@ -122,12 +124,14 @@ class TransformerDecoderLayer(nn.Module):
         )
 
         self.self_attention = TransformerSublayer(
-            MultiHeadedAttention(dim, num_heads),
+            ProbeNewAttention(dec_attn_config, dim, num_heads),
             dim, dropout_p
         )
 
+        # print("create source")
+
         self.source_attention = TransformerSublayer(
-            MultiHeadedAttention(dim, num_heads),
+            ProbeNewAttention(enc_dec_attn_config, dim, num_heads),
             dim, dropout_p
         )
 
@@ -148,13 +152,16 @@ class TransformerDecoderLayer(nn.Module):
             # If caching, only want the last k=span sequence values. Requires no causal masking.
             residual = state[:, -self.span:]
             kwargs['num_queries'] = self.span
+            kwargs['decoder_position'] = state.shape[1] - 1
         else:
             # If not caching, use the full sequence and ensure an appropriate causal mask
             residual = state
             kwargs['key_mask'] = mask
             kwargs['attention_mask'] = self.mask(state)
 
-        state = self.self_attention(
+        print("decoder self attention")
+
+        state, dec_attn_weights = self.self_attention(
             residual, # residual
             state, state, state, **kwargs # passed to multiheaded attention
         )
@@ -164,7 +171,9 @@ class TransformerDecoderLayer(nn.Module):
         if self.causal and cache is not None:
             kwargs['num_queries'] = self.span
 
-        state = self.source_attention(
+        print("decoder source attention")
+
+        state, enc_dec_attn_weights = self.source_attention(
             state, # residual
             source, source, state, **kwargs # passed to multiheaded attention
         )
@@ -181,7 +190,9 @@ class TransformerDecoderLayer(nn.Module):
             else:
                 state = cache[self.uuid] = torch.cat((cached, state), 1)
 
-        return {'state': state, 'mask': mask, 'cache': cache}
+        return {'state': state, 'mask': mask, 'cache': cache,
+                'dec_attn_weights': dec_attn_weights,
+                'enc_dec_attn_weights': enc_dec_attn_weights}
 
     _masks = threading.local()
     def mask(self, inputs):
@@ -260,7 +271,20 @@ class ProbeNewTransformer(nn.Module):
     def create_decoders(cls, config):
         ''' Create the transformer decoders '''
         kwargs = {'dropout_p': config.dropout_p, 'span': config.span}
-        args = [config.num_heads, config.embedding_size, config.hidden_dim]
+        dec_attn_config = {'attn_type': config.dec_attn_type,
+                           'attn_position': config.dec_attn_position,
+                           'attn_param': config.dec_attn_param,
+                           'attn_displacement': config.dec_attn_displacement,
+                           'num_layers': config.dec_num_layers,
+                           'num_heads': config.dec_num_heads}
+        enc_dec_attn_config = {'attn_type': config.enc_dec_attn_type,
+                               'attn_position': config.enc_dec_attn_position,
+                               'attn_param': config.enc_dec_attn_param,
+                               'attn_displacement': config.enc_dec_attn_displacement,
+                               'num_layers': config.enc_dec_num_layers,
+                               'num_heads': config.enc_dec_num_heads}
+        print("enc_dec_attn_config", enc_dec_attn_config)
+        args = [dec_attn_config, enc_dec_attn_config, config.num_heads, config.embedding_size, config.hidden_dim]
         return nn.ModuleList([
             TransformerDecoderLayer(*args, **kwargs)
             for _ in range(config.num_layers)
@@ -293,8 +317,9 @@ class ProbeNewTransformer(nn.Module):
 
     def forward(self, batch): # pylint:disable=arguments-differ
         ''' A batch of inputs and targets '''
+        encoded, enc_attn_weights_tensor = self.encode(batch['inputs'])
         decoded = self.decode(
-            self.encode(batch['inputs']),
+            encoded,
             right_shift(right_shift(batch['targets']), shift=self.span - 1, fill=self.sos_idx),
         )
 
@@ -304,7 +329,11 @@ class ProbeNewTransformer(nn.Module):
         nll = self.cross_entropy(logits, targets).sum(dims[:-1])
         smoothed_nll = self.label_smoothing(logits, targets).sum(dims)
 
-        return smoothed_nll, nll
+        return {'smoothed_nll': smoothed_nll,
+                'nll': nll,
+                'encoder_attn_weights_tensor': enc_attn_weights_tensor,
+                'decoder_attn_weights_tensor': decoded['dec_attn_weights_tensor'],
+                'enc_dec_attn_weights_tensor': decoded['enc_dec_attn_weights_tensor']}
 
     def encode(self, inputs):
         ''' Encode the inputs '''
@@ -312,10 +341,14 @@ class ProbeNewTransformer(nn.Module):
             'state': self.embed(inputs, self.embedding),
             'mask': inputs.eq(self.padding_idx)
         }
+        enc_attn_weights_list = []
         for i, encoder in enumerate(self.encoders):
             encoded = encoder(encoded, i)
+            enc_attn_weights_list.append(encoded['enc_attn_weights'])
 
-        return encoded
+        enc_attn_weights_tensor = torch.stack(enc_attn_weights_list)
+
+        return encoded, enc_attn_weights_tensor
 
     def decode(self, encoded, targets, decoders=None, embedding=None, cache=None, mask=None):
         ''' Decode the encoded sequence to the targets '''
@@ -330,8 +363,15 @@ class ProbeNewTransformer(nn.Module):
             'state': self.embed(targets, embedding),
             'mask': targets.eq(self.padding_idx) if mask is None else mask
         }
+        dec_attn_weights_list = []
+        enc_dec_attn_weights_list = []
         for decoder in decoders:
             decoded = decoder(decoded, encoded)
+            dec_attn_weights_list.append(decoded['dec_attn_weights'])
+            enc_dec_attn_weights_list.append(decoded['enc_dec_attn_weights'])
+
+        dec_attn_weights_tensor = torch.stack(dec_attn_weights_list)
+        enc_dec_attn_weights_tensor = torch.stack(enc_dec_attn_weights_list)
 
         # compute projection to the vocabulary
         state = decoded['state']
@@ -341,6 +381,8 @@ class ProbeNewTransformer(nn.Module):
         return {
             'cache': decoded.get('cache'),
             'logits': embedding(state, transpose=True).transpose(2, 1),  # transpose to B x C x ...
+            'dec_attn_weights_tensor': dec_attn_weights_tensor,
+            'enc_dec_attn_weights_tensor': enc_dec_attn_weights_tensor
         }
 
     def embed(self, inputs, token_embedding):

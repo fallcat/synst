@@ -11,14 +11,14 @@ from torch.nn import functional as F
 from utils import same_tensor
 
 
-class NewAttention(nn.Module):
+class ProbeNewAttention(nn.Module):
     ''' Implement a hard-coded attention module '''
     ATTN_TYPES = ['normal', 'uniform', 'whole', 'no', 'learned']
     ATTN_POSITIONS = ['center', 'left', 'right', 'first', 'last', 'middle']
 
     def __init__(self, attn_config, embed_dim, num_heads=1):
         ''' Initialize the attention module '''
-        super(NewAttention, self).__init__()
+        super(ProbeNewAttention, self).__init__()
 
         # ensure valid inputs
         assert embed_dim % num_heads == 0, \
@@ -39,9 +39,11 @@ class NewAttention(nn.Module):
 
         # Combine projections for multiple heads into a single linear layer for efficiency
         # self.input_weights = nn.Parameter(torch.Tensor(3 * embed_dim, embed_dim))
-        if 'learned' in self.attn_type:
+        if 'learned' in self.attn_type or 'learned' == self.attn_type:
+            print("here")
             self.input_weights = nn.Parameter(torch.Tensor(3 * embed_dim, embed_dim))
         else:
+            print("not here")
             self.input_weights = nn.Parameter(torch.Tensor(embed_dim, embed_dim))
         self.output_projection = nn.Linear(embed_dim, embed_dim, bias=False)
         self.reset_parameters()
@@ -90,8 +92,15 @@ class NewAttention(nn.Module):
                   -1,
                   self.projection_dim)
 
-    def attention(self, values, keys, queries, key_mask=None, mask=None, layer_i=0):
+    def attention(self, values, keys, queries, key_mask=None, mask=None, layer_i=0, decoder_position=-1):
         ''' Scaled dot product attention with optional masks '''
+
+        # print("values", values.shape)
+        # print("keys", keys.shape)
+        # print("queries", queries.shape)
+        # print("attn_type", self.attn_type)
+        # print("attn_position", self.attn_position)
+        # print("input weights", self.input_weights)
 
         # By this point the values, keys, and queries all have B * H as their first dimension
         batch_size = queries.shape[0] // self.num_heads
@@ -117,8 +126,22 @@ class NewAttention(nn.Module):
                 attn_configs.append(attn_config_i)
         attn_type, attn_position, attn_param, attn_displacement = attn_configs
 
+        # print("attn_type", attn_type)
+
         if attn_type == 'learned':
+            # print("in learned")
             logits = self.scale * torch.bmm(queries, keys.transpose(2, 1))
+            # print("queries", queries)
+            # print("keys", keys)
+            # print("logits", logits)
+            # print("queries", queries.shape)
+            # print("keys", keys.shape)
+            # print("logits", logits.shape)
+            # print("queries 0", queries[0])
+            # print("keys 0", keys.transpose(2,1)[0])
+            # print("queries 0", queries[0].shape)
+            # print("keys 0", keys.transpose(2, 1)[0].shape)
+            # print("q x k", torch.mm(queries[0], keys.transpose(2, 1)[0]))
             if mask is not None:
                 logits += mask
 
@@ -135,6 +158,9 @@ class NewAttention(nn.Module):
 
             batch_size = queries.shape[0] // self.num_heads
 
+            # print("attn_weights", attn_weights)
+            # print("attn_weights shape", attn_weights.shape)
+
             return attended.view(
                         batch_size,
                         self.num_heads,
@@ -144,11 +170,7 @@ class NewAttention(nn.Module):
                         batch_size,
                         -1,
                         self.num_heads * self.projection_dim
-                    ), attn_weights.view(batch_size,
-                                         self.num_heads,
-                                         attn_weights.size()[1],
-                                         -1
-                                         )
+                    ), attn_weights
 
         elif 'learned' in attn_type:
             learned_idx = np.where(np.array(attn_type) == 'learned')[0]
@@ -175,52 +197,62 @@ class NewAttention(nn.Module):
             learned_count = 0
 
         if type(attn_type) is not list and type(attn_position) is not list:
+            # print("enter first")
             if attn_type == 'whole':
                 logits = torch.full((queries.shape[1], values.shape[1]), 1 / values.shape[1]).to(dtype=torch.float32)
             else:
                 if attn_type not in self.attn_weights:
                     self.attn_weights[attn_type] = {}
-                if attn_position not in self.attn_weights[attn_type] \
-                        or (queries.shape[1] > self.attn_weights[attn_type][attn_position].shape[0]
-                            or values.shape[1] > self.attn_weights[attn_type][attn_position].shape[1]):
-                    indices_q = torch.arange(queries.shape[1]).view(-1, 1).to(dtype=torch.float32)
-                    indices_v = torch.arange(values.shape[1]).view(1, -1).to(dtype=torch.float32)
+                # if attn_position not in self.attn_weights[attn_type] \
+                #         or (queries.shape[1] > self.attn_weights[attn_type][attn_position].shape[0]
+                #             or values.shape[1] > self.attn_weights[attn_type][attn_position].shape[1]):
+                indices_q = torch.arange(queries.shape[1]).view(-1, 1).to(dtype=torch.float32)
+                indices_v = torch.arange(values.shape[1]).view(1, -1).to(dtype=torch.float32)
 
-                    if attn_position == 'left':
-                        indices_q = indices_q - attn_displacement
-                    elif attn_position == 'right':
-                        indices_q = indices_q + attn_displacement
-                    elif attn_position == 'first':
-                        indices_q[:] = 0
-                    elif attn_position == 'last':
-                        indices_q[:] = indices_q.size()[0] - 1
-                    elif attn_position == 'middle':
-                        indices_q[:] = (indices_q.size()[0] + 1) / 2 - 1
+                # print("decoder_position", decoder_position)
+                # print("indices_v", indices_v.shape)
 
-                    distance_diff = indices_v - indices_q
-                    # print("distance_diff", distance_diff)
+                if decoder_position > -1:
+                    indices_q[:] = decoder_position
 
-                    if attn_type == 'normal':
-                        # std = 1 / (attn_param * math.sqrt(2 * math.pi))
-                        std = attn_param
+                if attn_position == 'left':
+                    indices_q = indices_q - attn_displacement
+                elif attn_position == 'right':
+                    indices_q = indices_q + attn_displacement
+                elif attn_position == 'first':
+                    indices_q[:] = 0
+                elif attn_position == 'last':
+                    indices_q[:] = indices_v.size()[1] - 1
+                elif attn_position == 'middle':
+                    indices_q[:] = (indices_v.size()[1] + 1) / 2 - 1
 
-                        logits = (1 / (std * math.sqrt(2 * math.pi)) * torch.exp(- 1 / 2 * (distance_diff / std) ** 2))
-                    else:
-                        distance_diff = torch.abs(distance_diff)
-                        distance_diff[distance_diff <= attn_param] = 0
-                        distance_diff[distance_diff > attn_param] = 1
-                        logits = 1 - distance_diff
-                        logits = logits / torch.sum(logits, dim=-1, keepdim=True)
-                        # logits = F.softmax(logits, dim=-1)
-                    self.attn_weights[attn_type][attn_position] = logits
+                distance_diff = indices_v - indices_q
+                # print("distance_diff", distance_diff)
+
+                if attn_type == 'normal':
+                    # std = 1 / (attn_param * math.sqrt(2 * math.pi))
+                    std = attn_param
+
+                    logits = (1 / (std * math.sqrt(2 * math.pi)) * torch.exp(- 1 / 2 * (distance_diff / std) ** 2))
                 else:
-                    logits = self.attn_weights[attn_type][attn_position][:queries.shape[1], :values.shape[1]]
+                    distance_diff = torch.abs(distance_diff)
+                    distance_diff[distance_diff <= attn_param] = 0
+                    distance_diff[distance_diff > attn_param] = 1
+                    logits = 1 - distance_diff
+                    logits = logits / torch.sum(logits, dim=-1, keepdim=True)
+                    # logits = F.softmax(logits, dim=-1)
+                self.attn_weights[attn_type][attn_position] = logits
+                # else:
+                #     logits = self.attn_weights[attn_type][attn_position][:queries.shape[1], :values.shape[1]]
             # print("logits", logits)
-            attn_weights = logits.type_as(values)
-            attended = torch.bmm(attn_weights.expand(values.shape[0], attn_weights.shape[0], attn_weights.shape[1]),
+            attn_weights = logits.type_as(values).expand(values.shape[0], logits.shape[0], logits.shape[1])
+            if mask is not None:
+                attn_weights += mask
+            attended = torch.bmm(attn_weights,
                                  values)
 
         else:
+            # print("enter second")
             if type(attn_type) is not list:
                 # print("attn_type not list")
                 attn_type = [attn_type] * self.num_heads
@@ -248,51 +280,65 @@ class NewAttention(nn.Module):
                 else:
                     if attn_type[i] not in self.attn_weights:
                         self.attn_weights[attn_type[i]] = {}
-                    if attn_position[i] not in self.attn_weights[attn_type[i]] \
-                            or (queries.shape[1] > self.attn_weights[attn_type[i]][attn_position[i]].shape[0]
-                                or values.shape[1] > self.attn_weights[attn_type[i]][attn_position[i]].shape[1]):
-                        indices_q = torch.arange(queries.shape[1]).view(-1, 1).to(dtype=torch.float32)
-                        indices_v = torch.arange(values.shape[1]).view(1, -1).to(dtype=torch.float32)
+                    # if attn_position[i] not in self.attn_weights[attn_type[i]] \
+                    #         or (queries.shape[1] > self.attn_weights[attn_type[i]][attn_position[i]].shape[0]
+                    #             or values.shape[1] > self.attn_weights[attn_type[i]][attn_position[i]].shape[1]):
+                    indices_q = torch.arange(queries.shape[1]).view(-1, 1).to(dtype=torch.float32)
+                    indices_v = torch.arange(values.shape[1]).view(1, -1).to(dtype=torch.float32)
 
-                        if attn_position[i] == 'left':
-                            indices_q = indices_q - attn_displacement[i]
-                        elif attn_position[i] == 'right':
-                            indices_q = indices_q + attn_displacement[i]
-                        elif attn_position[i] == 'first':
-                            indices_q[:] = 0
-                        elif attn_position[i] == 'last':
-                            indices_q[:] = indices_q.size()[0] - 1
-                        elif attn_position == 'middle':
-                            indices_q[:] = (indices_q.size()[0] + 1) / 2 - 1
+                    print("decoder_position", decoder_position)
+                    print("indices_v", indices_v.shape)
 
-                        distance_diff = indices_v - indices_q
-                        # print("distance_diff", distance_diff)
+                    if decoder_position > -1:
+                        indices_q[:] = decoder_position
 
-                        if attn_type[i] == 'normal':
-                            # std = 1 / (attn_param[i] * math.sqrt(2 * math.pi))
-                            std = attn_param[i]
+                    if attn_position[i] == 'left':
+                        indices_q = indices_q - attn_displacement[i]
+                    elif attn_position[i] == 'right':
+                        indices_q = indices_q + attn_displacement[i]
+                    elif attn_position[i] == 'first':
+                        indices_q[:] = 0
+                    elif attn_position[i] == 'last':
+                        indices_q[:] = indices_v.size()[1] - 1
+                    elif attn_position == 'middle':
+                        indices_q[:] = (indices_v.size()[1] + 1) / 2 - 1
 
-                            logits = (1 / (std * math.sqrt(2 * math.pi)) * torch.exp(- 1 / 2 * (distance_diff / std) ** 2))
-                        else:
-                            distance_diff = torch.abs(distance_diff)
-                            distance_diff[distance_diff <= attn_param[i]] = 0
-                            distance_diff[distance_diff > attn_param[i]] = 1
-                            logits = 1 - distance_diff
-                            logits = logits / torch.sum(logits, dim=-1, keepdim=True)
-                            # logits = F.softmax(logits, dim=-1)
-                        self.attn_weights[attn_type[i]][attn_position[i]] = logits
+                    distance_diff = indices_v - indices_q
+                    # print("distance_diff", distance_diff)
+
+                    if attn_type[i] == 'normal':
+                        # std = 1 / (attn_param[i] * math.sqrt(2 * math.pi))
+                        std = attn_param[i]
+
+                        logits = (1 / (std * math.sqrt(2 * math.pi)) * torch.exp(- 1 / 2 * (distance_diff / std) ** 2))
                     else:
-                        logits = self.attn_weights[attn_type[i]][attn_position[i]][:queries.shape[1], :values.shape[1]]
+                        distance_diff = torch.abs(distance_diff)
+                        distance_diff[distance_diff <= attn_param[i]] = 0
+                        distance_diff[distance_diff > attn_param[i]] = 1
+                        logits = 1 - distance_diff
+                        logits = logits / torch.sum(logits, dim=-1, keepdim=True)
+                        # logits = F.softmax(logits, dim=-1)
+                    self.attn_weights[attn_type[i]][attn_position[i]] = logits
+                    # else:
+                    #     logits = self.attn_weights[attn_type[i]][attn_position[i]][:queries.shape[1], :values.shape[1]]
                     logits = logits.unsqueeze(0).expand(int(values.shape[0] / self.num_heads),
                                                         queries.shape[1],
                                                         values.shape[1]).type_as(values)
+                    # print("other", logits.is_cuda)
                 logits_list.append(logits)
             attn_weights = torch.stack(logits_list, dim=1)
-            attended = torch.bmm(attn_weights
-                                 .view(values.shape[0],
-                                       attn_weights.shape[2],
-                                       attn_weights.shape[3]),
+            attn_weights = attn_weights.view(values.shape[0],
+                                             attn_weights.shape[2],
+                                             attn_weights.shape[3])
+
+            if mask is not None:
+                attn_weights += mask
+
+            attended = torch.bmm(attn_weights,
                                  values)
+
+        print("attn_weights", attn_weights)
+        print("attn_weights shape", attn_weights.shape)
 
         return attended.view(
             batch_size,
@@ -303,17 +349,23 @@ class NewAttention(nn.Module):
             batch_size,
             -1,
             self.num_heads * self.projection_dim
-        ), attn_weights.view(batch_size,
-                             self.num_heads,
-                             attn_weights.size()[1],
-                             -1
-                             )
+        ), attn_weights
 
     def forward(self, values, keys, queries, # pylint:disable=arguments-differ
-                key_mask=None, attention_mask=None, num_queries=0, layer_i=0):
+                key_mask=None, attention_mask=None, num_queries=0, layer_i=0, decoder_position=-1):
         ''' Forward pass of the attention '''
         # pylint:disable=unbalanced-tuple-unpacking
-        if 'learned' in self.attn_type:
+        print("self.attn_type", self.attn_type)
+        print("start forward in new attention")
+        print("============================")
+        print("values", values)
+        print("keys", keys)
+        print("queries", queries)
+        print("key_mask", key_mask)
+        print("attention_mask", attention_mask)
+        print("num_queries", num_queries)
+        if 'learned' in self.attn_type or 'learned' == self.attn_type:
+            print("in")
             if same_tensor(values, keys, queries):
                 values, keys, queries = self.project(values, chunks=3)
             elif same_tensor(values, keys):
@@ -349,6 +401,8 @@ class NewAttention(nn.Module):
             )
         # pylint:enable=unbalanced-tuple-unpacking
 
+        # print("num_queries", num_queries)
+
         if num_queries:
             queries = queries[:, -num_queries:]
 
@@ -358,5 +412,5 @@ class NewAttention(nn.Module):
         # print("num_heads", self.num_heads)
         # print("projection_dim", self.projection_dim)
 
-        attended, attn_weights = self.attention(values, keys, queries, key_mask, attention_mask, layer_i)
-        return self.output_projection(attended), attn_weights
+        attended = self.attention(values, keys, queries, key_mask, attention_mask, layer_i, decoder_position)
+        return self.output_projection(attended)

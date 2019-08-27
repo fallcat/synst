@@ -246,6 +246,8 @@ class NewAttention(nn.Module):
                 #     logits = self.attn_weights[attn_type][attn_position][:queries.shape[1], :values.shape[1]]
             # print("logits", logits)
             attn_weights = logits.type_as(values).expand(values.shape[0], logits.shape[0], logits.shape[1])
+            if mask is not None:
+                attn_weights += mask
             attended = torch.bmm(attn_weights,
                                  values)
 
@@ -325,11 +327,12 @@ class NewAttention(nn.Module):
                     # print("other", logits.is_cuda)
                 logits_list.append(logits)
             attn_weights = torch.stack(logits_list, dim=1)
-
-            attended = torch.bmm(attn_weights
-                                 .view(values.shape[0],
-                                       attn_weights.shape[2],
-                                       attn_weights.shape[3]),
+            attn_weights = attn_weights.view(values.shape[0],
+                                             attn_weights.shape[2],
+                                             attn_weights.shape[3])
+            if mask is not None:
+                attn_weights += mask
+            attended = torch.bmm(attn_weights,
                                  values)
 
         print("attn_weights", attn_weights)
