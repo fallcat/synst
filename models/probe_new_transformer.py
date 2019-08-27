@@ -37,7 +37,8 @@ class TransformerSublayer(nn.Module):
 
     def forward(self, inputs, *sublayer_args, **sublayer_kwargs): # pylint:disable=arguments-differ
         ''' The forward pass of the sublayer '''
-        return self.norm(inputs + self.dropout(self.sublayer(*sublayer_args, **sublayer_kwargs)))
+        attention, attn_weights = self.sublayer(*sublayer_args, **sublayer_kwargs)
+        return self.norm(inputs + self.dropout(attention)), attn_weights
 
 
 class TransformerFFN(nn.Module):
