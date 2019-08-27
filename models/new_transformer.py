@@ -92,7 +92,7 @@ class TransformerEncoderLayer(nn.Module):
         mask = inputs['mask']
         state = inputs['state']
 
-        print("encoder self attention")
+        # print("encoder self attention")
 
         state = self.self_attention(
             state, # residual
@@ -123,22 +123,28 @@ class TransformerDecoderLayer(nn.Module):
             dim, dropout_p
         )
 
-        self.self_attention = TransformerSublayer(
-            NewAttention(dec_attn_config, dim, num_heads),
-            dim, dropout_p
-        )
-
-        print("create source")
-
-        self.source_attention = TransformerSublayer(
-            NewAttention(enc_dec_attn_config, dim, num_heads),
-            dim, dropout_p
-        )
-
-        # self.source_attention = TransformerSublayer(
-        #     MultiHeadedAttention(dim, num_heads),
+        # self.self_attention = TransformerSublayer(
+        #     NewAttention(dec_attn_config, dim, num_heads),
         #     dim, dropout_p
         # )
+
+        self.self_attention = TransformerSublayer(
+            MultiHeadedAttention(dim, num_heads),
+            dim, dropout_p
+        )
+
+        # print("create source")
+
+        # self.source_attention = TransformerSublayer(
+        #     NewAttention(enc_dec_attn_config, dim, num_heads),
+        #     dim, dropout_p
+        # )
+
+
+        self.source_attention = TransformerSublayer(
+            MultiHeadedAttention(dim, num_heads),
+            dim, dropout_p
+        )
 
     def reset_parameters(self):
         ''' Reset the parameters of the module '''
