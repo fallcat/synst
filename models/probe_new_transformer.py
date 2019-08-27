@@ -92,7 +92,7 @@ class TransformerEncoderLayer(nn.Module):
         mask = inputs['mask']
         state = inputs['state']
 
-        # print("encoder self attention")
+        print("encoder self attention")
 
         state, enc_attn_weights = self.self_attention(
             state, # residual
