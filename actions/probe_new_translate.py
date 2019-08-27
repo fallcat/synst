@@ -17,6 +17,7 @@ from tqdm import tqdm
 
 from utils import profile
 from utils import tqdm_wrap_stdout
+from models.utils import save_attention
 
 
 class ProbeNewTranslator(object):
@@ -74,6 +75,8 @@ class ProbeNewTranslator(object):
                 # run the data through the model
                 batches.set_description_str(get_description())
                 sequences = self.translator.translate(batch)
+                print("batch", batch)
+                print("sequences", sequences)
 
                 if self.config.timed:
                     continue
@@ -86,6 +89,9 @@ class ProbeNewTranslator(object):
                         join = verbose < 3
                         for key in sequences.keys():
                             sequence = sequences[key][i]
+                            print("key", key)
+                            print("sequences[key]", sequences[key])
+                            print("sequence", sequence)
                             sequence = ' '.join(self.dataset.decode(sequence, join, trim))
                             outputs.append(f'{key}: {sequence}\n')
                         outputs.append(f'+++++++++++++++++++++++++++++\n')
@@ -116,7 +122,7 @@ class ProbeNewTranslator(object):
                 os.makedirs(self.config.output_directory)
 
             if self.config.timed:
-                Translator.CURRENT = self
+                ProbeNewTranslator.CURRENT = self
                 stmt = f'Translator.CURRENT.translate_all(None, {epoch}, None, {verbose})'
                 timing = timeit.timeit(stmt, stmt, number=self.config.timed, globals=globals())
                 print(f'Translation timing={timing/self.config.timed}')
