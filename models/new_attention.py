@@ -98,9 +98,9 @@ class NewAttention(nn.Module):
         # print("values", values.shape)
         # print("keys", keys.shape)
         # print("queries", queries.shape)
-        print("attn_type", self.attn_type)
-        print("attn_position", self.attn_position)
-        print("input weights", self.input_weights)
+        # print("attn_type", self.attn_type)
+        # print("attn_position", self.attn_position)
+        # print("input weights", self.input_weights)
 
         # By this point the values, keys, and queries all have B * H as their first dimension
         batch_size = queries.shape[0] // self.num_heads
@@ -126,22 +126,22 @@ class NewAttention(nn.Module):
                 attn_configs.append(attn_config_i)
         attn_type, attn_position, attn_param, attn_displacement = attn_configs
 
-        print("attn_type", attn_type)
+        # print("attn_type", attn_type)
 
         if attn_type == 'learned':
-            print("in learned")
+            # print("in learned")
             logits = self.scale * torch.bmm(queries, keys.transpose(2, 1))
-            print("queries", queries)
-            print("keys", keys)
-            print("logits", logits)
-            print("queries", queries.shape)
-            print("keys", keys.shape)
-            print("logits", logits.shape)
-            print("queries 0", queries[0])
-            print("keys 0", keys.transpose(2,1)[0])
-            print("queries 0", queries[0].shape)
-            print("keys 0", keys.transpose(2, 1)[0].shape)
-            print("q x k", torch.mm(queries[0], keys.transpose(2, 1)[0]))
+            # print("queries", queries)
+            # print("keys", keys)
+            # print("logits", logits)
+            # print("queries", queries.shape)
+            # print("keys", keys.shape)
+            # print("logits", logits.shape)
+            # print("queries 0", queries[0])
+            # print("keys 0", keys.transpose(2,1)[0])
+            # print("queries 0", queries[0].shape)
+            # print("keys 0", keys.transpose(2, 1)[0].shape)
+            # print("q x k", torch.mm(queries[0], keys.transpose(2, 1)[0]))
             if mask is not None:
                 logits += mask
 
@@ -158,8 +158,8 @@ class NewAttention(nn.Module):
 
             batch_size = queries.shape[0] // self.num_heads
 
-            print("attn_weights", attn_weights)
-            print("attn_weights shape", attn_weights.shape)
+            # print("attn_weights", attn_weights)
+            # print("attn_weights shape", attn_weights.shape)
 
             return attended.view(
                         batch_size,
