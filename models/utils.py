@@ -478,7 +478,7 @@ class ProbeNewTranslator(object):
                 ('targets', targets),
                 ('gold_targets', gold_targets),
                 ('enc_attn_weights_tensor', enc_attn_weights_tensor),
-                ('dec_attn_weights_tensors', decoder_results['dec_attn_weights_tensors']),
+                ('dec_attn_weights_tensors', decoder_results['decoder_attn_weights_tensors']),
                 ('enc_dec_attn_weights_tensors', decoder_results['enc_dec_attn_weights_tensors'])
             ])
 
