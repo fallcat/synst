@@ -412,5 +412,5 @@ class ProbeNewAttention(nn.Module):
         # print("num_heads", self.num_heads)
         # print("projection_dim", self.projection_dim)
 
-        attended = self.attention(values, keys, queries, key_mask, attention_mask, layer_i, decoder_position)
-        return self.output_projection(attended)
+        attended, attn_weights = self.attention(values, keys, queries, key_mask, attention_mask, layer_i, decoder_position)
+        return self.output_projection(attended), attn_weights
