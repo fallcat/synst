@@ -406,9 +406,6 @@ class ProbeNewTranslator(object):
             'model': model
         }
 
-        self.num_layers = model.num_layers
-        self.num_heads = model.num_heads
-
     def to(self, device):
         ''' Move the translator to the specified device '''
         if 'cuda' in device.type:
