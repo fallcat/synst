@@ -82,6 +82,7 @@ class ProbeNewTranslator(object):
                     continue
 
                 target_sequences = next(iter(sequences.values()))
+                print("target_sequences", target_sequences)
                 for i, example_id in enumerate(batch['example_ids']):
                     outputs = []
                     if verbose > 1:
