@@ -76,6 +76,7 @@ class ProbeNewTranslator(object):
                 batches.set_description_str(get_description())
                 sequences = self.translator.translate(batch)
                 print("batch", batch)
+                print("sequences['encoder_attn_weights_tensor']", sequences['encoder_attn_weights_tensor'])
                 print("sequences", sequences)
 
                 if self.config.timed:
@@ -83,6 +84,8 @@ class ProbeNewTranslator(object):
 
                 target_sequences = next(iter(sequences.values()))
                 print("target_sequences", target_sequences)
+                encoder_attn_weights_tensor = sequences.values()[2]
+                print(encoder_attn_weights_tensor)
                 for i, example_id in enumerate(batch['example_ids']):
                     outputs = []
                     if verbose > 1:
