@@ -97,6 +97,7 @@ class ProbeNewTranslator(object):
                         outputs.append(f'+++++++++++++++++++++++++++++\n')
                     else:
                         sequence = target_sequences[i]
+                        print("inside sequence", sequence)
                         decoded = ' '.join(self.dataset.decode(sequence, trim=not verbose))
                         outputs.append(f'{decoded}\n')
 
