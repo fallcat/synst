@@ -102,7 +102,7 @@ class ProbeNewTranslator(object):
                         for j in range(encoder_attn_weights_tensor.shape[0]):
                             attn_filename = f'encoder_attn_weights{example_id}_{j}.png'
                             attn_path = os.path.join(self.config.output_directory, attn_filename)
-                            save_attention(source_sentence, source_sentence, encoder_attn_weights_tensor[j], attn_path)
+                            save_attention(source_sentence, source_sentence, encoder_attn_weights_tensor[j].cpu().numpy(), attn_path)
 
                     if self.config.order_output:
                         ordered_outputs.append((example_id, outputs))

@@ -532,7 +532,8 @@ def save_attention(input_sentence, output_words, attentions, file_path):
     # Set up figure with colorbar
     fig = plt.figure()
     ax = fig.add_subplot(111)
-    cax = ax.matshow(attentions.cpu().numpy(), cmap='bone')
+    print("attentions shape", attentions.shape)
+    cax = ax.matshow(attentions, cmap='bone')
     fig.colorbar(cax)
 
     # Set up axes
