@@ -82,8 +82,8 @@ class ProbeNewTranslator(object):
 
                 target_sequences = next(iter(sequences.values()))
                 encoder_attn_weights_tensor = attn_weights_tensors_dict['encoder_attn_weights_tensor']
-                decoder_attn_weights_tensor = attn_weights_tensors_dict['decoder_attn_weights_tensor']
-                enc_dec_attn_weights_tensor = attn_weights_tensors_dict['enc_dec_attn_weights_tensor']
+                decoder_attn_weights_tensors = attn_weights_tensors_dict['decoder_attn_weights_tensors']
+                enc_dec_attn_weights_tensors = attn_weights_tensors_dict['enc_dec_attn_weights_tensors']
                 for i, example_id in enumerate(batch['example_ids']):
                     outputs = []
                     if verbose > 1:
