@@ -539,7 +539,7 @@ def save_attention(input_sentence, output_words, attentions, file_path):
     # Set up axes
     ax.set_xticklabels([''] + input_sentence.split(' ') +
                        ['<EOS>'], rotation=90)
-    ax.set_yticklabels([''] + output_words)
+    ax.set_yticklabels([''] + output_words.split(' '))
 
     # Show label at every tick
     ax.xaxis.set_major_locator(ticker.MultipleLocator(1))
