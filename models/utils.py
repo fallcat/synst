@@ -476,11 +476,10 @@ class ProbeNewTranslator(object):
 
             return OrderedDict([
                 ('targets', targets),
-                ('gold_targets', gold_targets),
-                ('encoder_attn_weights_tensor', encoder_attn_weights_tensor),
-                ('decoder_attn_weights_tensors', decoder_results['decoder_attn_weights_tensors']),
-                ('enc_dec_attn_weights_tensors', decoder_results['enc_dec_attn_weights_tensors'])
-            ])
+                ('gold_targets', gold_targets)
+            ]), {'encoder_attn_weights_tensor': encoder_attn_weights_tensor,
+                 'decoder_attn_weights_tensors': decoder_results['decoder_attn_weights_tensors'],
+                 'enc_dec_attn_weights_tensors': decoder_results['enc_dec_attn_weights_tensors']}
 
 
 def get_final_state(x, mask, dim=1):
@@ -529,7 +528,7 @@ def probe(attn_weights):
             'abs_argmax_distances': torch.abs(argmax_distances.float())}
 
 
-def save_attention(input_sentence, output_words, attentions):
+def save_attention(input_sentence, output_words, attentions, file_path):
     # Set up figure with colorbar
     fig = plt.figure()
     ax = fig.add_subplot(111)
@@ -545,4 +544,4 @@ def save_attention(input_sentence, output_words, attentions):
     ax.xaxis.set_major_locator(ticker.MultipleLocator(1))
     ax.yaxis.set_major_locator(ticker.MultipleLocator(1))
 
-    plt.show()
+    plt.savefig(file_path)

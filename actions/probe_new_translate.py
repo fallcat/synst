@@ -74,18 +74,16 @@ class ProbeNewTranslator(object):
             for batch in batches:
                 # run the data through the model
                 batches.set_description_str(get_description())
-                sequences = self.translator.translate(batch)
-                print("batch", batch)
-                print("sequences['encoder_attn_weights_tensor']", sequences['encoder_attn_weights_tensor'])
-                print("sequences", sequences)
+                print("batch keys", batch.keys())
+                sequences, attn_weights_tensors_dict = self.translator.translate(batch)
 
                 if self.config.timed:
                     continue
 
                 target_sequences = next(iter(sequences.values()))
-                print("target_sequences", target_sequences)
-                encoder_attn_weights_tensor = sequences.values()[2]
-                print(encoder_attn_weights_tensor)
+                encoder_attn_weights_tensor = attn_weights_tensors_dict['encoder_attn_weights_tensor']
+                decoder_attn_weights_tensor = attn_weights_tensors_dict['decoder_attn_weights_tensor']
+                enc_dec_attn_weights_tensor = attn_weights_tensors_dict['enc_dec_attn_weights_tensor']
                 for i, example_id in enumerate(batch['example_ids']):
                     outputs = []
                     if verbose > 1:
@@ -93,17 +91,18 @@ class ProbeNewTranslator(object):
                         join = verbose < 3
                         for key in sequences.keys():
                             sequence = sequences[key][i]
-                            print("key", key)
-                            print("sequences[key]", sequences[key])
-                            print("sequence", sequence)
                             sequence = ' '.join(self.dataset.decode(sequence, join, trim))
                             outputs.append(f'{key}: {sequence}\n')
                         outputs.append(f'+++++++++++++++++++++++++++++\n')
                     else:
                         sequence = target_sequences[i]
-                        print("inside sequence", sequence)
                         decoded = ' '.join(self.dataset.decode(sequence, trim=not verbose))
                         outputs.append(f'{decoded}\n')
+                        source_sentence = ' '.join(self.dataset.decode(batch['input'][i], trim=not verbose))
+                        for j in range(encoder_attn_weights_tensor.shape[0]):
+                            attn_filename = f'encoder_attn_weights{example_id}_{j}.png'
+                            attn_path = os.path.join(self.config.output_directory, attn_filename)
+                            save_attention(source_sentence, source_sentence, encoder_attn_weights_tensor[j], attn_path)
 
                     if self.config.order_output:
                         ordered_outputs.append((example_id, outputs))
