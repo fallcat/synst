@@ -222,7 +222,7 @@ class ProbeBeamSearchDecoder(object):
 
                         new_cache = result.get('cache')
                         print("new_cache", len(new_cache))
-                        print("new_cache", new_cache)
+                        print("new_cache", new_cache[0].shape)
                         decoder_attn_weights_tensor = result.get('decoder_attn_weights_tensor')
                         print("decoder_attn_weights_tensor", decoder_attn_weights_tensor.shape)
                         enc_dec_attn_weights_tensor = result.get('enc_dec_attn_weights_tensor')
