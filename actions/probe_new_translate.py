@@ -112,7 +112,7 @@ class ProbeNewTranslator(object):
                         new_targets.append(sequence)
                         decoded = ' '.join(self.dataset.decode(sequence, trim=not verbose))
                         outputs.append(f'{decoded}\n')
-                        output_sentences.append(decoded)
+                        output_sentences.append(torch.LongTensor(decoded))
                         source_sentence = ' '.join(self.dataset.decode(batch['inputs'][i], trim=not verbose))
                         source_sentences.append(source_sentence)
 
