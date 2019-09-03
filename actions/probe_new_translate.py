@@ -81,7 +81,6 @@ class ProbeNewTranslator(object):
             for batch in batches:
                 # run the data through the model
                 batches.set_description_str(get_description())
-                print("batch", batch)
                 sequences, attn_weights_tensors_dict = self.translator.translate(batch)
 
                 if self.config.timed:
@@ -89,16 +88,6 @@ class ProbeNewTranslator(object):
 
                 target_sequences = next(iter(sequences.values()))
                 encoder_attn_weights_tensor = attn_weights_tensors_dict['encoder_attn_weights_tensor']
-                decoder_attn_weights_tensors = attn_weights_tensors_dict['decoder_attn_weights_tensors']
-                enc_dec_attn_weights_tensors = attn_weights_tensors_dict['enc_dec_attn_weights_tensors']
-                # print("decoder_attn_weights_tensors[0]", decoder_attn_weights_tensors[0].shape)
-                # print("enc_dec_attn_weights_tensors[0]", enc_dec_attn_weights_tensors[0].shape)
-                # print("decoder_attn_weights_tensors[1]", decoder_attn_weights_tensors[1].shape)
-                # print("enc_dec_attn_weights_tensors[1]", enc_dec_attn_weights_tensors[1].shape)
-                # print("decoder_attn_weights_tensors[-1]", decoder_attn_weights_tensors[-1].shape)
-                # print("enc_dec_attn_weights_tensors[-1]", enc_dec_attn_weights_tensors[-1].shape)
-                # print("decoder_attn_weights_tensors[-2]", decoder_attn_weights_tensors[-2].shape)
-                # print("enc_dec_attn_weights_tensors[-2]", enc_dec_attn_weights_tensors[-2].shape)
                 new_targets = []
                 output_sentences = []
                 source_sentences = []
@@ -135,7 +124,6 @@ class ProbeNewTranslator(object):
                         output_file.writelines(outputs)
 
                 self.dataset.collate_field(batch, 'target', new_targets)
-                print("new batch", batch)
                 result = self.model(batch)
                 # Decoder heatmap
                 for i, example_id in enumerate(batch['example_ids']):

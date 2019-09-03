@@ -96,8 +96,6 @@ class TransformerEncoderLayer(nn.Module):
         mask = inputs['mask']
         state = inputs['state']
 
-        print("encoder self attention")
-
         state, encoder_attn_weights = self.self_attention(
             state, # residual
             state, state, state, mask, # passed to multiheaded attention
@@ -163,7 +161,7 @@ class TransformerDecoderLayer(nn.Module):
             kwargs['key_mask'] = mask
             kwargs['attention_mask'] = self.mask(state)
 
-        print("decoder self attention")
+        # print("decoder self attention")
 
         state, decoder_attn_weights = self.self_attention(
             residual, # residual
@@ -175,7 +173,7 @@ class TransformerDecoderLayer(nn.Module):
         if self.causal and cache is not None:
             kwargs['num_queries'] = self.span
 
-        print("decoder source attention")
+        # print("decoder source attention")
 
         state, enc_dec_attn_weights = self.source_attention(
             state, # residual
@@ -287,7 +285,7 @@ class ProbeNewTransformer(nn.Module):
                                'attn_displacement': config.enc_dec_attn_displacement,
                                'num_layers': config.enc_dec_num_layers,
                                'num_heads': config.enc_dec_num_heads}
-        print("enc_dec_attn_config", enc_dec_attn_config)
+        # print("enc_dec_attn_config", enc_dec_attn_config)
         args = [dec_attn_config, enc_dec_attn_config, config.num_heads, config.embedding_size, config.hidden_dim]
         return nn.ModuleList([
             TransformerDecoderLayer(*args, **kwargs)
