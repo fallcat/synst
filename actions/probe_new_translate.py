@@ -109,10 +109,10 @@ class ProbeNewTranslator(object):
                         outputs.append(f'+++++++++++++++++++++++++++++\n')
                     else:
                         sequence = target_sequences[i]
-                        new_targets.append(sequence)
+                        new_targets.append(torch.LongTensor(sequence))
                         decoded = ' '.join(self.dataset.decode(sequence, trim=not verbose))
                         outputs.append(f'{decoded}\n')
-                        output_sentences.append(torch.LongTensor(decoded))
+                        output_sentences.append(decoded)
                         source_sentence = ' '.join(self.dataset.decode(batch['inputs'][i], trim=not verbose))
                         source_sentences.append(source_sentence)
 
