@@ -365,12 +365,12 @@ class NewAttention(nn.Module):
                 key_mask=None, attention_mask=None, num_queries=0, layer_i=0, decoder_position=-1):
         ''' Forward pass of the attention '''
         # pylint:disable=unbalanced-tuple-unpacking
-        print("self.attn_type", self.attn_type)
-        print("start forward in new attention")
-        print("============================")
-        print("values", values)
-        print("keys", keys)
-        print("queries", queries)
+        # print("self.attn_type", self.attn_type)
+        # print("start forward in new attention")
+        # print("============================")
+        # print("values", values)
+        # print("keys", keys)
+        # print("queries", queries)
         print("key_mask", key_mask)
         print("attention_mask", attention_mask)
         print("num_queries", num_queries)
