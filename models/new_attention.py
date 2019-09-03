@@ -251,7 +251,7 @@ class NewAttention(nn.Module):
             if mask is not None:
                 print("attn_weights", attn_weights)
                 print("attn_weights", type(attn_weights))
-                attn_weights += mask
+                attn_weights = attn_weights.clone() + mask
             if key_mask is not None:
                 attn_weights_shape = attn_weights.shape
                 batch_size = attn_weights_shape[0] // self.num_heads
@@ -343,7 +343,7 @@ class NewAttention(nn.Module):
             if mask is not None:
                 print("attn_weights", attn_weights)
                 print("attn_weights", type(attn_weights))
-                attn_weights += mask
+                attn_weights = attn_weights.clone() + mask
             if key_mask is not None:
                 attn_weights_shape = attn_weights.shape
                 batch_size = attn_weights_shape[0] // self.num_heads
