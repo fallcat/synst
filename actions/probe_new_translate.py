@@ -13,6 +13,7 @@ import timeit
 from contextlib import ExitStack
 
 import torch
+from torch import nn
 from tqdm import tqdm
 
 from utils import profile
@@ -30,6 +31,9 @@ class ProbeNewTranslator(object):
         self.translator = model.translator(config).to(device)
         self.model = model
         self.device = device
+
+        if 'cuda' in device.type:
+            self.model = nn.DataParallel(model.cuda())
 
         self.modules = {
             'model': model
