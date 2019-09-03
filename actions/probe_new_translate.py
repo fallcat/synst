@@ -75,6 +75,7 @@ class ProbeNewTranslator(object):
             for batch in batches:
                 # run the data through the model
                 batches.set_description_str(get_description())
+                print("batch", batch)
                 sequences, attn_weights_tensors_dict = self.translator.translate(batch)
 
                 if self.config.timed:
@@ -113,7 +114,8 @@ class ProbeNewTranslator(object):
                             for k in range(encoder_attn_weights_tensor.shape[1]):
                                 attn_filename = f'encoder_attn_weights{example_id}_l{j}_h{k}.png'
                                 attn_path = os.path.join(self.config.output_directory, attn_filename)
-                                save_attention(source_sentence, source_sentence, encoder_attn_weights_tensor[j][k].cpu().numpy(), attn_path)
+                                save_attention(source_sentence, source_sentence,
+                                               encoder_attn_weights_tensor[j][k].cpu().numpy(), attn_path)
 
                     if self.config.order_output:
                         ordered_outputs.append((example_id, outputs))
