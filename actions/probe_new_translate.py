@@ -129,7 +129,7 @@ class ProbeNewTranslator(object):
                     else:
                         output_file.writelines(outputs)
 
-                self.dataset.collate_field(batch, 'targets', new_targets)
+                self.dataset.collate_field(batch, 'target', new_targets)
                 print("new batch", batch)
                 result = self.model(batch)
                 # Decoder heatmap
