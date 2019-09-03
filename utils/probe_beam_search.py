@@ -221,12 +221,12 @@ class ProbeBeamSearchDecoder(object):
                         result = self.model(encoded_batch, batch, cache=cache)
 
                         new_cache = result.get('cache')
-                        print("new_cache", len(new_cache))
-                        print("new_cache", new_cache[0].shape)
+                        # print("new_cache", len(new_cache))
+                        # print("new_cache", new_cache[0].shape)
                         decoder_attn_weights_tensor = result.get('decoder_attn_weights_tensor')
-                        print("decoder_attn_weights_tensor", decoder_attn_weights_tensor.shape)
+                        # print("decoder_attn_weights_tensor", decoder_attn_weights_tensor.shape)
                         enc_dec_attn_weights_tensor = result.get('enc_dec_attn_weights_tensor')
-                        print("enc_dec_attn_weights_tensor", enc_dec_attn_weights_tensor.shape)
+                        # print("enc_dec_attn_weights_tensor", enc_dec_attn_weights_tensor.shape)
                         decoder_attn_weights_tensors.append(decoder_attn_weights_tensor)
                         enc_dec_attn_weights_tensors.append(enc_dec_attn_weights_tensor)
                         if new_cache:

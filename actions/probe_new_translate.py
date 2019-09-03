@@ -71,6 +71,7 @@ class ProbeNewTranslator(object):
         )
 
         with tqdm_wrap_stdout():
+            self.model.eval()
             ordered_outputs = []
             for batch in batches:
                 # run the data through the model
@@ -85,15 +86,17 @@ class ProbeNewTranslator(object):
                 encoder_attn_weights_tensor = attn_weights_tensors_dict['encoder_attn_weights_tensor']
                 decoder_attn_weights_tensors = attn_weights_tensors_dict['decoder_attn_weights_tensors']
                 enc_dec_attn_weights_tensors = attn_weights_tensors_dict['enc_dec_attn_weights_tensors']
-                print("decoder_attn_weights_tensors[0]", decoder_attn_weights_tensors[0].shape)
-                print("enc_dec_attn_weights_tensors[0]", enc_dec_attn_weights_tensors[0].shape)
-                print("decoder_attn_weights_tensors[1]", decoder_attn_weights_tensors[1].shape)
-                print("enc_dec_attn_weights_tensors[1]", enc_dec_attn_weights_tensors[1].shape)
-                print("decoder_attn_weights_tensors[-1]", decoder_attn_weights_tensors[-1].shape)
-                print("enc_dec_attn_weights_tensors[-1]", enc_dec_attn_weights_tensors[-1].shape)
-                print("decoder_attn_weights_tensors[-2]", decoder_attn_weights_tensors[-2].shape)
-                print("enc_dec_attn_weights_tensors[-2]", enc_dec_attn_weights_tensors[-2].shape)
+                # print("decoder_attn_weights_tensors[0]", decoder_attn_weights_tensors[0].shape)
+                # print("enc_dec_attn_weights_tensors[0]", enc_dec_attn_weights_tensors[0].shape)
+                # print("decoder_attn_weights_tensors[1]", decoder_attn_weights_tensors[1].shape)
+                # print("enc_dec_attn_weights_tensors[1]", enc_dec_attn_weights_tensors[1].shape)
+                # print("decoder_attn_weights_tensors[-1]", decoder_attn_weights_tensors[-1].shape)
+                # print("enc_dec_attn_weights_tensors[-1]", enc_dec_attn_weights_tensors[-1].shape)
+                # print("decoder_attn_weights_tensors[-2]", decoder_attn_weights_tensors[-2].shape)
+                # print("enc_dec_attn_weights_tensors[-2]", enc_dec_attn_weights_tensors[-2].shape)
                 new_targets = []
+                output_sentences = []
+                source_sentences = []
                 for i, example_id in enumerate(batch['example_ids']):
                     outputs = []
                     if verbose > 1:
@@ -109,7 +112,11 @@ class ProbeNewTranslator(object):
                         new_targets.append(sequence)
                         decoded = ' '.join(self.dataset.decode(sequence, trim=not verbose))
                         outputs.append(f'{decoded}\n')
+                        output_sentences.append(decoded)
                         source_sentence = ' '.join(self.dataset.decode(batch['inputs'][i], trim=not verbose))
+                        source_sentences.append(source_sentence)
+
+                        # Encoder heatmap
                         for j in range(encoder_attn_weights_tensor.shape[0]):
                             for k in range(encoder_attn_weights_tensor.shape[1]):
                                 attn_filename = f'encoder_attn_weights{example_id}_l{j}_h{k}.png'
@@ -121,6 +128,22 @@ class ProbeNewTranslator(object):
                         ordered_outputs.append((example_id, outputs))
                     else:
                         output_file.writelines(outputs)
+
+                self.dataset.collate_field(batch, 'targets', new_targets)
+                print("new batch", batch)
+                result = self.model(batch)
+                # Decoder heatmap
+                for i, example_id in enumerate(batch['example_ids']):
+                    for j in range(result['decoder_attn_weights_tensor'].shape[0]):
+                        for k in range(result['decoder_attn_weights_tensor'].shape[1]):
+                            attn_filename = f'decoder_attn_weights{example_id}_l{j}_h{k}.png'
+                            attn_path = os.path.join(self.config.output_directory, attn_filename)
+                            save_attention(output_sentences[i], output_sentences[i],
+                                           result['decoder_attn_weights_tensor'][j][k].cpu().numpy(), attn_path)
+                            attn_filename = f'enc_dec_attn_weights{example_id}_l{j}_h{k}.png'
+                            attn_path = os.path.join(self.config.output_directory, attn_filename)
+                            save_attention(output_sentences[i], source_sentences[i],
+                                           result['enc_dec_attn_weights_tensor'][j][k].cpu().numpy(), attn_path)
 
             for _, outputs in sorted(ordered_outputs, key=lambda x: x[0]): # pylint:disable=consider-using-enumerate
                 output_file.writelines(outputs)
