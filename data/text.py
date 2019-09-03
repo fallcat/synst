@@ -87,7 +87,7 @@ class TextDataset(Dataset):
 
     def collate_field(self, batch, field_name, values):
         ''' Collate a specific field '''
-        print("values", values)
+        print("values", type(values))
         batch[field_name + 's'] = nn.utils.rnn.pad_sequence(
             values, batch_first=True, padding_value=self.padding_idx)
         batch[field_name + '_lens'] = torch.LongTensor([len(sequence) for sequence in values])
