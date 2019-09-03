@@ -545,3 +545,4 @@ def save_attention(input_sentence, output_words, attentions, file_path):
     ax.yaxis.set_major_locator(ticker.MultipleLocator(1))
 
     plt.savefig(file_path)
+    plt.close('all')
