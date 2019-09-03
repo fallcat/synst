@@ -143,6 +143,8 @@ class NewAttention(nn.Module):
             # print("keys 0", keys.transpose(2, 1)[0].shape)
             # print("q x k", torch.mm(queries[0], keys.transpose(2, 1)[0]))
             if mask is not None:
+                print("logits", logits)
+                print("logits", type(logits))
                 logits += mask
 
             if key_mask is not None:
@@ -247,6 +249,8 @@ class NewAttention(nn.Module):
             # print("logits", logits)
             attn_weights = logits.type_as(values).expand(values.shape[0], logits.shape[0], logits.shape[1])
             if mask is not None:
+                print("attn_weights", attn_weights)
+                print("attn_weights", type(attn_weights))
                 attn_weights += mask
             if key_mask is not None:
                 attn_weights_shape = attn_weights.shape
@@ -337,6 +341,8 @@ class NewAttention(nn.Module):
                                              attn_weights.shape[2],
                                              attn_weights.shape[3])
             if mask is not None:
+                print("attn_weights", attn_weights)
+                print("attn_weights", type(attn_weights))
                 attn_weights += mask
             if key_mask is not None:
                 attn_weights_shape = attn_weights.shape
