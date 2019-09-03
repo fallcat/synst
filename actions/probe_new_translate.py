@@ -29,6 +29,7 @@ class ProbeNewTranslator(object):
         self.dataloader = dataloader
         self.translator = model.translator(config).to(device)
         self.model = model
+        self.device = device
 
         self.modules = {
             'model': model
@@ -109,7 +110,7 @@ class ProbeNewTranslator(object):
                         outputs.append(f'+++++++++++++++++++++++++++++\n')
                     else:
                         sequence = target_sequences[i]
-                        new_targets.append(torch.LongTensor(sequence))
+                        new_targets.append(torch.LongTensor(sequence).to(self.device))
                         decoded = ' '.join(self.dataset.decode(sequence, trim=not verbose))
                         outputs.append(f'{decoded}\n')
                         output_sentences.append(decoded)
