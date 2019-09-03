@@ -256,7 +256,7 @@ class NewAttention(nn.Module):
                 attn_weights_shape = attn_weights.shape
                 batch_size = attn_weights_shape[0] // self.num_heads
                 attn_weights = attn_weights.view(batch_size, self.num_heads, attn_weights_shape[1], attn_weights_shape[2])
-                attn_weights.masked_fill_(key_mask[:, None, None], 0)
+                attn_weights.masked_fill_(key_mask[:, None, None], float(0))
                 attn_weights = attn_weights.view(attn_weights_shape)
             attended = torch.bmm(attn_weights,
                                  values)
@@ -348,7 +348,7 @@ class NewAttention(nn.Module):
                 attn_weights_shape = attn_weights.shape
                 batch_size = attn_weights_shape[0] // self.num_heads
                 attn_weights = attn_weights.view(batch_size, self.num_heads, attn_weights_shape[1], attn_weights_shape[2])
-                attn_weights.masked_fill_(key_mask[:, None, None], 0)
+                attn_weights.masked_fill_(key_mask[:, None, None], float(0))
                 attn_weights = attn_weights.view(attn_weights_shape)
             attended = torch.bmm(attn_weights,
                                  values)
