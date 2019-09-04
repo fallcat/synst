@@ -248,18 +248,6 @@ class NewAttention(nn.Module):
                 #     logits = self.attn_weights[attn_type][attn_position][:queries.shape[1], :values.shape[1]]
             # print("logits", logits)
             attn_weights = logits.type_as(values).expand(values.shape[0], logits.shape[0], logits.shape[1])
-            if mask is not None:
-                # print("attn_weights", attn_weights)
-                # print("attn_weights", type(attn_weights))
-                attn_weights = attn_weights.clone() + mask
-            if key_mask is not None:
-                attn_weights_shape = attn_weights.shape
-                batch_size = attn_weights_shape[0] // self.num_heads
-                attn_weights = attn_weights.view(batch_size, self.num_heads, attn_weights_shape[1], attn_weights_shape[2])
-                attn_weights.masked_fill_(key_mask[:, None, None], float(0))
-                attn_weights = attn_weights.view(attn_weights_shape)
-            attended = torch.bmm(attn_weights,
-                                 values)
 
         else:
             # print("enter second")
@@ -340,16 +328,19 @@ class NewAttention(nn.Module):
             attn_weights = attn_weights.view(values.shape[0],
                                              attn_weights.shape[2],
                                              attn_weights.shape[3])
-            if mask is not None:
-                attn_weights = attn_weights.clone() + mask
-            if key_mask is not None:
-                attn_weights_shape = attn_weights.shape
-                batch_size = attn_weights_shape[0] // self.num_heads
-                attn_weights = attn_weights.view(batch_size, self.num_heads, attn_weights_shape[1], attn_weights_shape[2])
-                attn_weights.masked_fill_(key_mask[:, None, None], float(0))
-                attn_weights = attn_weights.view(attn_weights_shape)
-            attended = torch.bmm(attn_weights,
-                                 values)
+        if mask is not None:
+            new_mask = mask.clone()
+            new_mask[new_mask == 0] = 1
+            new_mask[new_mask == float('-inf')] = 0
+            attn_weights = attn_weights.clone() * new_mask
+        if key_mask is not None:
+            attn_weights_shape = attn_weights.shape
+            batch_size = attn_weights_shape[0] // self.num_heads
+            attn_weights = attn_weights.view(batch_size, self.num_heads, attn_weights_shape[1], attn_weights_shape[2])
+            attn_weights.masked_fill_(key_mask[:, None, None], float(0))
+            attn_weights = attn_weights.view(attn_weights_shape)
+        attended = torch.bmm(attn_weights,
+                             values)
 
         print("attn_weights", attn_weights)
         print("attn_weights shape", attn_weights.shape)
