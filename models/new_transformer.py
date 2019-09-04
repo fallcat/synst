@@ -99,7 +99,7 @@ class TransformerEncoderLayer(nn.Module):
         state = self.self_attention(
             state, # residual
             state, state, state, mask, # passed to multiheaded attention
-            layer_i
+            layer_i=layer_i
         )
 
         state = self.ffn(
@@ -154,7 +154,7 @@ class TransformerDecoderLayer(nn.Module):
         self.self_attention.reset_parameters()
         self.source_attention.reset_parameters()
 
-    def forward(self, inputs, sources): # pylint:disable=arguments-differ
+    def forward(self, inputs, sources, layer_i): # pylint:disable=arguments-differ
         ''' The forward pass '''
         mask = inputs['mask']
         state = inputs['state']
@@ -171,6 +171,7 @@ class TransformerDecoderLayer(nn.Module):
             residual = state
             kwargs['key_mask'] = mask
             kwargs['attention_mask'] = self.mask(state)
+        kwargs['layer_i'] = layer_i
 
         print("decoder self attention")
 
@@ -180,7 +181,7 @@ class TransformerDecoderLayer(nn.Module):
         )
 
         source = sources['state']
-        kwargs = {'key_mask': sources['mask']}
+        kwargs = {'key_mask': sources['mask'], 'layer_i': layer_i}
         if self.causal and cache is not None:
             kwargs['num_queries'] = self.span
 
@@ -365,8 +366,8 @@ class NewTransformer(nn.Module):
             'state': self.embed(targets, embedding),
             'mask': targets.eq(self.padding_idx) if mask is None else mask
         }
-        for decoder in decoders:
-            decoded = decoder(decoded, encoded)
+        for i, decoder in enumerate(decoders):
+            decoded = decoder(decoded, encoded, i)
 
         # compute projection to the vocabulary
         state = decoded['state']
