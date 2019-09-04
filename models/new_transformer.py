@@ -94,7 +94,7 @@ class TransformerEncoderLayer(nn.Module):
 
         # print("encoder self attention")
 
-        print("outside layer_i", layer_i)
+        # print("outside layer_i", layer_i)
 
         state = self.self_attention(
             state, # residual
@@ -160,7 +160,7 @@ class TransformerDecoderLayer(nn.Module):
         state = inputs['state']
         cache = inputs.get('cache')
 
-        kwargs = {}
+        kwargs = {'layer_i': layer_i}
         if self.causal and cache is not None:
             # If caching, only want the last k=span sequence values. Requires no causal masking.
             residual = state[:, -self.span:]
@@ -171,9 +171,8 @@ class TransformerDecoderLayer(nn.Module):
             residual = state
             kwargs['key_mask'] = mask
             kwargs['attention_mask'] = self.mask(state)
-        kwargs['layer_i'] = layer_i
 
-        print("decoder self attention")
+        # print("decoder self attention")
 
         state = self.self_attention(
             residual, # residual
@@ -185,7 +184,7 @@ class TransformerDecoderLayer(nn.Module):
         if self.causal and cache is not None:
             kwargs['num_queries'] = self.span
 
-        print("decoder source attention")
+        # print("decoder source attention")
 
         state = self.source_attention(
             state, # residual
@@ -295,7 +294,7 @@ class NewTransformer(nn.Module):
                                'attn_displacement': config.enc_dec_attn_displacement,
                                'num_layers': config.enc_dec_num_layers,
                                'num_heads': config.enc_dec_num_heads}
-        print("enc_dec_attn_config", enc_dec_attn_config)
+        # print("enc_dec_attn_config", enc_dec_attn_config)
         args = [dec_attn_config, enc_dec_attn_config, config.num_heads, config.embedding_size, config.hidden_dim]
         return nn.ModuleList([
             TransformerDecoderLayer(*args, **kwargs)

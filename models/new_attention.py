@@ -40,10 +40,10 @@ class NewAttention(nn.Module):
         # Combine projections for multiple heads into a single linear layer for efficiency
         # self.input_weights = nn.Parameter(torch.Tensor(3 * embed_dim, embed_dim))
         if 'learned' in self.attn_type or 'learned' == self.attn_type:
-            print("here")
+            # print("here")
             self.input_weights = nn.Parameter(torch.Tensor(3 * embed_dim, embed_dim))
         else:
-            print("not here")
+            # print("not here")
             self.input_weights = nn.Parameter(torch.Tensor(embed_dim, embed_dim))
         self.output_projection = nn.Linear(embed_dim, embed_dim, bias=False)
         self.reset_parameters()
@@ -98,8 +98,8 @@ class NewAttention(nn.Module):
         # print("values", values.shape)
         # print("keys", keys.shape)
         # print("queries", queries.shape)
-        print("attn_type", self.attn_type)
-        print("attn_position", self.attn_position)
+        # print("attn_type", self.attn_type)
+        # print("attn_position", self.attn_position)
         # print("input weights", self.input_weights)
 
         # By this point the values, keys, and queries all have B * H as their first dimension
@@ -342,8 +342,8 @@ class NewAttention(nn.Module):
         attended = torch.bmm(attn_weights,
                              values)
 
-        print("attn_weights", attn_weights)
-        print("attn_weights shape", attn_weights.shape)
+        # print("attn_weights", attn_weights)
+        # print("attn_weights shape", attn_weights.shape)
 
         return attended.view(
             batch_size,
@@ -366,12 +366,12 @@ class NewAttention(nn.Module):
         # print("values", values)
         # print("keys", keys)
         # print("queries", queries)
-        print("key_mask", key_mask)
-        print("attention_mask", attention_mask)
-        print("num_queries", num_queries)
-        print("layer_i", layer_i)
+        # print("key_mask", key_mask)
+        # print("attention_mask", attention_mask)
+        # print("num_queries", num_queries)
+        # print("layer_i", layer_i)
         if 'learned' in self.attn_type or 'learned' == self.attn_type:
-            print("in")
+            # print("in")
             if same_tensor(values, keys, queries):
                 values, keys, queries = self.project(values, chunks=3)
             elif same_tensor(values, keys):

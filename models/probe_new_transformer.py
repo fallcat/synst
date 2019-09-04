@@ -99,7 +99,7 @@ class TransformerEncoderLayer(nn.Module):
         state, encoder_attn_weights = self.self_attention(
             state, # residual
             state, state, state, mask, # passed to multiheaded attention
-            layer_i
+            layer_i=layer_i
         )
 
         state = self.ffn(
@@ -143,13 +143,13 @@ class TransformerDecoderLayer(nn.Module):
         self.self_attention.reset_parameters()
         self.source_attention.reset_parameters()
 
-    def forward(self, inputs, sources): # pylint:disable=arguments-differ
+    def forward(self, inputs, sources, layer_i): # pylint:disable=arguments-differ
         ''' The forward pass '''
         mask = inputs['mask']
         state = inputs['state']
         cache = inputs.get('cache')
 
-        kwargs = {}
+        kwargs = {'layer_i': layer_i}
         if self.causal and cache is not None:
             # If caching, only want the last k=span sequence values. Requires no causal masking.
             residual = state[:, -self.span:]
@@ -367,8 +367,8 @@ class ProbeNewTransformer(nn.Module):
         }
         decoder_attn_weights_list = []
         enc_dec_attn_weights_list = []
-        for decoder in decoders:
-            decoded = decoder(decoded, encoded)
+        for i, decoder in enumerate(decoders):
+            decoded = decoder(decoded, encoded, i)
             decoder_attn_weights_list.append(decoded['decoder_attn_weights'])
             enc_dec_attn_weights_list.append(decoded['enc_dec_attn_weights'])
 
