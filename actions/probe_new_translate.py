@@ -106,8 +106,9 @@ class ProbeNewTranslator(object):
                         new_targets.append(torch.LongTensor(sequence))
                         decoded = ' '.join(self.dataset.decode(sequence, trim=not verbose))
                         outputs.append(f'{decoded}\n')
-                        output_sentences.append(decoded)
-                        source_sentence = ' '.join(self.dataset.decode(batch['inputs'][i], trim=not verbose))
+                        output_sentence = ' '.join(self.dataset.decode(sequence, join=False, trim=not verbose))
+                        output_sentences.append(output_sentence)
+                        source_sentence = ' '.join(self.dataset.decode(batch['inputs'][i], join=False, trim=not verbose))
                         source_sentences.append(source_sentence)
 
                         # Encoder heatmap
@@ -135,7 +136,7 @@ class ProbeNewTranslator(object):
                                            result['decoder_attn_weights_tensor'][j][k].cpu().numpy(), attn_path)
                             attn_filename = f'enc_dec_attn_weights{example_id}_l{j}_h{k}.png'
                             attn_path = os.path.join(self.config.output_directory, attn_filename)
-                            save_attention(output_sentences[i], source_sentences[i],
+                            save_attention(source_sentences[i], output_sentences[i],
                                            result['enc_dec_attn_weights_tensor'][j][k].cpu().numpy(), attn_path)
 
             for _, outputs in sorted(ordered_outputs, key=lambda x: x[0]): # pylint:disable=consider-using-enumerate
