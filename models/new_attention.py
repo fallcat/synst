@@ -98,10 +98,10 @@ class NewAttention(nn.Module):
         # print("values", values.shape)
         # print("keys", keys.shape)
         # print("queries", queries.shape)
-        print("attn_type", self.attn_type)
-        print("attn_position", self.attn_position)
+        # print("attn_type", self.attn_type)
+        # print("attn_position", self.attn_position)
         # print("input weights", self.input_weights)
-        print("decoder_position", decoder_position)
+        # print("decoder_position", decoder_position)
 
         # By this point the values, keys, and queries all have B * H as their first dimension
         batch_size = queries.shape[0] // self.num_heads
@@ -343,8 +343,8 @@ class NewAttention(nn.Module):
         attended = torch.bmm(attn_weights,
                              values)
 
-        print("attn_weights", attn_weights)
-        print("attn_weights shape", attn_weights.shape)
+        # print("attn_weights", attn_weights)
+        # print("attn_weights shape", attn_weights.shape)
 
         return attended.view(
             batch_size,
