@@ -165,7 +165,7 @@ class TransformerDecoderLayer(nn.Module):
             # If caching, only want the last k=span sequence values. Requires no causal masking.
             residual = state[:, -self.span:]
             kwargs['num_queries'] = self.span
-            # kwargs['decoder_position'] = state.shape[1] - 1
+            kwargs['decoder_position'] = state.shape[1] - 1
         else:
             # If not caching, use the full sequence and ensure an appropriate causal mask
             residual = state
