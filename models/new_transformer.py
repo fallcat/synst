@@ -92,7 +92,7 @@ class TransformerEncoderLayer(nn.Module):
         mask = inputs['mask']
         state = inputs['state']
 
-        print("encoder self attention")
+        # print("encoder self attention")
 
         # print("outside layer_i", layer_i)
 
@@ -172,7 +172,7 @@ class TransformerDecoderLayer(nn.Module):
             kwargs['key_mask'] = mask
             kwargs['attention_mask'] = self.mask(state)
 
-        print("decoder self attention")
+        # print("decoder self attention")
 
         state = self.self_attention(
             residual, # residual
@@ -184,7 +184,7 @@ class TransformerDecoderLayer(nn.Module):
         if self.causal and cache is not None:
             kwargs['num_queries'] = self.span
 
-        print("decoder source attention")
+        # print("decoder source attention")
 
         state = self.source_attention(
             state, # residual
