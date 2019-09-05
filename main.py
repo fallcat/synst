@@ -29,8 +29,6 @@ from utils import profile
 from comet_ml import Experiment
     
 # Add the following code anywhere in your machine learning file
-experiment = Experiment(api_key="IC0nxJoG6lqyQyfvKEJN58jZf",
-                        project_name="transformer-attn", workspace="umass-nlp")
 
 def main(argv=None):
     ''' Main entry point '''
