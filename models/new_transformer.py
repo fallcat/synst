@@ -250,7 +250,7 @@ class NewTransformer(nn.Module):
 
         # Allow for overriding the encoders and decoders in dervied classes
         self.encoders = type(self).create_encoders(config)
-        self.decoders = type(self).create_decoders(config)
+        self.decoders = self.create_decoders(config)
 
         self.label_smoothing = LabelSmoothingLoss(
             config.label_smoothing or 0,
@@ -278,8 +278,8 @@ class NewTransformer(nn.Module):
             for _ in range(config.num_layers)
         ])
 
-    @classmethod
-    def create_decoders(cls, config):
+    # @classmethod
+    def create_decoders(self, config):
         ''' Create the transformer decoders '''
         kwargs = {'dropout_p': config.dropout_p, 'span': config.span}
         dec_attn_config = {'attn_type': config.dec_attn_type,
@@ -293,7 +293,8 @@ class NewTransformer(nn.Module):
                                'attn_param': config.enc_dec_attn_param,
                                'attn_displacement': config.enc_dec_attn_displacement,
                                'num_layers': config.enc_dec_num_layers,
-                               'num_heads': config.enc_dec_num_heads}
+                               'num_heads': config.enc_dec_num_heads,
+                               'word_count_ratio': self.dataset.word_count_ratio}
         # print("enc_dec_attn_config", enc_dec_attn_config)
         args = [dec_attn_config, enc_dec_attn_config, config.num_heads, config.embedding_size, config.hidden_dim]
         return nn.ModuleList([

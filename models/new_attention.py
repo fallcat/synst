@@ -34,6 +34,7 @@ class NewAttention(nn.Module):
         self.attn_param = attn_config['attn_param']
         self.attn_displacement = attn_config['attn_displacement']
         self.num_layers = attn_config['num_layers']
+        self.word_count_ratio = attn_config['word_count_ratio'] if 'word_count_ratio' in attn_config else 1
         # self.max_prob = attn_config['max_prob']
         # self.window_size = attn_config['window_size']
 
@@ -211,8 +212,7 @@ class NewAttention(nn.Module):
                 # if attn_position not in self.attn_weights[attn_type] \
                 #         or (queries.shape[1] > self.attn_weights[attn_type][attn_position].shape[0]
                 #             or values.shape[1] > self.attn_weights[attn_type][attn_position].shape[1]):
-                indices_q = torch.arange(queries.shape[1]).view(-1, 1).to(dtype=torch.float32) * \
-                            values_shape[1] / queries_shape[1]
+                indices_q = torch.arange(queries.shape[1]).view(-1, 1).to(dtype=torch.float32) * self.word_count_ratio
                 indices_v = torch.arange(values.shape[1]).view(1, -1).to(dtype=torch.float32)
 
                 # print("decoder_position", decoder_position)
@@ -285,8 +285,7 @@ class NewAttention(nn.Module):
                     # if attn_position[i] not in self.attn_weights[attn_type[i]] \
                     #         or (queries.shape[1] > self.attn_weights[attn_type[i]][attn_position[i]].shape[0]
                     #             or values.shape[1] > self.attn_weights[attn_type[i]][attn_position[i]].shape[1]):
-                    indices_q = torch.arange(queries.shape[1]).view(-1, 1).to(dtype=torch.float32) * \
-                                values_shape[1] / queries_shape[1]
+                    indices_q = torch.arange(queries.shape[1]).view(-1, 1).to(dtype=torch.float32) * self.word_count_ratio
                     indices_v = torch.arange(values.shape[1]).view(1, -1).to(dtype=torch.float32)
 
                     # print("decoder_position", decoder_position)
