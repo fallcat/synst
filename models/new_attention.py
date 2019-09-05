@@ -245,7 +245,7 @@ class NewAttention(nn.Module):
                     distance_diff[distance_diff <= attn_param] = 0
                     distance_diff[distance_diff > attn_param] = 1
                     logits = 1 - distance_diff
-                    logits = logits / torch.sum(logits, dim=-1, keepdim=True)
+                logits = logits / torch.sum(logits, dim=-1, keepdim=True)
                     # logits = F.softmax(logits, dim=-1)
                 self.attn_weights[attn_type][attn_position] = logits
                 # else:
@@ -319,7 +319,7 @@ class NewAttention(nn.Module):
                         distance_diff[distance_diff <= attn_param[i]] = 0
                         distance_diff[distance_diff > attn_param[i]] = 1
                         logits = 1 - distance_diff
-                        logits = logits / torch.sum(logits, dim=-1, keepdim=True)
+                    logits = logits / torch.sum(logits, dim=-1, keepdim=True)
                         # logits = F.softmax(logits, dim=-1)
                     self.attn_weights[attn_type[i]][attn_position[i]] = logits
                     # else:
