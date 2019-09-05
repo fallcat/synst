@@ -10,6 +10,8 @@ from torch.nn import functional as F
 
 from utils import same_tensor
 
+torch.set_printoptions(threshold=5000)
+
 
 class NewAttention(nn.Module):
     ''' Implement a hard-coded attention module '''
