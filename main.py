@@ -25,6 +25,12 @@ from data.utils import get_dataloader
 from models.utils import restore
 from utils import profile
 
+# import comet_ml in the top of your file
+from comet_ml import Experiment
+    
+# Add the following code anywhere in your machine learning file
+experiment = Experiment(api_key="IC0nxJoG6lqyQyfvKEJN58jZf",
+                        project_name="transformer-attn", workspace="umass-nlp")
 
 def main(argv=None):
     ''' Main entry point '''
