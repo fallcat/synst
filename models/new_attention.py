@@ -10,8 +10,6 @@ from torch.nn import functional as F
 
 from utils import same_tensor
 
-torch.set_printoptions(threshold=5000)
-
 
 class NewAttention(nn.Module):
     ''' Implement a hard-coded attention module '''
@@ -349,6 +347,7 @@ class NewAttention(nn.Module):
         attended = torch.bmm(attn_weights,
                              values)
 
+        torch.set_printoptions(threshold=5000)
         print("attn_weights", attn_weights)
         print("attn_weights shape", attn_weights.shape)
 
