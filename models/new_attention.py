@@ -372,8 +372,8 @@ class NewAttention(nn.Module):
         # print("values", values)
         # print("keys", keys)
         # print("queries", queries)
-        # print("key_mask", key_mask)
-        # print("attention_mask", attention_mask)
+        print("key_mask", key_mask)
+        print("attention_mask", attention_mask)
         # print("num_queries", num_queries)
         # print("layer_i", layer_i)
         if 'learned' in self.attn_type or 'learned' == self.attn_type:
