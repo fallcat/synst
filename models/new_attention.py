@@ -347,7 +347,7 @@ class NewAttention(nn.Module):
         attended = torch.bmm(attn_weights,
                              values)
 
-        torch.set_printoptions(threshold=5000)
+        torch.set_printoptions(profile='full')
         print("attn_weights", attn_weights)
         print("attn_weights shape", attn_weights.shape)
 
