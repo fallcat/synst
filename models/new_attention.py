@@ -347,8 +347,8 @@ class NewAttention(nn.Module):
                              values)
 
         torch.set_printoptions(profile='full')
-        # print("attn_weights", attn_weights)
-        # print("attn_weights shape", attn_weights.shape)
+        print("attn_weights", attn_weights)
+        print("attn_weights shape", attn_weights.shape)
 
         return attended.view(
             batch_size,
@@ -371,9 +371,9 @@ class NewAttention(nn.Module):
         # print("values", values)
         # print("keys", keys)
         # print("queries", queries)
-        torch.set_printoptions(profile='full')
-        print("key_mask", key_mask)
-        print("attention_mask", attention_mask)
+        # torch.set_printoptions(profile='full')
+        # print("key_mask", key_mask)
+        # print("attention_mask", attention_mask)
         # print("num_queries", num_queries)
         # print("layer_i", layer_i)
         if 'learned' in self.attn_type or 'learned' == self.attn_type:
