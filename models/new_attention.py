@@ -102,6 +102,8 @@ class NewAttention(nn.Module):
         # print("attn_position", self.attn_position)
         # print("input weights", self.input_weights)
         # print("decoder_position", decoder_position)
+        queries_shape = queries.shape
+        values_shape = values.shape
 
         # By this point the values, keys, and queries all have B * H as their first dimension
         batch_size = queries.shape[0] // self.num_heads
@@ -209,7 +211,8 @@ class NewAttention(nn.Module):
                 # if attn_position not in self.attn_weights[attn_type] \
                 #         or (queries.shape[1] > self.attn_weights[attn_type][attn_position].shape[0]
                 #             or values.shape[1] > self.attn_weights[attn_type][attn_position].shape[1]):
-                indices_q = torch.arange(queries.shape[1]).view(-1, 1).to(dtype=torch.float32)
+                indices_q = torch.arange(queries.shape[1]).view(-1, 1).to(dtype=torch.float32) * \
+                            values_shape[1] / queries_shape[1]
                 indices_v = torch.arange(values.shape[1]).view(1, -1).to(dtype=torch.float32)
 
                 # print("decoder_position", decoder_position)
