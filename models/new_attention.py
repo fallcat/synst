@@ -285,7 +285,8 @@ class NewAttention(nn.Module):
                     # if attn_position[i] not in self.attn_weights[attn_type[i]] \
                     #         or (queries.shape[1] > self.attn_weights[attn_type[i]][attn_position[i]].shape[0]
                     #             or values.shape[1] > self.attn_weights[attn_type[i]][attn_position[i]].shape[1]):
-                    indices_q = torch.arange(queries.shape[1]).view(-1, 1).to(dtype=torch.float32)
+                    indices_q = torch.arange(queries.shape[1]).view(-1, 1).to(dtype=torch.float32) * \
+                                values_shape[1] / queries_shape[1]
                     indices_v = torch.arange(values.shape[1]).view(1, -1).to(dtype=torch.float32)
 
                     # print("decoder_position", decoder_position)
