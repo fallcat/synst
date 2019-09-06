@@ -105,6 +105,7 @@ class NewAttention(nn.Module):
         # print("decoder_position", decoder_position)
         queries_shape = queries.shape
         values_shape = values.shape
+        print("self.word_count_ratio", self.word_count_ratio)
 
         # By this point the values, keys, and queries all have B * H as their first dimension
         batch_size = queries.shape[0] // self.num_heads
