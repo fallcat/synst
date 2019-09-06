@@ -212,7 +212,7 @@ class NewAttention(nn.Module):
                 # if attn_position not in self.attn_weights[attn_type] \
                 #         or (queries.shape[1] > self.attn_weights[attn_type][attn_position].shape[0]
                 #             or values.shape[1] > self.attn_weights[attn_type][attn_position].shape[1]):
-                indices_q = torch.arange(queries.shape[1]).view(-1, 1).to(dtype=torch.float32) * self.word_count_ratio
+                indices_q = torch.arange(queries.shape[1]).view(-1, 1).to(dtype=torch.float32)
                 indices_v = torch.arange(values.shape[1]).view(1, -1).to(dtype=torch.float32)
 
                 # print("decoder_position", decoder_position)
@@ -220,6 +220,8 @@ class NewAttention(nn.Module):
 
                 if decoder_position > -1:
                     indices_q[:] = decoder_position
+
+                indices_q = indices_q * self.word_count_ratio
 
                 if attn_position == 'left':
                     indices_q = indices_q - attn_displacement
@@ -285,7 +287,7 @@ class NewAttention(nn.Module):
                     # if attn_position[i] not in self.attn_weights[attn_type[i]] \
                     #         or (queries.shape[1] > self.attn_weights[attn_type[i]][attn_position[i]].shape[0]
                     #             or values.shape[1] > self.attn_weights[attn_type[i]][attn_position[i]].shape[1]):
-                    indices_q = torch.arange(queries.shape[1]).view(-1, 1).to(dtype=torch.float32) * self.word_count_ratio
+                    indices_q = torch.arange(queries.shape[1]).view(-1, 1).to(dtype=torch.float32)
                     indices_v = torch.arange(values.shape[1]).view(1, -1).to(dtype=torch.float32)
 
                     # print("decoder_position", decoder_position)
@@ -293,6 +295,8 @@ class NewAttention(nn.Module):
 
                     if decoder_position > -1:
                         indices_q[:] = decoder_position
+
+                    indices_q = indices_q * self.word_count_ratio
 
                     if attn_position[i] == 'left':
                         indices_q = indices_q - attn_displacement[i]
@@ -302,7 +306,7 @@ class NewAttention(nn.Module):
                         indices_q[:] = 0
                     elif attn_position[i] == 'last':
                         indices_q[:] = indices_v.size()[1] - 1
-                    elif attn_position == 'middle':
+                    elif attn_position[i] == 'middle':
                         indices_q[:] = (indices_v.size()[1] + 1) / 2 - 1
 
                     distance_diff = indices_v - indices_q
@@ -347,8 +351,8 @@ class NewAttention(nn.Module):
                              values)
 
         # torch.set_printoptions(profile='full')
-        # print("attn_weights", attn_weights)
-        # print("attn_weights shape", attn_weights.shape)
+        print("attn_weights", attn_weights)
+        print("attn_weights shape", attn_weights.shape)
 
         return attended.view(
             batch_size,

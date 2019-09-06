@@ -162,6 +162,8 @@ class BeamSearchDecoder(object):
         new_hypotheses = []
         for new_hypothesis_idx in hypotheses_indices:
             base_hypothesis_idx = new_hypothesis_idx // self.beam_width
+            print("base_hypothesis_idx", base_hypothesis_idx)
+            print("len(beam.hypotheses)", len(beam.hypotheses))
             base_hypothesis = beam.hypotheses[base_hypothesis_idx]
             if beam.finished_decoding(base_hypothesis, self.eos_idx):
                 new_hypotheses.append(base_hypothesis)
