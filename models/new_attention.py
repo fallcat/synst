@@ -34,6 +34,7 @@ class NewAttention(nn.Module):
         self.attn_param = attn_config['attn_param']
         self.attn_displacement = attn_config['attn_displacement']
         self.num_layers = attn_config['num_layers']
+        self.word_count_ratio = attn_config['word_count_ratio'] if 'word_count_ratio' in attn_config else 1
         # self.max_prob = attn_config['max_prob']
         # self.window_size = attn_config['window_size']
 
@@ -102,6 +103,9 @@ class NewAttention(nn.Module):
         # print("attn_position", self.attn_position)
         # print("input weights", self.input_weights)
         # print("decoder_position", decoder_position)
+        queries_shape = queries.shape
+        values_shape = values.shape
+        print("self.word_count_ratio", self.word_count_ratio)
 
         # By this point the values, keys, and queries all have B * H as their first dimension
         batch_size = queries.shape[0] // self.num_heads
@@ -218,6 +222,8 @@ class NewAttention(nn.Module):
                 if decoder_position > -1:
                     indices_q[:] = decoder_position
 
+                indices_q = indices_q * self.word_count_ratio
+
                 if attn_position == 'left':
                     indices_q = indices_q - attn_displacement
                 elif attn_position == 'right':
@@ -242,7 +248,7 @@ class NewAttention(nn.Module):
                     distance_diff[distance_diff <= attn_param] = 0
                     distance_diff[distance_diff > attn_param] = 1
                     logits = 1 - distance_diff
-                    logits = logits / torch.sum(logits, dim=-1, keepdim=True)
+                logits = logits / torch.sum(logits, dim=-1, keepdim=True)
                     # logits = F.softmax(logits, dim=-1)
                 self.attn_weights[attn_type][attn_position] = logits
                 # else:
@@ -291,6 +297,8 @@ class NewAttention(nn.Module):
                     if decoder_position > -1:
                         indices_q[:] = decoder_position
 
+                    indices_q = indices_q * self.word_count_ratio
+
                     if attn_position[i] == 'left':
                         indices_q = indices_q - attn_displacement[i]
                     elif attn_position[i] == 'right':
@@ -299,7 +307,7 @@ class NewAttention(nn.Module):
                         indices_q[:] = 0
                     elif attn_position[i] == 'last':
                         indices_q[:] = indices_v.size()[1] - 1
-                    elif attn_position == 'middle':
+                    elif attn_position[i] == 'middle':
                         indices_q[:] = (indices_v.size()[1] + 1) / 2 - 1
 
                     distance_diff = indices_v - indices_q
@@ -315,7 +323,7 @@ class NewAttention(nn.Module):
                         distance_diff[distance_diff <= attn_param[i]] = 0
                         distance_diff[distance_diff > attn_param[i]] = 1
                         logits = 1 - distance_diff
-                        logits = logits / torch.sum(logits, dim=-1, keepdim=True)
+                    logits = logits / torch.sum(logits, dim=-1, keepdim=True)
                         # logits = F.softmax(logits, dim=-1)
                     self.attn_weights[attn_type[i]][attn_position[i]] = logits
                     # else:
@@ -343,8 +351,9 @@ class NewAttention(nn.Module):
         attended = torch.bmm(attn_weights,
                              values)
 
-        # print("attn_weights", attn_weights)
-        # print("attn_weights shape", attn_weights.shape)
+        # torch.set_printoptions(profile='full')
+        print("attn_weights", attn_weights)
+        print("attn_weights shape", attn_weights.shape)
 
         return attended.view(
             batch_size,
@@ -367,6 +376,7 @@ class NewAttention(nn.Module):
         # print("values", values)
         # print("keys", keys)
         # print("queries", queries)
+        # torch.set_printoptions(profile='full')
         # print("key_mask", key_mask)
         # print("attention_mask", attention_mask)
         # print("num_queries", num_queries)

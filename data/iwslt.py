@@ -10,6 +10,7 @@ class IWSLTDataset(AnnotatedTextDataset):
     ''' Class that encapsulates the IWSLT dataset '''
     NAME = 'iwslt'
     LANGUAGE_PAIR = ('en', 'de')
+    WORD_COUNT = (4215814, 4186988)
 
     URLS = [
         ('iwslt_en_de.tgz', 'https://wit3.fbk.eu/archive/2016-01/texts/en/de/en-de.tgz'),

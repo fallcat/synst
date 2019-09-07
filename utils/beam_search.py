@@ -153,7 +153,9 @@ class BeamSearchDecoder(object):
         # pylint:disable=unused-variable
         lengths = torch.stack([scores.new_tensor(lengths)] * self.beam_width, 1).reshape(-1)
         normalized_scores = self.normalized_score(scores, lengths)
+        print("normalized_scores", normalized_scores)
         normalized_scores, hypotheses_indices = torch.topk(normalized_scores, self.beam_width)
+        print("hypotheses_indices", hypotheses_indices)
         # pylint:enable=unused-variable
 
         # need to convert each index into a hypothesis index
@@ -162,6 +164,9 @@ class BeamSearchDecoder(object):
         new_hypotheses = []
         for new_hypothesis_idx in hypotheses_indices:
             base_hypothesis_idx = new_hypothesis_idx // self.beam_width
+            print("new_hypothesis_idx", new_hypothesis_idx)
+            print("base_hypothesis_idx", base_hypothesis_idx)
+            print("len(beam.hypotheses)", len(beam.hypotheses))
             base_hypothesis = beam.hypotheses[base_hypothesis_idx]
             if beam.finished_decoding(base_hypothesis, self.eos_idx):
                 new_hypotheses.append(base_hypothesis)

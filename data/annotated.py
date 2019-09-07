@@ -54,6 +54,7 @@ class AnnotatedTextDataset(TextDataset):
     ''' Class that encapsulates an annotated text dataset '''
     NAME = ''
     LANGUAGE_PAIR = ('en', 'en')
+    WORD_COUNT = (4215814, 4186988)
 
     URLS = []
     RAW_SPLITS = {}
@@ -93,6 +94,12 @@ class AnnotatedTextDataset(TextDataset):
     def target_language(self):
         ''' Return the target language '''
         return type(self).LANGUAGE_PAIR[0 if self.swap else 1]
+
+    @property
+    def word_count_ratio(self):
+        ''' Return the word count ratio between source and target languages '''
+        return type(self).WORD_COUNT[1] / type(self).WORD_COUNT[0] if self.swap \
+            else type(self).WORD_COUNT[0] / type(self).WORD_COUNT[1]
 
     @property
     def mask_idx(self):
