@@ -105,7 +105,7 @@ class NewAttention(nn.Module):
         # print("decoder_position", decoder_position)
         queries_shape = queries.shape
         values_shape = values.shape
-        print("self.word_count_ratio", self.word_count_ratio)
+        # print("self.word_count_ratio", self.word_count_ratio)
 
         # By this point the values, keys, and queries all have B * H as their first dimension
         batch_size = queries.shape[0] // self.num_heads
@@ -352,8 +352,8 @@ class NewAttention(nn.Module):
                              values)
 
         # torch.set_printoptions(profile='full')
-        print("attn_weights", attn_weights)
-        print("attn_weights shape", attn_weights.shape)
+        # print("attn_weights", attn_weights)
+        # print("attn_weights shape", attn_weights.shape)
 
         return attended.view(
             batch_size,
