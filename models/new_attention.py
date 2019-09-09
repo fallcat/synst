@@ -210,49 +210,50 @@ class NewAttention(nn.Module):
             else:
                 if attn_type not in self.attn_weights:
                     self.attn_weights[attn_type] = {}
-                # if attn_position not in self.attn_weights[attn_type] \
-                #         or (queries.shape[1] > self.attn_weights[attn_type][attn_position].shape[0]
-                #             or values.shape[1] > self.attn_weights[attn_type][attn_position].shape[1]):
-                indices_q = torch.arange(queries.shape[1]).view(-1, 1).to(dtype=torch.float32)
-                indices_v = torch.arange(values.shape[1]).view(1, -1).to(dtype=torch.float32)
+                if (attn_position not in self.attn_weights[attn_type]
+                        or (queries.shape[1] > self.attn_weights[attn_type][attn_position].shape[0]
+                            or values.shape[1] > self.attn_weights[attn_type][attn_position].shape[1])) \
+                        or decoder_position == -1:
+                    indices_q = torch.arange(queries.shape[1]).view(-1, 1).to(dtype=torch.float32)
+                    indices_v = torch.arange(values.shape[1]).view(1, -1).to(dtype=torch.float32)
 
-                # print("decoder_position", decoder_position)
-                # print("indices_v", indices_v.shape)
+                    # print("decoder_position", decoder_position)
+                    # print("indices_v", indices_v.shape)
 
-                if decoder_position > -1:
-                    indices_q[:] = decoder_position
+                    if decoder_position > -1:
+                        indices_q[:] = decoder_position
 
-                indices_q = indices_q * self.word_count_ratio
+                    indices_q = indices_q * self.word_count_ratio
 
-                if attn_position == 'left':
-                    indices_q = indices_q - attn_displacement
-                elif attn_position == 'right':
-                    indices_q = indices_q + attn_displacement
-                elif attn_position == 'first':
-                    indices_q[:] = 0
-                elif attn_position == 'last':
-                    indices_q[:] = indices_v.size()[1] - 1
-                elif attn_position == 'middle':
-                    indices_q[:] = (indices_v.size()[1] + 1) / 2 - 1
+                    if attn_position == 'left':
+                        indices_q = indices_q - attn_displacement
+                    elif attn_position == 'right':
+                        indices_q = indices_q + attn_displacement
+                    elif attn_position == 'first':
+                        indices_q[:] = 0
+                    elif attn_position == 'last':
+                        indices_q[:] = indices_v.size()[1] - 1
+                    elif attn_position == 'middle':
+                        indices_q[:] = (indices_v.size()[1] + 1) / 2 - 1
 
-                distance_diff = indices_v - indices_q
-                # print("distance_diff", distance_diff)
+                    distance_diff = indices_v - indices_q
+                    # print("distance_diff", distance_diff)
 
-                if attn_type == 'normal':
-                    # std = 1 / (attn_param * math.sqrt(2 * math.pi))
-                    std = attn_param
+                    if attn_type == 'normal':
+                        # std = 1 / (attn_param * math.sqrt(2 * math.pi))
+                        std = attn_param
 
-                    logits = (1 / (std * math.sqrt(2 * math.pi)) * torch.exp(- 1 / 2 * (distance_diff / std) ** 2))
+                        logits = (1 / (std * math.sqrt(2 * math.pi)) * torch.exp(- 1 / 2 * (distance_diff / std) ** 2))
+                    else:
+                        distance_diff = torch.abs(distance_diff)
+                        distance_diff[distance_diff <= attn_param] = 0
+                        distance_diff[distance_diff > attn_param] = 1
+                        logits = 1 - distance_diff
+                        logits = logits / torch.sum(logits, dim=-1, keepdim=True)
+                        # logits = F.softmax(logits, dim=-1)
+                    self.attn_weights[attn_type][attn_position] = logits
                 else:
-                    distance_diff = torch.abs(distance_diff)
-                    distance_diff[distance_diff <= attn_param] = 0
-                    distance_diff[distance_diff > attn_param] = 1
-                    logits = 1 - distance_diff
-                    logits = logits / torch.sum(logits, dim=-1, keepdim=True)
-                    # logits = F.softmax(logits, dim=-1)
-                self.attn_weights[attn_type][attn_position] = logits
-                # else:
-                #     logits = self.attn_weights[attn_type][attn_position][:queries.shape[1], :values.shape[1]]
+                    logits = self.attn_weights[attn_type][attn_position][:queries.shape[1], :values.shape[1]]
             # print("logits", logits)
             attn_weights = logits.type_as(values).expand(values.shape[0], logits.shape[0], logits.shape[1])
 
@@ -285,49 +286,50 @@ class NewAttention(nn.Module):
                 else:
                     if attn_type[i] not in self.attn_weights:
                         self.attn_weights[attn_type[i]] = {}
-                    # if attn_position[i] not in self.attn_weights[attn_type[i]] \
-                    #         or (queries.shape[1] > self.attn_weights[attn_type[i]][attn_position[i]].shape[0]
-                    #             or values.shape[1] > self.attn_weights[attn_type[i]][attn_position[i]].shape[1]):
-                    indices_q = torch.arange(queries.shape[1]).view(-1, 1).to(dtype=torch.float32)
-                    indices_v = torch.arange(values.shape[1]).view(1, -1).to(dtype=torch.float32)
+                    if (attn_position[i] not in self.attn_weights[attn_type[i]]
+                            or (queries.shape[1] > self.attn_weights[attn_type[i]][attn_position[i]].shape[0]
+                                or values.shape[1] > self.attn_weights[attn_type[i]][attn_position[i]].shape[1])) \
+                            or decoder_position == -1:
+                        indices_q = torch.arange(queries.shape[1]).view(-1, 1).to(dtype=torch.float32)
+                        indices_v = torch.arange(values.shape[1]).view(1, -1).to(dtype=torch.float32)
 
-                    # print("decoder_position", decoder_position)
-                    # print("indices_v", indices_v.shape)
+                        # print("decoder_position", decoder_position)
+                        # print("indices_v", indices_v.shape)
 
-                    if decoder_position > -1:
-                        indices_q[:] = decoder_position
+                        if decoder_position > -1:
+                            indices_q[:] = decoder_position
 
-                    indices_q = indices_q * self.word_count_ratio
+                        indices_q = indices_q * self.word_count_ratio
 
-                    if attn_position[i] == 'left':
-                        indices_q = indices_q - attn_displacement[i]
-                    elif attn_position[i] == 'right':
-                        indices_q = indices_q + attn_displacement[i]
-                    elif attn_position[i] == 'first':
-                        indices_q[:] = 0
-                    elif attn_position[i] == 'last':
-                        indices_q[:] = indices_v.size()[1] - 1
-                    elif attn_position[i] == 'middle':
-                        indices_q[:] = (indices_v.size()[1] + 1) / 2 - 1
+                        if attn_position[i] == 'left':
+                            indices_q = indices_q - attn_displacement[i]
+                        elif attn_position[i] == 'right':
+                            indices_q = indices_q + attn_displacement[i]
+                        elif attn_position[i] == 'first':
+                            indices_q[:] = 0
+                        elif attn_position[i] == 'last':
+                            indices_q[:] = indices_v.size()[1] - 1
+                        elif attn_position[i] == 'middle':
+                            indices_q[:] = (indices_v.size()[1] + 1) / 2 - 1
 
-                    distance_diff = indices_v - indices_q
-                    # print("distance_diff", distance_diff)
+                        distance_diff = indices_v - indices_q
+                        # print("distance_diff", distance_diff)
 
-                    if attn_type[i] == 'normal':
-                        # std = 1 / (attn_param[i] * math.sqrt(2 * math.pi))
-                        std = attn_param[i]
+                        if attn_type[i] == 'normal':
+                            # std = 1 / (attn_param[i] * math.sqrt(2 * math.pi))
+                            std = attn_param[i]
 
-                        logits = (1 / (std * math.sqrt(2 * math.pi)) * torch.exp(- 1 / 2 * (distance_diff / std) ** 2))
+                            logits = (1 / (std * math.sqrt(2 * math.pi)) * torch.exp(- 1 / 2 * (distance_diff / std) ** 2))
+                        else:
+                            distance_diff = torch.abs(distance_diff)
+                            distance_diff[distance_diff <= attn_param[i]] = 0
+                            distance_diff[distance_diff > attn_param[i]] = 1
+                            logits = 1 - distance_diff
+                            logits = logits / torch.sum(logits, dim=-1, keepdim=True)
+                            # logits = F.softmax(logits, dim=-1)
+                        self.attn_weights[attn_type[i]][attn_position[i]] = logits
                     else:
-                        distance_diff = torch.abs(distance_diff)
-                        distance_diff[distance_diff <= attn_param[i]] = 0
-                        distance_diff[distance_diff > attn_param[i]] = 1
-                        logits = 1 - distance_diff
-                        logits = logits / torch.sum(logits, dim=-1, keepdim=True)
-                        # logits = F.softmax(logits, dim=-1)
-                    self.attn_weights[attn_type[i]][attn_position[i]] = logits
-                    # else:
-                    #     logits = self.attn_weights[attn_type[i]][attn_position[i]][:queries.shape[1], :values.shape[1]]
+                        logits = self.attn_weights[attn_type[i]][attn_position[i]][:queries.shape[1], :values.shape[1]]
                     logits = logits.unsqueeze(0).expand(int(values.shape[0] / self.num_heads),
                                                         queries.shape[1],
                                                         values.shape[1]).type_as(values)
