@@ -214,6 +214,7 @@ class NewAttention(nn.Module):
                         or (queries.shape[1] > self.attn_weights[attn_type][attn_position].shape[0]
                             or values.shape[1] > self.attn_weights[attn_type][attn_position].shape[1])) \
                         and decoder_position == -1:
+                    print("inside", queries.shape[1], values.shape[1])
                     indices_q = torch.arange(queries.shape[1]).view(-1, 1).to(dtype=torch.float32)
                     indices_v = torch.arange(values.shape[1]).view(1, -1).to(dtype=torch.float32)
 
@@ -354,8 +355,8 @@ class NewAttention(nn.Module):
                              values)
 
         # torch.set_printoptions(profile='full')
-        print("attn_weights", attn_weights)
-        print("attn_weights shape", attn_weights.shape)
+        # print("attn_weights", attn_weights)
+        # print("attn_weights shape", attn_weights.shape)
 
         return attended.view(
             batch_size,
