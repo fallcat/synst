@@ -354,12 +354,12 @@ class NewAttention(nn.Module):
                              values)
 
         # torch.set_printoptions(profile='full')
-        print("values", values)
-        print("values shape", values.shape)
-        print("attn_weights", attn_weights)
-        print("attn_weights shape", attn_weights.shape)
-        print("attended", attended)
-        print("attended shape", attended.shape)
+        # print("values", values)
+        # print("values shape", values.shape)
+        # print("attn_weights", attn_weights)
+        # print("attn_weights shape", attn_weights.shape)
+        # print("attended", attended)
+        # print("attended shape", attended.shape)
 
         return attended.view(
             batch_size,
@@ -379,10 +379,10 @@ class NewAttention(nn.Module):
         # print("self.attn_type", self.attn_type)
         # print("start forward in new attention")
         # print("============================")
-        print("values outside", values)
-        print("keys outside", keys)
-        print("queries outside", queries)
-        print("self.input_weights", self.input_weights)
+        # print("values outside", values)
+        # print("keys outside", keys)
+        # print("queries outside", queries)
+        # print("self.input_weights", self.input_weights)
         # torch.set_printoptions(profile='full')
         # print("key_mask", key_mask)
         # print("attention_mask", attention_mask)
