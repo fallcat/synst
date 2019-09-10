@@ -354,8 +354,10 @@ class NewAttention(nn.Module):
                              values)
 
         # torch.set_printoptions(profile='full')
-        # print("attn_weights", attn_weights)
-        # print("attn_weights shape", attn_weights.shape)
+        print("attn_weights", attn_weights)
+        print("attn_weights shape", attn_weights.shape)
+        print("attended", attended)
+        print("attended shape", attended.shape)
 
         return attended.view(
             batch_size,
