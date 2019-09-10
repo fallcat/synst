@@ -354,6 +354,8 @@ class NewAttention(nn.Module):
                              values)
 
         # torch.set_printoptions(profile='full')
+        print("values", values)
+        print("values shape" values.shape)
         print("attn_weights", attn_weights)
         print("attn_weights shape", attn_weights.shape)
         print("attended", attended)
