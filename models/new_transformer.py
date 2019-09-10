@@ -173,16 +173,21 @@ class TransformerDecoderLayer(nn.Module):
             kwargs['attention_mask'] = self.mask(state)
 
         # print("decoder self attention")
+        print("state before self attention", state)
 
         state = self.self_attention(
             residual, # residual
             state, state, state, **kwargs # passed to multiheaded attention
         )
 
+        print("state after self attention", state)
+
         source = sources['state']
+        print("source", source)
         kwargs = {'key_mask': sources['mask'], 'layer_i': layer_i}
         if self.causal and cache is not None:
             kwargs['num_queries'] = self.span
+            kwargs['decoder_position'] = state.shape[1] - 1
 
         # print("decoder source attention")
 
