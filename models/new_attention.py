@@ -102,7 +102,7 @@ class NewAttention(nn.Module):
         # print("attn_type", self.attn_type)
         # print("attn_position", self.attn_position)
         # print("input weights", self.input_weights)
-        print("decoder_position", decoder_position)
+        # print("decoder_position", decoder_position)
         queries_shape = queries.shape
         values_shape = values.shape
         # print("self.word_count_ratio", self.word_count_ratio)
