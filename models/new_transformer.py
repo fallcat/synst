@@ -189,7 +189,7 @@ class TransformerDecoderLayer(nn.Module):
         if self.causal and cache is not None:
             kwargs['num_queries'] = self.span
             kwargs['decoder_position'] = decoder_position
-            print("kwargs['decoder_position']", kwargs['decoder_position'])
+            # print("kwargs['decoder_position']", kwargs['decoder_position'])
 
         # print("decoder source attention")
 
