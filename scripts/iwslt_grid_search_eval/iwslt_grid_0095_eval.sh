@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 #SBATCH --job-name=iwslt_grid_0095
-#SBATCH --partition=1080ti-long
+#SBATCH --partition=1080ti-short
 #SBATCH --gres=gpu:1
 #SBATCH --ntasks-per-node=24
 #SBATCH --mem=47GB
@@ -36,13 +36,13 @@ CUDA_VISIBLE_DEVICES=0 python main.py --dataset iwslt_en_de --span 1   --model n
   --dec-attn-param 1 \
   --dec-attn-type normal \
   --dec-attn-position left center left center left center left center center center \
-  --dec-attn-displacement 1 \                     
+  --dec-attn-displacement 1 \
   --embedding-size 286 --hidden-dim 507 --num-heads 2 --num-layers 5 \
   -d /mnt/nfs/work1/miyyer/wyou/iwslt -p /mnt/nfs/work1/miyyer/wyou/iwslt \
-  --batch-size 1 --batch-method example --split dev \                       
-  --restore $EXPERIMENT_PATH/checkpoint.pt \                               
+  --batch-size 1 --batch-method example --split dev \
+  --restore $EXPERIMENT_PATH/checkpoint.pt \
   --average-checkpoints 5 \
-  translate \               
+  translate \
   --beam-width 4 --max-decode-length 50 --length-basis input_lens --order-output \
   --output-directory $EXPERIMENT_PATH
 	
