@@ -223,7 +223,7 @@ class NewAttention(nn.Module):
                     if decoder_position > -1:
                         indices_q[:] = decoder_position
 
-                    indices_q = indices_q * self.word_count_ratio
+                    indices_q = indices_q * values_shape[1] / queries_shape[1]  # self.word_count_ratio
 
                     if attn_position == 'left':
                         indices_q = indices_q - attn_displacement
@@ -299,7 +299,7 @@ class NewAttention(nn.Module):
                         if decoder_position > -1:
                             indices_q[:] = decoder_position
 
-                        indices_q = indices_q * self.word_count_ratio
+                        indices_q = indices_q * values_shape[1] / queries_shape[1]  # self.word_count_ratio
 
                         if attn_position[i] == 'left':
                             indices_q = indices_q - attn_displacement[i]
