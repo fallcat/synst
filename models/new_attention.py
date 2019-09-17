@@ -230,6 +230,8 @@ class NewAttention(nn.Module):
                         indices_q = indices_q * values_shape[1] / queries_shape[1]  # self.word_count_ratio
                     else:
                         indices_q = indices_q * values_shape[1] / target_lens[0]
+                        print("target_lens[0]", target_lens[0])
+                        print("indices_q", indices_q)
 
                     if attn_position == 'left':
                         indices_q = indices_q - attn_displacement
