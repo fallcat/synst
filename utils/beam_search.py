@@ -219,7 +219,7 @@ class BeamSearchDecoder(object):
                 chunks = [(encoded_batch, target_lens_batch, batch)]
                 while chunks:
                     try:
-                        encoded_batch, batch = chunks.pop()
+                        encoded_batch, target_lens_batch, batch = chunks.pop()
                         result = self.model(encoded_batch, batch, cache=cache, target_lens=target_lens_batch)
 
                         new_cache = result.get('cache')
