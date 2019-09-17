@@ -230,9 +230,10 @@ class NewAttention(nn.Module):
                         if decoder_position > -1:
                             indices_q = indices_q * values_shape[1] / queries_shape[1]  # self.word_count_ratio
                     else:
+                        print("indices_q first", indices_q)
                         indices_q = indices_q * values_shape[1] / target_lens[0]
                         print("target_lens[0]", target_lens[0])
-                        print("indices_q", indices_q)
+                        print("indices_q second", indices_q)
 
                     if attn_position == 'left':
                         indices_q = indices_q - attn_displacement
