@@ -377,7 +377,7 @@ class NewTransformer(nn.Module):
             'target_lens': target_lens
         }
         for i, decoder in enumerate(decoders):
-            print("i", i)
+            # print("i", i)
             decoded = decoder(decoded, encoded, i)
 
         # compute projection to the vocabulary
