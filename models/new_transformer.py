@@ -159,6 +159,7 @@ class TransformerDecoderLayer(nn.Module):
         mask = inputs['mask']
         state = inputs['state']
         cache = inputs.get('cache')
+        target_lens = inputs['target_lens']
 
         kwargs = {'layer_i': layer_i}
         decoder_position = state.shape[1] - 1
@@ -167,6 +168,7 @@ class TransformerDecoderLayer(nn.Module):
             residual = state[:, -self.span:]
             kwargs['num_queries'] = self.span
             kwargs['decoder_position'] = decoder_position
+            kwargs['target_lens'] = target_lens
         else:
             # If not caching, use the full sequence and ensure an appropriate causal mask
             residual = state
@@ -360,7 +362,7 @@ class NewTransformer(nn.Module):
 
         return encoded
 
-    def decode(self, encoded, targets, decoders=None, embedding=None, cache=None, mask=None):
+    def decode(self, encoded, targets, decoders=None, embedding=None, cache=None, mask=None, target_lens=None):
         ''' Decode the encoded sequence to the targets '''
         if decoders is None:
             decoders = self.decoders
@@ -371,7 +373,8 @@ class NewTransformer(nn.Module):
         decoded = {
             'cache': cache,
             'state': self.embed(targets, embedding),
-            'mask': targets.eq(self.padding_idx) if mask is None else mask
+            'mask': targets.eq(self.padding_idx) if mask is None else mask,
+            'target_lens': target_lens
         }
         for i, decoder in enumerate(decoders):
             decoded = decoder(decoded, encoded, i)

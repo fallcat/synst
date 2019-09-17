@@ -93,7 +93,7 @@ class NewAttention(nn.Module):
                   -1,
                   self.projection_dim)
 
-    def attention(self, values, keys, queries, key_mask=None, mask=None, layer_i=0, decoder_position=-1):
+    def attention(self, values, keys, queries, key_mask=None, mask=None, layer_i=0, decoder_position=-1, target_lens=None):
         ''' Scaled dot product attention with optional masks '''
 
         # print("values", values.shape)
@@ -103,6 +103,7 @@ class NewAttention(nn.Module):
         # print("attn_position", self.attn_position)
         # print("input weights", self.input_weights)
         # print("decoder_position", decoder_position)
+        print("target_lens", target_lens)
         queries_shape = queries.shape
         values_shape = values.shape
         # print("self.word_count_ratio", self.word_count_ratio)
@@ -223,7 +224,10 @@ class NewAttention(nn.Module):
                     if decoder_position > -1:
                         indices_q[:] = decoder_position
 
-                    indices_q = indices_q * values_shape[1] / queries_shape[1]  # self.word_count_ratio
+                    if target_lens is None:
+                        indices_q = indices_q * values_shape[1] / queries_shape[1]  # self.word_count_ratio
+                    else:
+                        indices_q = indices_q * values_shape[1] / target_lens[0]
 
                     if attn_position == 'left':
                         indices_q = indices_q - attn_displacement
@@ -299,7 +303,10 @@ class NewAttention(nn.Module):
                         if decoder_position > -1:
                             indices_q[:] = decoder_position
 
-                        indices_q = indices_q * values_shape[1] / queries_shape[1]  # self.word_count_ratio
+                        if target_lens is None:
+                            indices_q = indices_q * values_shape[1] / queries_shape[1]  # self.word_count_ratio
+                        else:
+                            indices_q = indices_q * values_shape[1] / target_lens[0]
 
                         if attn_position[i] == 'left':
                             indices_q = indices_q - attn_displacement[i]
@@ -373,7 +380,7 @@ class NewAttention(nn.Module):
         )
 
     def forward(self, values, keys, queries, # pylint:disable=arguments-differ
-                key_mask=None, attention_mask=None, num_queries=0, layer_i=0, decoder_position=-1):
+                key_mask=None, attention_mask=None, num_queries=0, layer_i=0, decoder_position=-1, target_lens=None):
         ''' Forward pass of the attention '''
         # pylint:disable=unbalanced-tuple-unpacking
         # print("self.attn_type", self.attn_type)
@@ -436,5 +443,5 @@ class NewAttention(nn.Module):
         # print("num_heads", self.num_heads)
         # print("projection_dim", self.projection_dim)
 
-        attended = self.attention(values, keys, queries, key_mask, attention_mask, layer_i, decoder_position)
+        attended = self.attention(values, keys, queries, key_mask, attention_mask, layer_i, decoder_position, target_lens)
         return self.output_projection(attended)
