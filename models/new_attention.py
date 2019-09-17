@@ -227,7 +227,8 @@ class NewAttention(nn.Module):
                         indices_q[:] = decoder_position
 
                     if target_lens is None:
-                        indices_q = indices_q * values_shape[1] / queries_shape[1]  # self.word_count_ratio
+                        if decoder_position > -1:
+                            indices_q = indices_q * values_shape[1] / queries_shape[1]  # self.word_count_ratio
                     else:
                         indices_q = indices_q * values_shape[1] / target_lens[0]
                         print("target_lens[0]", target_lens[0])
@@ -308,7 +309,8 @@ class NewAttention(nn.Module):
                             indices_q[:] = decoder_position
 
                         if target_lens is None:
-                            indices_q = indices_q * values_shape[1] / queries_shape[1]  # self.word_count_ratio
+                            if decoder_position > -1:
+                                indices_q = indices_q * values_shape[1] / queries_shape[1]  # self.word_count_ratio
                         else:
                             indices_q = indices_q * values_shape[1] / target_lens[0]
 

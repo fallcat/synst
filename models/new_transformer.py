@@ -168,7 +168,6 @@ class TransformerDecoderLayer(nn.Module):
             residual = state[:, -self.span:]
             kwargs['num_queries'] = self.span
             kwargs['decoder_position'] = decoder_position
-            kwargs['target_lens'] = target_lens
         else:
             # If not caching, use the full sequence and ensure an appropriate causal mask
             residual = state
@@ -191,6 +190,7 @@ class TransformerDecoderLayer(nn.Module):
         if self.causal and cache is not None:
             kwargs['num_queries'] = self.span
             kwargs['decoder_position'] = decoder_position
+            kwargs['target_lens'] = target_lens
             # print("kwargs['decoder_position']", kwargs['decoder_position'])
 
         print("decoder source attention")
