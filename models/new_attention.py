@@ -103,11 +103,11 @@ class NewAttention(nn.Module):
         # print("attn_position", self.attn_position)
         # print("input weights", self.input_weights)
         # print("decoder_position", decoder_position)
-        print("target_lens", target_lens)
+        # print("target_lens", target_lens)
         queries_shape = queries.shape
         values_shape = values.shape
-        print("queries_shape", queries_shape)
-        print("values_shape", values_shape)
+        # print("queries_shape", queries_shape)
+        # print("values_shape", values_shape)
         # print("self.word_count_ratio", self.word_count_ratio)
 
         # By this point the values, keys, and queries all have B * H as their first dimension
@@ -230,10 +230,10 @@ class NewAttention(nn.Module):
                         if decoder_position > -1:
                             indices_q = indices_q * values_shape[1] / queries_shape[1]  # self.word_count_ratio
                     else:
-                        print("indices_q first", indices_q)
+                        # print("indices_q first", indices_q)
                         indices_q = indices_q * values_shape[1] / target_lens[0]
-                        print("target_lens[0]", target_lens[0])
-                        print("indices_q second", indices_q)
+                        # print("target_lens[0]", target_lens[0])
+                        # print("indices_q second", indices_q)
 
                     if attn_position == 'left':
                         indices_q = indices_q - attn_displacement
@@ -370,8 +370,8 @@ class NewAttention(nn.Module):
         # torch.set_printoptions(profile='full')
         # print("values", values)
         # print("values shape", values.shape)
-        print("attn_weights", attn_weights)
-        print("attn_weights shape", attn_weights.shape)
+        # print("attn_weights", attn_weights)
+        # print("attn_weights shape", attn_weights.shape)
         # print("attended", attended)
         # print("attended shape", attended.shape)
 
