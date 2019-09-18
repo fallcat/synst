@@ -1,7 +1,7 @@
 import pickle
 import numpy as np
 
-split_portion = 50
+split_portion = 100
 
 with open('../iwslt/train.tok.en', 'rt') as file_en:
     with open('../iwslt/train.tok.de', 'rt') as file_de:
