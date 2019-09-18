@@ -226,14 +226,17 @@ class NewAttention(nn.Module):
                     if decoder_position > -1:
                         indices_q[:] = decoder_position
 
-                    if target_lens is None:
-                        if decoder_position > -1:
-                            indices_q = indices_q * values_shape[1] / queries_shape[1]  # self.word_count_ratio
-                    else:
-                        # print("indices_q first", indices_q)
-                        indices_q = indices_q * values_shape[1] / target_lens[0]
-                        # print("target_lens[0]", target_lens[0])
-                        # print("indices_q second", indices_q)
+                    # if target_lens is None:
+                    #     if decoder_position > -1:
+                    #         indices_q = indices_q * values_shape[1] / queries_shape[1]  # self.word_count_ratio
+                    # else:
+                    #     # print("indices_q first", indices_q)
+                    #     indices_q = indices_q * values_shape[1] / target_lens[0]
+                    #     # print("target_lens[0]", target_lens[0])
+                    #     # print("indices_q second", indices_q)
+
+                    if decoder_position > -1 or target_lens is not None:
+                        indices_q = indices_q * self.word_count_ratio
 
                     if attn_position == 'left':
                         indices_q = indices_q - attn_displacement
@@ -309,11 +312,14 @@ class NewAttention(nn.Module):
                         if decoder_position > -1:
                             indices_q[:] = decoder_position
 
-                        if target_lens is None:
-                            if decoder_position > -1:
-                                indices_q = indices_q * values_shape[1] / queries_shape[1]  # self.word_count_ratio
-                        else:
-                            indices_q = indices_q * values_shape[1] / target_lens[0]
+                        # if target_lens is None:
+                        #     if decoder_position > -1:
+                        #         indices_q = indices_q * values_shape[1] / queries_shape[1]  # self.word_count_ratio
+                        # else:
+                        #     indices_q = indices_q * values_shape[1] / target_lens[0]
+
+                        if decoder_position > -1 or target_lens is not None:
+                            indices_q = indices_q * self.word_count_ratio
 
                         if attn_position[i] == 'left':
                             indices_q = indices_q - attn_displacement[i]
