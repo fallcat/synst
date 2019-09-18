@@ -16,15 +16,16 @@ with open('../iwslt/train.tok.en', 'rt') as file_en:
                         a, b = z_element.split('-')
                         z_dict[round(int(b) + 1 / len_x * split_portion) - 1] = round(int(a) + 1 / len_x * split_portion) - 1
                     for i, y_word in enumerate(y.split()):
-                        if i in z_dict:
+                        new_i = round(int(i) + 1 / len_x * split_portion) - 1
+                        if new_i in z_dict:
                             if y_word in final_count:
-                                if i in final_count[y_word]:
-                                    final_count[y_word][i].append(z_dict[i])
+                                if new_i in final_count[y_word]:
+                                    final_count[y_word][new_i].append(z_dict[new_i])
                                 else:
-                                    final_count[y_word][i] = [z_dict[i]]
+                                    final_count[y_word][new_i] = [z_dict[new_i]]
                             else:
                                 final_count[y_word] = {}
-                                final_count[y_word][i] = [z_dict[i]]
+                                final_count[y_word][new_i] = [z_dict[new_i]]
                 for key in final_count:
                     stats[key] = {}
                     mean_offsets = []
