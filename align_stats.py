@@ -27,10 +27,16 @@ with open('../iwslt/train.tok.en', 'rt') as file_en:
                                 final_count[y_word][i] = [z_dict[i]]
                 for key in final_count:
                     stats[key] = {}
+                    mean_offsets = []
+                    stds = []
                     for num in final_count[key]:
                         mean = np.mean(final_count[key][num])
                         std = np.std(final_count[key][num])
                         stats[key][num] = {}
                         stats[key][num]['mean'] = mean
                         stats[key][num]['std'] = std
+                        mean_offsets.append(mean - num)
+                        stds.append(std)
+                    stats[key]['mean_offsets_mean'] = np.mean(mean_offsets)
+                    stats[key]['stds_mean'] = np.mean(stds)
                 pickle.dump(stats, file_fas)
