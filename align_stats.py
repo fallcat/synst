@@ -14,7 +14,7 @@ with open('../iwslt/train.tok.en', 'rt') as file_en:
                     len_x = len(x.split())
                     for z_element in z.split():
                         a, b = z_element.split('-')
-                        z_dict[int(b)] = round(int(a) + 1 / len_x * split_portion) - 1
+                        z_dict[round(int(b) + 1 / len_x * split_portion) - 1] = round(int(a) + 1 / len_x * split_portion) - 1
                     for i, y_word in enumerate(y.split()):
                         if i in z_dict:
                             if y_word in final_count:
