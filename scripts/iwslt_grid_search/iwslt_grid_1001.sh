@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 #SBATCH --job-name=1001
-#SBATCH --partition=1080ti-short
+#SBATCH --partition=1080ti-long
 #SBATCH --gres=gpu:1
 #SBATCH --ntasks-per-node=24
 #SBATCH --mem=47GB
@@ -30,11 +30,11 @@ env $(cat ~/.comet.ml | xargs) python main.py \
   --model new_transformer \
   --attn-param 1 \
   --attn-type normal \
-  --attn-position left right left right left right left right left right \
+  --attn-position left left left left left left left left left left \
   --attn-displacement 1 \
   --dec-attn-param 1 \
   --dec-attn-type normal \
-  --dec-attn-position left center left center left center left center left center \
+  --dec-attn-position left left left left left left left left left left \
   --dec-attn-displacement 1 \
   --embedding-size 286 --hidden-dim 507 --num-heads 2 --num-layers 5 \
   -d /mnt/nfs/work1/miyyer/wyou/iwslt -p /mnt/nfs/work1/miyyer/wyou/iwslt -v train \

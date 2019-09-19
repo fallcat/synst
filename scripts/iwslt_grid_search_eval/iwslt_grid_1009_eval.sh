@@ -1,19 +1,18 @@
 #!/bin/bash
 #
-#SBATCH --job-name=1005
-#SBATCH --partition=1080ti-long
+#SBATCH --job-name=1009
+#SBATCH --partition=1080ti-short
 #SBATCH --gres=gpu:1
 #SBATCH --ntasks-per-node=24
 #SBATCH --mem=47GB
 #SBATCH -d singleton
 #SBATCH --open-mode append
-#SBATCH -o /mnt/nfs/work1/miyyer/simengsun/synst/experiments/iwslt_grid_1005/output_train.txt
+#SBATCH -o /mnt/nfs/work1/miyyer/simengsun/synst/experiments/iwslt_grid_1009/output_eval.txt
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=simengsun@cs.umass.edu
 BASE_PATH=/mnt/nfs/work1/miyyer
 PROJECT_PATH=$BASE_PATH/simengsun/synst
-EXPERIMENT_PATH=$PROJECT_PATH/experiments/iwslt_grid_1005
-
+EXPERIMENT_PATH=$PROJECT_PATH/experiments/iwslt_grid_1009
 
 # Load in python3 and source the venv
 module load python3/3.6.6-1810
@@ -24,19 +23,21 @@ source /mnt/nfs/work1/miyyer/wyou/py36/bin/activate
 #PYTHONPATH=$BASE_PATH/simengsun/synst/bin/lib/python3.6/site-packages/:$PYTHONPATH
 PYTHONPATH=/mnt/nfs/work1/miyyer/wyou/py36/lib/python3.6/site-packages:$PYTHONPATH
 
-		
-env $(cat ~/.comet.ml | xargs) python main.py \
-  --track -b 6000 --dataset iwslt_de_en --span 1 \
-  --model new_transformer \
+	
+CUDA_VISIBLE_DEVICES=0 python main.py --dataset iwslt_en_de --span 1   --model new_transformer \
   --attn-param 1 \
   --attn-type normal \
-  --attn-position left first left first left first left first left first \
+  --attn-position left first left right left right left right left first \
   --attn-displacement 1 \
   --dec-attn-param 1 \
   --dec-attn-type normal \
-  --dec-attn-position left first left first left first left first left first \
+  --dec-attn-position left first left center left center left center left first \
   --dec-attn-displacement 1 \
   --embedding-size 286 --hidden-dim 507 --num-heads 2 --num-layers 5 \
-  -d /mnt/nfs/work1/miyyer/wyou/iwslt -p /mnt/nfs/work1/miyyer/wyou/iwslt -v train \
-  --checkpoint-interval 600 --accumulate 1 --learning-rate 3e-4 --checkpoint-directory $EXPERIMENT_PATH \
-  --label-smoothing 0.0 --learning-rate-scheduler linear
+  -d /mnt/nfs/work1/miyyer/wyou/iwslt -p /mnt/nfs/work1/miyyer/wyou/iwslt \
+  --batch-size 1 --batch-method example --split dev \
+  --restore $EXPERIMENT_PATH/checkpoint.pt \
+  --average-checkpoints 5 \
+  translate \
+  --beam-width 4 --max-decode-length 50 --length-basis input_lens --order-output \
+  --output-directory $EXPERIMENT_PATH
