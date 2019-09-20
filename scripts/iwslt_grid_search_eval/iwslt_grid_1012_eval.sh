@@ -1,18 +1,18 @@
 #!/bin/bash
 #
-#SBATCH --job-name=1003
+#SBATCH --job-name=1012
 #SBATCH --partition=1080ti-short
 #SBATCH --gres=gpu:1
 #SBATCH --ntasks-per-node=24
 #SBATCH --mem=47GB
 #SBATCH -d singleton
 #SBATCH --open-mode append
-#SBATCH -o /mnt/nfs/work1/miyyer/simengsun/synst/experiments/iwslt_grid_1003/output_eval.txt
+#SBATCH -o /mnt/nfs/work1/miyyer/simengsun/synst/experiments/iwslt_grid_1012/output_eval.txt
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=simengsun@cs.umass.edu
 BASE_PATH=/mnt/nfs/work1/miyyer
 PROJECT_PATH=$BASE_PATH/simengsun/synst
-EXPERIMENT_PATH=$PROJECT_PATH/experiments/iwslt_grid_1003
+EXPERIMENT_PATH=$PROJECT_PATH/experiments/iwslt_grid_1012
 
 # Load in python3 and source the venv
 module load python3/3.6.6-1810
@@ -23,16 +23,11 @@ source /mnt/nfs/work1/miyyer/wyou/py36/bin/activate
 #PYTHONPATH=$BASE_PATH/simengsun/synst/bin/lib/python3.6/site-packages/:$PYTHONPATH
 PYTHONPATH=/mnt/nfs/work1/miyyer/wyou/py36/lib/python3.6/site-packages:$PYTHONPATH
 
-	
+  
 CUDA_VISIBLE_DEVICES=0 python main.py --dataset iwslt_de_en --span 1   --model new_transformer \
   --attn-param 1 \
-  --attn-type normal \
-  --attn-position left first left left left left left left left first \
-  --attn-displacement 1 \
-  --dec-attn-param 1 \
-  --dec-attn-type normal \
-  --dec-attn-position left first left left left left left left left first \
-  --dec-attn-displacement 1 \
+  --attn-type learned \
+  --dec-attn-type learned \
   --embedding-size 286 --hidden-dim 507 --num-heads 2 --num-layers 5 \
   -d /mnt/nfs/work1/miyyer/wyou/iwslt -p /mnt/nfs/work1/miyyer/wyou/iwslt \
   --batch-size 1 --batch-method example --split dev \

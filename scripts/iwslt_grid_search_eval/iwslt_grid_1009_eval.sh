@@ -24,7 +24,7 @@ source /mnt/nfs/work1/miyyer/wyou/py36/bin/activate
 PYTHONPATH=/mnt/nfs/work1/miyyer/wyou/py36/lib/python3.6/site-packages:$PYTHONPATH
 
 	
-CUDA_VISIBLE_DEVICES=0 python main.py --dataset iwslt_en_de --span 1   --model new_transformer \
+CUDA_VISIBLE_DEVICES=0 python main.py --dataset iwslt_de_en --span 1   --model new_transformer \
   --attn-param 1 \
   --attn-type normal \
   --attn-position left first left right left right left right left first \
