@@ -1,7 +1,7 @@
 import pickle
 import numpy as np
 
-split_portion = 100
+split_portion = 4
 
 with open('../iwslt/train.tok.en', 'rt') as file_en:
     with open('../iwslt/train.tok.de', 'rt') as file_de:
@@ -14,21 +14,25 @@ with open('../iwslt/train.tok.en', 'rt') as file_en:
                     len_x = len(x.split())
                     for z_element in z.split():
                         a, b = z_element.split('-')
-                        z_dict[round((int(b) + 1) / len_x * split_portion) - 1] = round((int(a) + 1) / len_x * split_portion) - 1
+                        key = round((int(b) + 1) / len_x * split_portion) - 1
+                        if key in z_dict:
+                            z_dict[key].append(a - b)  # round((int(a) + 1) / len_x * split_portion) - 1
+                        else:
+                            z_dict = [a - b]
                     for i, y_word in enumerate(y.split()):
                         new_i = round((int(i) + 1) / len_x * split_portion) - 1
                         if new_i in z_dict:
                             if y_word in final_count:
                                 if new_i in final_count[y_word]:
-                                    final_count[y_word][new_i].append(z_dict[new_i])
+                                    final_count[y_word][new_i].extend(z_dict[new_i])
                                 else:
-                                    final_count[y_word][new_i] = [z_dict[new_i]]
+                                    final_count[y_word][new_i] = z_dict[new_i]
                             else:
                                 final_count[y_word] = {}
-                                final_count[y_word][new_i] = [z_dict[new_i]]
+                                final_count[y_word][new_i] = z_dict[new_i]
                 for key in final_count:
                     stats[key] = {}
-                    mean_offsets = []
+                    means = []
                     stds = []
                     for num in final_count[key]:
                         mean = np.mean(final_count[key][num])
@@ -36,8 +40,8 @@ with open('../iwslt/train.tok.en', 'rt') as file_en:
                         stats[key][num] = {}
                         stats[key][num]['mean'] = mean
                         stats[key][num]['std'] = std
-                        mean_offsets.append(mean - num)
+                        means.append(mean)
                         stds.append(std)
-                    stats[key]['mean_offsets_mean'] = np.mean(mean_offsets)
+                    stats[key]['means_mean'] = np.mean(means)
                     stats[key]['stds_mean'] = np.mean(stds)
                 pickle.dump(stats, file_fas)
