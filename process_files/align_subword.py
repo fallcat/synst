@@ -17,6 +17,10 @@ with open('../iwslt/train.bpe.idx.mapping.en', 'rt') as source_file:
                         else:
                             base = new_source[0] - 0.5
                             try:
+                                for i, w in enumerate(new_target):
+                                    print("(new_source[-1] - new_source[0] + 1)", (new_source[-1] - new_source[0] + 1))
+                                    print("(w - base)", (w - base))
+                                    print("(new_target[-1] + 0.5 - base)", (new_target[-1] + 0.5 - base))
                                 output_list.extend([[base + (new_source[-1] - new_source[0] + 1) *
                                                     (w - base) / (new_target[-1] + 0.5 - base), w]
                                                     for i, w in enumerate(new_target)])
