@@ -20,5 +20,4 @@ with open('../iwslt/train.bpe.idx.mapping.en', 'rt') as source_file:
                             output_list.extend([[base_source + (new_source[-1] - new_source[0] + 1) *
                                                 (w - base_target) / (new_target[-1] + 0.5 - base_target), w]
                                                 for i, w in enumerate(new_target)])
-                    print(output_list)
                     output_file.write(' '.join(['-'.join([str(x) for x in item]) for item in output_list]) + '\n')
