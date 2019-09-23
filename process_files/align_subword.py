@@ -1,7 +1,7 @@
 with open('../iwslt/train.bpe.idx.mapping.de', 'rt') as source_file:
     with open('../iwslt/train.bpe.idx.mapping.en', 'rt') as target_file:
-        with open('../iwslt/backward.align', 'rt') as align_file:
-            with open('../iwslt/backward.subword.align', 'wt') as output_file:
+        with open('../iwslt/reverse.align', 'rt') as align_file:
+            with open('../iwslt/reverse.subword.align', 'wt') as output_file:
                 for source_line, target_line, align_line in zip(source_file, target_file, align_file):
                     source_list = [[int(x) for x in w.split(':')[1].split(',')] for w in source_line.split()]
                     target_list = [[int(x) for x in w.split(':')[1].split(',')] for w in target_line.split()]
@@ -9,7 +9,8 @@ with open('../iwslt/train.bpe.idx.mapping.de', 'rt') as source_file:
                     output_list = []
                     for item in align_list:
                         source = item[1]
-                        target = item[0]
+                        target = item[0
+                        ]
                         new_source = source_list[source]
                         new_target = target_list[target]
                         if len(new_source) == 1 and len(new_target) == 1:
