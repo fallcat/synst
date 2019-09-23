@@ -1,5 +1,5 @@
-with open('../iwslt/train.tok.bpe.32000.en', 'rt') as input_file:
-    with open('../iwslt/train.bpe.idx.mapping.en', 'wt') as output_file:
+with open('../iwslt/train.tok.bpe.32000.de', 'rt') as input_file:
+    with open('../iwslt/train.bpe.idx.mapping.de', 'wt') as output_file:
         for line in input_file.readlines():
             line_list = line.split()
             mapping = []
