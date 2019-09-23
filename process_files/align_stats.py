@@ -5,8 +5,8 @@ import numpy as np
 split_portion = 4
 WORD_COUNT = (1.0360595565014956, 1)
 
-with open('../iwslt/train.tok.en', 'rt') as file_en:
-    with open('../iwslt/train.tok.de', 'rt') as file_de:
+with open('../iwslt/train.tok.bpe.32000.en', 'rt') as file_en:
+    with open('../iwslt/train.tok.bpe.32000.de', 'rt') as file_de:
         with open('../iwslt/forward.subword.align', 'rt') as file_fa:
             with open('../iwslt/forward.subword.align.4.pickle', 'wb') as file_fas:
                 final_count = {}
@@ -30,7 +30,6 @@ with open('../iwslt/train.tok.en', 'rt') as file_en:
                             z_dict[key].append(a - b * 1.0360595565014956)  # round((int(a) + 1) / len_x * split_portion) - 1
                         else:
                             z_dict[key] = [a - b * WORD_COUNT[0]]
-                    print("z_dict", z_dict)
                     for i, y_word in enumerate(y.split()):
                         new_i = round((int(i) + 1) / len_x * split_portion) - 1
                         if new_i in z_dict:
