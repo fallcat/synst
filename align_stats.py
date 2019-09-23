@@ -55,7 +55,7 @@ with open('../iwslt/train.tok.en', 'rt') as file_en:
                         stats[key][num]['mean'] = final_count[key][num]['mean']
                         stats[key][num]['std'] = math.sqrt(final_count[key][num]['var'])
                         means.append(stats[key][num]['mean'])
-                        stds.append(stats[key][num]['mean'])
+                        stds.append(stats[key][num]['std'])
                     stats[key]['means_mean'] = np.mean(means)
                     stats[key]['stds_mean'] = np.mean(stds)
                 pickle.dump(stats, file_fas)
