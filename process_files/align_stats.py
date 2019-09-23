@@ -16,6 +16,7 @@ with open('../iwslt/train.tok.en', 'rt') as file_en:
                     len_x = len(x.split())
                     len_y = len(y.split())
                     for z_element in z.split():
+                        print("z_element", z_element)
                         a, b = z_element.rsplit('-')
                         a, b = float(a), int(b)
                         key = math.ceil((b + 0.5) / len_y * split_portion)  # round((b + 1) / len_x * split_portion) - 1
