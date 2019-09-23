@@ -17,7 +17,7 @@ with open('../iwslt/train.tok.en', 'rt') as file_en:
                     len_y = len(y.split())
                     for z_element in z.split():
                         a, b = z_element.split('-')
-                        a, b = int(a), int(b)
+                        a, b = float(a), int(b)
                         key = math.ceil((b + 0.5) / len_y * split_portion)  # round((b + 1) / len_x * split_portion) - 1
                         if key in z_dict:
                             z_dict[key].append(a - b * 1.0360595565014956)  # round((int(a) + 1) / len_x * split_portion) - 1
