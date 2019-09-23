@@ -20,6 +20,9 @@ with open('../iwslt/train.tok.en', 'rt') as file_en:
                         a, b = int(a), int(b)
                         key = math.ceil((b + 0.5) / len_y * split_portion)  # round((b + 1) / len_x * split_portion) - 1
                         if key in z_dict:
+                            print("z_dict", z_dict)
+                            print("key", key)
+                            print("z_dict[key]", z_dict[key])
                             z_dict[key].append(a - b * 1.0360595565014956)  # round((int(a) + 1) / len_x * split_portion) - 1
                         else:
                             z_dict = [a - b * WORD_COUNT[0]]
