@@ -7,11 +7,11 @@ WORD_COUNT = (1.0360595565014956, 1)
 
 with open('../iwslt/train.tok.bpe.32000.en', 'rt') as file_en:
     with open('../iwslt/train.tok.bpe.32000.de', 'rt') as file_de:
-        with open('../iwslt/forward.subword.align', 'rt') as file_fa:
-            with open('../iwslt/forward.subword.align.4.pickle', 'wb') as file_fas:
+        with open('../iwslt/reverse.subword.align', 'rt') as file_fa:
+            with open('../iwslt/reverse.subword.align.4.pickle', 'wb') as file_fas:
                 final_count = {}
                 stats = {}
-                for x, y, z in zip(file_en, file_de, file_fa):
+                for x, y, z in zip(file_de, file_en, file_fa):
                     z_dict = {}
                     len_x = len(x.split())
                     len_y = len(y.split())
@@ -27,7 +27,7 @@ with open('../iwslt/train.tok.bpe.32000.en', 'rt') as file_en:
                             print("b", b)
                             print("len_y", len_y)
                         if key in z_dict:
-                            z_dict[key].append(a - b * 1.0360595565014956)  # round((int(a) + 1) / len_x * split_portion) - 1
+                            z_dict[key].append(a - b / 1.0360595565014956)  # round((int(a) + 1) / len_x * split_portion) - 1
                         else:
                             z_dict[key] = [a - b * WORD_COUNT[0]]
                     for i, y_word in enumerate(y.split()):
