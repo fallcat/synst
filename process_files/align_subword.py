@@ -5,7 +5,7 @@ with open('../iwslt/train.bpe.idx.mapping.en', 'rt') as source_file:
                 for source_line, target_line, align_line in zip(source_file, target_file, align_file):
                     source_list = [w.split(':')[1].split(',') for w in source_line.split()]
                     target_list = [w.split(':')[1].split(',') for w in target_line.split()]
-                    align_list = [w.split('-') for w in align_line]
+                    align_list = [w.split('-') for w in align_line.split()]
                     print(align_list)
                     output_list = []
                     for item in align_list:
