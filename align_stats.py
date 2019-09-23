@@ -25,7 +25,7 @@ with open('../iwslt/train.tok.en', 'rt') as file_en:
                             print("z_dict[key]", z_dict[key])
                             z_dict[key].append(a - b * 1.0360595565014956)  # round((int(a) + 1) / len_x * split_portion) - 1
                         else:
-                            z_dict = [a - b * WORD_COUNT[0]]
+                            z_dict[key] = [a - b * WORD_COUNT[0]]
                     for i, y_word in enumerate(y.split()):
                         new_i = round((int(i) + 1) / len_x * split_portion) - 1
                         if new_i in z_dict:
