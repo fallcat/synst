@@ -26,26 +26,36 @@ with open('../iwslt/train.tok.en', 'rt') as file_en:
                     for i, y_word in enumerate(y.split()):
                         new_i = round((int(i) + 1) / len_x * split_portion) - 1
                         if new_i in z_dict:
-                            if y_word in final_count:
-                                if new_i in final_count[y_word]:
-                                    final_count[y_word][new_i].extend(z_dict[new_i])
-                                else:
-                                    final_count[y_word][new_i] = z_dict[new_i]
-                            else:
+                            if y_word not in final_count:
                                 final_count[y_word] = {}
-                                final_count[y_word][new_i] = z_dict[new_i]
+                            if new_i in final_count[y_word]:
+                                old_mean = final_count[y_word][new_i]['mean']
+                                old_var = final_count[y_word][new_i]['var']
+                                old_count = final_count[y_word][new_i]['count']
+                                current_count = len(z_dict[new_i])
+                                current_mean = np.mean(z_dict[new_i])
+                                current_var = np.var(z_dict[new_i])
+                                new_count = old_count + current_count
+                                new_mean = (old_mean * old_count + sum(z_dict[new_i])) / new_count
+                                new_var = (old_count * (old_var + (old_mean - new_mean) ** 2) + current_count * (current_var + (current_mean - new_mean) ** 2)) / new_count
+                                final_count[y_word][new_i]['mean'] = new_mean
+                                final_count[y_word][new_i]['var'] = new_var
+                                final_count[y_word][new_i]['count'] = new_count
+                            else:
+                                final_count[y_word][new_i] = {}
+                                final_count[y_word][new_i]['mean'] = np.mean(z_dict[new_i])
+                                final_count[y_word][new_i]['var'] = np.var(z_dict[new_i])
+                                final_count[y_word][new_i]['count'] = len(z_dict[new_i])
                 for key in final_count:
                     stats[key] = {}
                     means = []
                     stds = []
                     for num in final_count[key]:
-                        mean = np.mean(final_count[key][num])
-                        std = np.std(final_count[key][num])
                         stats[key][num] = {}
-                        stats[key][num]['mean'] = mean
-                        stats[key][num]['std'] = std
-                        means.append(mean)
-                        stds.append(std)
+                        stats[key][num]['mean'] = final_count[key][num]['mean']
+                        stats[key][num]['std'] = math.sqrt(final_count[key][num]['var'])
+                        means.append(stats[key][num]['mean'])
+                        stds.append(stats[key][num]['mean'])
                     stats[key]['means_mean'] = np.mean(means)
                     stats[key]['stds_mean'] = np.mean(stds)
                 pickle.dump(stats, file_fas)
