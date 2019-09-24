@@ -440,6 +440,8 @@ class NewAttention(nn.Module):
         # print("attention_mask", attention_mask)
         # print("num_queries", num_queries)
         # print("layer_i", layer_i)
+        print("original_targets", original_targets)
+        print("decoder_position", decoder_position)
         if 'learned' in self.attn_type or 'learned' == self.attn_type:
             # print("in")
             if same_tensor(values, keys, queries):
@@ -489,5 +491,5 @@ class NewAttention(nn.Module):
         # print("projection_dim", self.projection_dim)
 
         attended = self.attention(values, keys, queries, key_mask, attention_mask, layer_i, decoder_position,
-                                  target_lens, original_targets)
+                                  target_lens, original_targets=original_targets)
         return self.output_projection(attended)
