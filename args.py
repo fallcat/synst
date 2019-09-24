@@ -275,12 +275,6 @@ def add_new_transformer_args(parser):
         help='Only works when corresponding attn-position is left or right.'
              'The number of steps to take to that direction.'
     )
-    group.add_argument(
-        '--align-stats-bin-size',
-        type=int,
-        default=4,
-        help='Bin size for word align stats'
-    )
 
     return group
 
@@ -572,6 +566,12 @@ def add_data_args(parser):
         default='train',
         choices=['train', 'valid', 'test', 'dev'],
         help='Location for the preprocessed data'
+    )
+    group.add_argument(
+        '--align-stats-bin-size',
+        type=int,
+        default=4,
+        help='Bin size for word align stats'
     )
 
     return group
