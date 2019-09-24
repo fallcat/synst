@@ -187,7 +187,7 @@ class TransformerDecoderLayer(nn.Module):
 
         source = sources['state']
         # print("source", source)
-        kwargs = {'key_mask': sources['mask'], 'layer_i': layer_i, 'original_targets': original_targets}
+        kwargs = {'key_mask': sources['mask'], 'layer_i': layer_i, 'original_targets': original_targets.cpu().numpy()}
         if self.causal and cache is not None:
             kwargs['num_queries'] = self.span
             kwargs['decoder_position'] = decoder_position
