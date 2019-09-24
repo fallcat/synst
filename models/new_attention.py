@@ -375,7 +375,7 @@ class NewAttention(nn.Module):
                             print("distance_diff", distance_diff.shape)
                             print("offsets", offsets.shape)
                             print("offsets.unsqueeze(1).unsqueeze(-1)", offsets.unsqueeze(1).unsqueeze(-1).shape)
-                            distance_diff = (distance_diff - offsets.unsqueeze(1).unsqueeze(-1)).view(distance_diff_shape)
+                            distance_diff = (distance_diff - offsets.unsqueeze(-1))
 
 
                         if attn_type[i] == 'normal':
