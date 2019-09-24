@@ -632,4 +632,4 @@ class AnnotatedTextDataset(TextDataset):
             if w in word_align_stats:
                 self.word_align_stats.append(word_align_stats[w])
             else:
-                self.word_align_stats.append({0:{'mean': 0, 'std': 0}})
+                self.word_align_stats.append({1: {'mean': 0, 'std': 0}})
