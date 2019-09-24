@@ -244,22 +244,6 @@ class NewAttention(nn.Module):
                         indices_q = indices_q * self.word_count_ratio
 
                     if decoder_position == -1 and original_targets is not None:
-                        for j, original_target in enumerate(original_targets):
-                            print("j original_target", j, original_target)
-                            for i, n in enumerate(original_target):
-                                print("n", n)
-                                print("self.word_align_stats", self.word_align_stats)
-                                print("self.word_align_stats", len(self.word_align_stats))
-                                print("self.word_align_stats[n]", self.word_align_stats[n])
-                                print("abs(x - math.ceil((i + 0.5) / queries_shape[1] * self.split_portion))",
-                                      abs(self.word_align_stats[n].keys()[0] - math.ceil((i + 0.5) / queries_shape[1] * self.split_portion)))
-                                print("min(self.word_align_stats[n], key=lambda x: abs(x - math.ceil((i + 0.5) / queries_shape[1] * self.split_portion)))",
-                                      min(self.word_align_stats[n],
-                                                          key=lambda x: abs(x - math.ceil((i + 0.5) / queries_shape[1] *
-                                                                                          self.split_portion))))
-                                print(self.word_align_stats[min(self.word_align_stats[n],
-                                                          key=lambda x: abs(x - math.ceil((i + 0.5) / queries_shape[1] *
-                                                                                          self.split_portion)))]['mean'])
                         offsets = torch.tensor([[self.word_align_stats[min(self.word_align_stats[n],
                                                  key=lambda x: abs(x - math.ceil((i + 0.5) / queries_shape[1] *
                                                                                  self.split_portion)))]['mean']
