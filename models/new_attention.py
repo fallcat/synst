@@ -244,11 +244,17 @@ class NewAttention(nn.Module):
                         indices_q = indices_q * self.word_count_ratio
 
                     if decoder_position == -1 and original_targets is not None:
+                        for j, original_target in enumerate(original_targets):
+                            print("j original_target", j, original_target)
+                            for i, n in enumerate(original_target):
+                                print(self.word_align_stats[min(self.word_align_stats[n],
+                                                          key=lambda x: abs(x - math.ceil((i + 0.5) / queries_shape[1] *
+                                                                                          self.split_portion)))]['mean'])
                         offsets = torch.tensor([[self.word_align_stats[min(self.word_align_stats[n],
                                                  key=lambda x: abs(x - math.ceil((i + 0.5) / queries_shape[1] *
                                                                                  self.split_portion)))]['mean']
-                                                 for i, n in enumerate(original_targets[j])]
-                                                for j in range(len(original_targets))])
+                                                 for i, n in enumerate(original_target)]
+                                                for j, original_target in enumerate(original_targets)])
                         print("offsets", offsets.shape)
                         print("offsets[0]", offsets)
 
