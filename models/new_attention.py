@@ -249,8 +249,12 @@ class NewAttention(nn.Module):
                             for i, n in enumerate(original_target):
                                 print("n", n)
                                 # print("self.word_align_stats", self.word_align_stats)
-                                print("self.word_align_stats", len(self.word_align_stats))
-                                # print("self.word_align_stats[n]", self.word_align_stats[n])
+                                # print("self.word_align_stats", len(self.word_align_stats))
+                                print("self.word_align_stats[n]", self.word_align_stats[n])
+                                for k in self.word_align_stats[n]:
+                                    print("k", k)
+                                    print("abs(x - math.ceil((i + 0.5) / queries_shape[1] * self.split_portion))", abs(k - math.ceil((i + 0.5) / queries_shape[1] *
+                                                                                          self.split_portion)))
                                 print("min(self.word_align_stats[n], key=lambda x: abs(x - math.ceil((i + 0.5) / queries_shape[1] * self.split_portion)))",
                                       min(self.word_align_stats[n],
                                                           key=lambda x: abs(x - math.ceil((i + 0.5) / queries_shape[1] *
