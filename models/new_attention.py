@@ -400,8 +400,8 @@ class NewAttention(nn.Module):
         # torch.set_printoptions(profile='full')
         # print("values", values)
         # print("values shape", values.shape)
-        # print("attn_weights", attn_weights)
-        # print("attn_weights shape", attn_weights.shape)
+        print("attn_weights", attn_weights)
+        print("attn_weights shape", attn_weights.shape)
         # print("attended", attended)
         # print("attended shape", attended.shape)
 
@@ -433,8 +433,8 @@ class NewAttention(nn.Module):
         # print("attention_mask", attention_mask)
         # print("num_queries", num_queries)
         # print("layer_i", layer_i)
-        print("original_targets", original_targets)
-        print("decoder_position", decoder_position)
+        # print("original_targets", original_targets)
+        # print("decoder_position", decoder_position)
         if 'learned' in self.attn_type or 'learned' == self.attn_type:
             # print("in")
             if same_tensor(values, keys, queries):

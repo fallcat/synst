@@ -92,7 +92,7 @@ class TransformerEncoderLayer(nn.Module):
         mask = inputs['mask']
         state = inputs['state']
 
-        print("encoder self attention")
+        # print("encoder self attention")
 
         # print("outside layer_i", layer_i)
 
@@ -175,7 +175,7 @@ class TransformerDecoderLayer(nn.Module):
             kwargs['key_mask'] = mask
             kwargs['attention_mask'] = self.mask(state)
 
-        print("decoder self attention")
+        # print("decoder self attention")
         # print("state before self attention", state.shape)
 
         state = self.self_attention(
@@ -196,7 +196,7 @@ class TransformerDecoderLayer(nn.Module):
             # print("kwargs['decoder_position']", kwargs['decoder_position'])
         print("original_targets outside", kwargs['original_targets'])
 
-        print("decoder source attention")
+        # print("decoder source attention")
 
         state = self.source_attention(
             state, # residual
