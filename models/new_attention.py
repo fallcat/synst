@@ -395,6 +395,7 @@ class NewAttention(nn.Module):
                     else:
                         logits = self.attn_weights[attn_type[i]][attn_position[i]][:queries.shape[1], :values.shape[1]]
                         logits = logits.expand(int(values.shape[0] / self.num_heads), logits.shape[0], logits.shape[1])
+                    logits = logits.type_as(values)
                     # logits = logits.unsqueeze(0).expand(int(values.shape[0] / self.num_heads),
                     #                                     queries.shape[1],
                     #                                     values.shape[1]).type_as(values)
