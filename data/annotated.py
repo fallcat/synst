@@ -109,11 +109,6 @@ class AnnotatedTextDataset(TextDataset):
         return os.path.join(self.config.data_directory, type(self).ALIGN_STATS[1 if self.swap else 0])
 
     @property
-    def word_align_stats(self):
-        ''' Return word align stats'''
-        return self.word_align_stats
-
-    @property
     def mask_idx(self):
         ''' Return the start of summary value '''
         return self.token2id[MASKED]
