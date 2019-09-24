@@ -267,7 +267,10 @@ class NewAttention(nn.Module):
                                                                                   self.split_portion)))]['mean']
                                                  for i, n in enumerate(original_target)]
                                                 for j, original_target in enumerate(original_targets)])
-                        distance_diff = distance_diff - offsets.unsqueeze(-1)
+                        distance_diff_shape = distance_diff.shape
+                        distance_diff = (distance_diff.view(values.shape[0] / self.num_heads, self.num_heads,
+                                                           distance_diff_shape[1], distance_diff_shape[2]) \
+                                        - offsets.unsqueeze(1).unsqueeze(-1)).view(distance_diff_shape)
 
                     if attn_type == 'normal':
                         # std = 1 / (attn_param * math.sqrt(2 * math.pi))
