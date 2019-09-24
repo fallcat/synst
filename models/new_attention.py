@@ -399,7 +399,7 @@ class NewAttention(nn.Module):
                     #                                     queries.shape[1],
                     #                                     values.shape[1]).type_as(values)
                     # print("other", logits.is_cuda)
-                logits_list.append(logits.unsqueeze(1))
+                logits_list.append(logits.)
             attn_weights = torch.stack(logits_list, dim=1)
             print("attn_weights1", attn_weights.shape)
             attn_weights = attn_weights.view(values.shape[0],
