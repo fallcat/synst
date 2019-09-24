@@ -194,7 +194,7 @@ class TransformerDecoderLayer(nn.Module):
             kwargs['target_lens'] = target_lens
 
             # print("kwargs['decoder_position']", kwargs['decoder_position'])
-        print("original_targets outside", kwargs['original_targets'])
+        # print("original_targets outside", kwargs['original_targets'])
 
         # print("decoder source attention")
 
