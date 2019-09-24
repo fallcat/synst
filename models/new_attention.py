@@ -36,7 +36,7 @@ class NewAttention(nn.Module):
         self.num_layers = attn_config['num_layers']
         self.word_count_ratio = attn_config['word_count_ratio'] if 'word_count_ratio' in attn_config else 1
         self.word_align_stats = attn_config['word_align_stats'] if 'word_align_stats' in attn_config else None
-        self.align_stats_bin_size = attn_config['align_stats_bin_size']
+        self.align_stats_bin_size = attn_config['align_stats_bin_size'] if 'align_stats_bin_size' in attn_config else None
         # self.max_prob = attn_config['max_prob']
         # self.window_size = attn_config['window_size']
 
