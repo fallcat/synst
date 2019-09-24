@@ -307,6 +307,15 @@ class NewAttention(nn.Module):
                 # print("attn_param not list")
                 attn_displacement = [attn_displacement] * self.num_heads
             logits_list = []
+
+            if decoder_position == -1 and original_targets is not None:
+                offsets = torch.tensor([[self.word_align_stats[n][min(self.word_align_stats[n].keys()
+                                                                      & list(range(1, self.split_portion + 1)),
+                                                                      key=lambda x: abs(x - math.ceil(
+                                                                          (i + 0.5) / queries_shape[1] *
+                                                                          self.split_portion)))]['mean']
+                                         for i, n in enumerate(original_target)]
+                                        for j, original_target in enumerate(original_targets)])
             for i in range(self.num_heads):
                 if attn_type[i] == 'whole':
                     logits = torch.full((queries.shape[1], values.shape[1]), 1 / values.shape[1]).to(
@@ -324,7 +333,7 @@ class NewAttention(nn.Module):
                     if (attn_position[i] not in self.attn_weights[attn_type[i]]
                             or (queries.shape[1] > self.attn_weights[attn_type[i]][attn_position[i]].shape[0]
                                 or values.shape[1] > self.attn_weights[attn_type[i]][attn_position[i]].shape[1])) \
-                            or decoder_position != -1:
+                            or decoder_position != -1 or original_targets is not None:
                         indices_q = torch.arange(queries.shape[1]).view(-1, 1).to(dtype=torch.float32)
                         indices_v = torch.arange(values.shape[1]).view(1, -1).to(dtype=torch.float32)
 
@@ -357,6 +366,15 @@ class NewAttention(nn.Module):
                         distance_diff = indices_v - indices_q
                         # print("distance_diff", distance_diff)
 
+                        distance_diff = distance_diff.expand(int(values.shape[0] / self.num_heads),
+                                                             distance_diff.shape[0],
+                                                             distance_diff.shape[1])
+
+                        if decoder_position == -1 and original_targets is not None:
+                            distance_diff_shape = distance_diff.shape
+                            distance_diff = (distance_diff - offsets.unsqueeze(1).unsqueeze(-1)).view(distance_diff_shape)
+
+
                         if attn_type[i] == 'normal':
                             # std = 1 / (attn_param[i] * math.sqrt(2 * math.pi))
                             std = attn_param[i]
@@ -369,14 +387,16 @@ class NewAttention(nn.Module):
                             logits = 1 - distance_diff
                             logits = logits / torch.sum(logits, dim=-1, keepdim=True)
                             # logits = F.softmax(logits, dim=-1)
-                        self.attn_weights[attn_type[i]][attn_position[i]] = logits
+                        if decoder_position > -1 or original_targets is None:
+                            self.attn_weights[attn_type[i]][attn_position[i]] = logits[0]
                     else:
                         logits = self.attn_weights[attn_type[i]][attn_position[i]][:queries.shape[1], :values.shape[1]]
-                    logits = logits.unsqueeze(0).expand(int(values.shape[0] / self.num_heads),
-                                                        queries.shape[1],
-                                                        values.shape[1]).type_as(values)
+                        logits = logits.expand(int(values.shape[0] / self.num_heads), logits.shape[0], logits.shape[1])
+                    # logits = logits.unsqueeze(0).expand(int(values.shape[0] / self.num_heads),
+                    #                                     queries.shape[1],
+                    #                                     values.shape[1]).type_as(values)
                     # print("other", logits.is_cuda)
-                logits_list.append(logits)
+                logits_list.append(logits.unsqueeze(1))
             attn_weights = torch.stack(logits_list, dim=1)
             print("attn_weights1", attn_weights.shape)
             attn_weights = attn_weights.view(values.shape[0],
