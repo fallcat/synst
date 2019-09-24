@@ -92,7 +92,7 @@ class TransformerEncoderLayer(nn.Module):
         mask = inputs['mask']
         state = inputs['state']
 
-        # print("encoder self attention")
+        print("encoder self attention")
 
         # print("outside layer_i", layer_i)
 
@@ -161,6 +161,7 @@ class TransformerDecoderLayer(nn.Module):
         cache = inputs.get('cache')
         target_lens = inputs['target_lens']
 
+
         kwargs = {'layer_i': layer_i}
         decoder_position = state.shape[1] - 1
         if self.causal and cache is not None:
@@ -174,7 +175,7 @@ class TransformerDecoderLayer(nn.Module):
             kwargs['key_mask'] = mask
             kwargs['attention_mask'] = self.mask(state)
 
-        # print("decoder self attention")
+        print("decoder self attention")
         # print("state before self attention", state.shape)
 
         state = self.self_attention(
@@ -186,15 +187,16 @@ class TransformerDecoderLayer(nn.Module):
 
         source = sources['state']
         # print("source", source)
-        kwargs = {'key_mask': sources['mask'], 'layer_i': layer_i}
+        kwargs = {'key_mask': sources['mask'], 'layer_i': layer_i, 'original_targets': original_targets}
         if self.causal and cache is not None:
             kwargs['num_queries'] = self.span
             kwargs['decoder_position'] = decoder_position
             kwargs['target_lens'] = target_lens
-            kwargs['original_targets'] = original_targets
-            # print("kwargs['decoder_position']", kwargs['decoder_position'])
 
-        # print("decoder source attention")
+            # print("kwargs['decoder_position']", kwargs['decoder_position'])
+        print("original_targets outside", kwargs['original_targets'])
+
+        print("decoder source attention")
 
         state = self.source_attention(
             state, # residual
