@@ -220,7 +220,7 @@ class NewAttention(nn.Module):
                 if (attn_position not in self.attn_weights[attn_type]
                         or (queries.shape[1] > self.attn_weights[attn_type][attn_position].shape[0]
                             or values.shape[1] > self.attn_weights[attn_type][attn_position].shape[1])) \
-                        or decoder_position != -1:
+                        or decoder_position != -1 or original_targets is not None:
                     indices_q = torch.arange(queries.shape[1]).view(-1, 1).to(dtype=torch.float32)
                     indices_v = torch.arange(values.shape[1]).view(1, -1).to(dtype=torch.float32)
 
@@ -244,17 +244,13 @@ class NewAttention(nn.Module):
                         indices_q = indices_q * self.word_count_ratio
 
                     if decoder_position == -1 and original_targets is not None:
-                        offsets = torch.tensor([self.word_align_stats[min(self.word_align_stats[n],
-                                                                          key=lambda x: abs(x -
-                                                                                            math.ceil(
-                                                                                                (
-                                                                                                        i + 0.5) /
-                                                                                                queries_shape[
-                                                                                                    1] *
-                                                                                                self.split_portion)))][
-                                                    'mean']
-                                                for i, n in enumerate(original_targets)]).view(-1, 1)
-                        indices_q = indices_q + offsets
+                        offsets = torch.tensor([[self.word_align_stats[min(self.word_align_stats[n],
+                                                 key=lambda x: abs(x - math.ceil((i + 0.5) / queries_shape[1] *
+                                                                                 self.split_portion)))]['mean']
+                                                 for i, n in enumerate(original_targets[j])]
+                                                for j in range(len(original_targets))])
+                        print("offsets", offsets.shape)
+                        print("offsets[0]", offsets)
 
                     if attn_position == 'left':
                         indices_q = indices_q - attn_displacement
@@ -283,10 +279,12 @@ class NewAttention(nn.Module):
                         logits = logits / torch.sum(logits, dim=-1, keepdim=True)
                         # logits = F.softmax(logits, dim=-1)
                     self.attn_weights[attn_type][attn_position] = logits
+                    logits = logits.expand(values.shape[0], logits.shape[0], logits.shape[1])
                 else:
                     logits = self.attn_weights[attn_type][attn_position][:queries.shape[1], :values.shape[1]]
+                    logits = logits.expand(values.shape[0], logits.shape[0], logits.shape[1])
             # print("logits", logits)
-            attn_weights = logits.type_as(values).expand(values.shape[0], logits.shape[0], logits.shape[1])
+            attn_weights = logits.type_as(values)
 
         else:
             # print("enter second")
