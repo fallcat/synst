@@ -268,7 +268,7 @@ class NewAttention(nn.Module):
                                                  for i, n in enumerate(original_target)]
                                                 for j, original_target in enumerate(original_targets)])
                         distance_diff_shape = distance_diff.shape
-                        distance_diff = (distance_diff.view(values.shape[0] / self.num_heads, self.num_heads,
+                        distance_diff = (distance_diff.view(int(values.shape[0] / self.num_heads), self.num_heads,
                                                            distance_diff_shape[1], distance_diff_shape[2]) \
                                         - offsets.unsqueeze(1).unsqueeze(-1)).view(distance_diff_shape)
 
