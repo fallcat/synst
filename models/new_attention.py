@@ -243,40 +243,6 @@ class NewAttention(nn.Module):
                     if decoder_position > -1 or target_lens is not None:
                         indices_q = indices_q * self.word_count_ratio
 
-                    if decoder_position == -1 and original_targets is not None:
-                        for j, original_target in enumerate(original_targets):
-                            print("j original_target", j, original_target)
-                            for i, n in enumerate(original_target):
-                                print("n", n)
-                                # print("self.word_align_stats", self.word_align_stats)
-                                # print("self.word_align_stats", len(self.word_align_stats))
-                                print("self.word_align_stats[n]", self.word_align_stats[n])
-                                # for k in self.word_align_stats[n]:
-                                #     print("k", k)
-                                #     print("abs(x - math.ceil((i + 0.5) / queries_shape[1] * self.split_portion))", abs(k - math.ceil((i + 0.5) / queries_shape[1] *
-                                #                                                           self.split_portion)))
-                                print("min(self.word_align_stats[n], key=lambda x: abs(x - math.ceil((i + 0.5) / queries_shape[1] * self.split_portion)))",
-                                      min(self.word_align_stats[n].keys() & list(range(1, self.split_portion + 1)),
-                                                          key=lambda x: abs(x - math.ceil((i + 0.5) / queries_shape[1] *
-                                                                                          self.split_portion))))
-                                # print("self.word_align_stats[min(self.word_align_stats[n], key=lambda x: abs(x - math.ceil((i + 0.5) / queries_shape[1] * self.split_portion)))]",
-                                #       self.word_align_stats[n][min(self.word_align_stats[n],
-                                #                                 key=lambda x: abs(
-                                #                                     x - math.ceil((i + 0.5) / queries_shape[1] *
-                                #                                                   self.split_portion)))]
-                                #       )
-                                # print(self.word_align_stats[n][min(self.word_align_stats[n],
-                                #                           key=lambda x: abs(x - math.ceil((i + 0.5) / queries_shape[1] *
-                                #                                                           self.split_portion)))]['mean'])
-                        offsets = torch.tensor([[self.word_align_stats[n][min(self.word_align_stats[n].keys()
-                                                                              & list(range(1, self.split_portion + 1)),
-                                                 key=lambda x: abs(x - math.ceil((i + 0.5) / queries_shape[1] *
-                                                                                 self.split_portion)))]['mean']
-                                                 for i, n in enumerate(original_target)]
-                                                for j, original_target in enumerate(original_targets)])
-                        print("offsets", offsets.shape)
-                        print("offsets[0]", offsets)
-
                     if attn_position == 'left':
                         indices_q = indices_q - attn_displacement
                     elif attn_position == 'right':
@@ -291,6 +257,18 @@ class NewAttention(nn.Module):
                     distance_diff = indices_v - indices_q
                     # print("distance_diff", distance_diff)
 
+                    distance_diff = distance_diff.expand(values.shape[0], distance_diff.shape[0], distance_diff.shape[1])
+
+                    if decoder_position == -1 and original_targets is not None:
+                        offsets = torch.tensor([[self.word_align_stats[n][min(self.word_align_stats[n].keys()
+                                                                              & list(range(1, self.split_portion + 1)),
+                                                                              key=lambda x: abs(x - math.ceil(
+                                                                                  (i + 0.5) / queries_shape[1] *
+                                                                                  self.split_portion)))]['mean']
+                                                 for i, n in enumerate(original_target)]
+                                                for j, original_target in enumerate(original_targets)])
+                        distance_diff = distance_diff - offsets.unsqueeze(-1)
+
                     if attn_type == 'normal':
                         # std = 1 / (attn_param * math.sqrt(2 * math.pi))
                         std = attn_param
@@ -303,8 +281,8 @@ class NewAttention(nn.Module):
                         logits = 1 - distance_diff
                         logits = logits / torch.sum(logits, dim=-1, keepdim=True)
                         # logits = F.softmax(logits, dim=-1)
-                    self.attn_weights[attn_type][attn_position] = logits
-                    logits = logits.expand(values.shape[0], logits.shape[0], logits.shape[1])
+                    if decoder_position > -1 or original_targets is None:
+                        self.attn_weights[attn_type][attn_position] = logits[0]
                 else:
                     logits = self.attn_weights[attn_type][attn_position][:queries.shape[1], :values.shape[1]]
                     logits = logits.expand(values.shape[0], logits.shape[0], logits.shape[1])
