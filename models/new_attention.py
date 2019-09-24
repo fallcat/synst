@@ -372,9 +372,9 @@ class NewAttention(nn.Module):
 
                         if decoder_position == -1 and original_targets is not None:
                             distance_diff_shape = distance_diff.shape
-                            print("distance_diff", distance_diff.shape)
-                            print("offsets", offsets.shape)
-                            print("offsets.unsqueeze(1).unsqueeze(-1)", offsets.unsqueeze(1).unsqueeze(-1).shape)
+                            # print("distance_diff", distance_diff.shape)
+                            # print("offsets", offsets.shape)
+                            # print("offsets.unsqueeze(1).unsqueeze(-1)", offsets.unsqueeze(1).unsqueeze(-1).shape)
                             distance_diff = (distance_diff - offsets.unsqueeze(-1))
 
 
@@ -402,11 +402,11 @@ class NewAttention(nn.Module):
                     # print("other", logits.is_cuda)
                 logits_list.append(logits)
             attn_weights = torch.stack(logits_list, dim=1)
-            print("attn_weights1", attn_weights.shape)
+            # print("attn_weights1", attn_weights.shape)
             attn_weights = attn_weights.view(values.shape[0],
                                              attn_weights.shape[2],
                                              attn_weights.shape[3])
-            print("attn_weights2", attn_weights.shape)
+            # print("attn_weights2", attn_weights.shape)
         if mask is not None:
             new_mask = mask.clone()
             new_mask[new_mask == 0] = 1
@@ -424,8 +424,8 @@ class NewAttention(nn.Module):
         # torch.set_printoptions(profile='full')
         # print("values", values)
         # print("values shape", values.shape)
-        # print("attn_weights", attn_weights)
-        # print("attn_weights shape", attn_weights.shape)
+        print("attn_weights", attn_weights)
+        print("attn_weights shape", attn_weights.shape)
         # print("attended", attended)
         # print("attended shape", attended.shape)
 
