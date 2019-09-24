@@ -36,7 +36,7 @@ class NewAttention(nn.Module):
         self.num_layers = attn_config['num_layers']
         self.word_count_ratio = attn_config['word_count_ratio'] if 'word_count_ratio' in attn_config else 1
         self.word_align_stats = attn_config['word_align_stats'] if 'word_align_stats' in attn_config else None
-        self.split_portion = 4  # TODO: need to change to get from args
+        self.align_stats_bin_size = attn_config['align_stats_bin_size']
         # self.max_prob = attn_config['max_prob']
         # self.window_size = attn_config['window_size']
 
@@ -261,10 +261,11 @@ class NewAttention(nn.Module):
 
                     if decoder_position == -1 and original_targets is not None:
                         offsets = torch.tensor([[self.word_align_stats[n][min(self.word_align_stats[n].keys()
-                                                                              & list(range(1, self.split_portion + 1)),
+                                                                              & list(range(1, self.align_stats_bin_size
+                                                                                           + 1)),
                                                                               key=lambda x: abs(x - math.ceil(
                                                                                   (i + 0.5) / queries_shape[1] *
-                                                                                  self.split_portion)))]['mean']
+                                                                                  self.align_stats_bin_size)))]['mean']
                                                  for i, n in enumerate(original_target)]
                                                 for j, original_target in enumerate(original_targets)])
                         distance_diff_shape = distance_diff.shape
@@ -310,10 +311,10 @@ class NewAttention(nn.Module):
 
             if decoder_position == -1 and original_targets is not None:
                 offsets = torch.tensor([[self.word_align_stats[n][min(self.word_align_stats[n].keys()
-                                                                      & list(range(1, self.split_portion + 1)),
+                                                                      & list(range(1, self.align_stats_bin_size + 1)),
                                                                       key=lambda x: abs(x - math.ceil(
                                                                           (i + 0.5) / queries_shape[1] *
-                                                                          self.split_portion)))]['mean']
+                                                                          self.align_stats_bin_size)))]['mean']
                                          for i, n in enumerate(original_target)]
                                         for j, original_target in enumerate(original_targets)])
             for i in range(self.num_heads):

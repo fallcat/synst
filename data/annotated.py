@@ -56,7 +56,7 @@ class AnnotatedTextDataset(TextDataset):
     NAME = ''
     LANGUAGE_PAIR = ('en', 'en')
     WORD_COUNT = (4215814, 4186988)
-    ALIGN_STATS = ('forward.subword.align.4.pickle', 'reverse.subword.align.4.pickle')
+    ALIGN_STATS = ('forward.subword.align', 'reverse.subword.align')
 
     URLS = []
     RAW_SPLITS = {}
@@ -106,7 +106,8 @@ class AnnotatedTextDataset(TextDataset):
     @property
     def word_align_file(self):
         ''' Return the name of word align file for subwords'''
-        return os.path.join(self.config.data_directory, type(self).ALIGN_STATS[1 if self.swap else 0])
+        return os.path.join(self.config.data_directory, type(self).ALIGN_STATS[1 if self.swap else 0] +
+                            '.' + str(self.config.align_stats_bin_size) + '.pickle')
 
     @property
     def mask_idx(self):
