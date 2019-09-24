@@ -340,19 +340,6 @@ class NewAttention(nn.Module):
                         if decoder_position > -1 or target_lens is not None:
                             indices_q = indices_q * self.word_count_ratio
 
-                        if decoder_position == -1 and original_targets is not None:
-                            offsets = torch.tensor([self.word_align_stats[min(self.word_align_stats[n],
-                                                                                            key=lambda x: abs(x -
-                                                                                                              math.ceil(
-                                                                                                                  (
-                                                                                                                              i + 0.5) /
-                                                                                                                  queries_shape[
-                                                                                                                      1] *
-                                                                                                                  self.split_portion)))][
-                                                                      'mean']
-                                                                  for i, n in enumerate(original_targets)]).view(-1, 1)
-                            indices_q = indices_q + offsets
-
                         if attn_position[i] == 'left':
                             indices_q = indices_q - attn_displacement[i]
                         elif attn_position[i] == 'right':
@@ -388,9 +375,11 @@ class NewAttention(nn.Module):
                     # print("other", logits.is_cuda)
                 logits_list.append(logits)
             attn_weights = torch.stack(logits_list, dim=1)
+            print("attn_weights1", attn_weights.shape)
             attn_weights = attn_weights.view(values.shape[0],
                                              attn_weights.shape[2],
                                              attn_weights.shape[3])
+            print("attn_weights2", attn_weights.shape)
         if mask is not None:
             new_mask = mask.clone()
             new_mask[new_mask == 0] = 1
