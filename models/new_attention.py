@@ -251,24 +251,25 @@ class NewAttention(nn.Module):
                                 # print("self.word_align_stats", self.word_align_stats)
                                 # print("self.word_align_stats", len(self.word_align_stats))
                                 print("self.word_align_stats[n]", self.word_align_stats[n])
-                                for k in self.word_align_stats[n]:
-                                    print("k", k)
-                                    print("abs(x - math.ceil((i + 0.5) / queries_shape[1] * self.split_portion))", abs(k - math.ceil((i + 0.5) / queries_shape[1] *
-                                                                                          self.split_portion)))
+                                # for k in self.word_align_stats[n]:
+                                #     print("k", k)
+                                #     print("abs(x - math.ceil((i + 0.5) / queries_shape[1] * self.split_portion))", abs(k - math.ceil((i + 0.5) / queries_shape[1] *
+                                #                                                           self.split_portion)))
                                 print("min(self.word_align_stats[n], key=lambda x: abs(x - math.ceil((i + 0.5) / queries_shape[1] * self.split_portion)))",
-                                      min(self.word_align_stats[n],
+                                      min(self.word_align_stats[n].keys() & list(range(1, self.split_portion + 1)),
                                                           key=lambda x: abs(x - math.ceil((i + 0.5) / queries_shape[1] *
                                                                                           self.split_portion))))
-                                print("self.word_align_stats[min(self.word_align_stats[n], key=lambda x: abs(x - math.ceil((i + 0.5) / queries_shape[1] * self.split_portion)))]",
-                                      self.word_align_stats[n][min(self.word_align_stats[n],
-                                                                key=lambda x: abs(
-                                                                    x - math.ceil((i + 0.5) / queries_shape[1] *
-                                                                                  self.split_portion)))]
-                                      )
-                                print(self.word_align_stats[n][min(self.word_align_stats[n],
-                                                          key=lambda x: abs(x - math.ceil((i + 0.5) / queries_shape[1] *
-                                                                                          self.split_portion)))]['mean'])
-                        offsets = torch.tensor([[self.word_align_stats[n][min(self.word_align_stats[n],
+                                # print("self.word_align_stats[min(self.word_align_stats[n], key=lambda x: abs(x - math.ceil((i + 0.5) / queries_shape[1] * self.split_portion)))]",
+                                #       self.word_align_stats[n][min(self.word_align_stats[n],
+                                #                                 key=lambda x: abs(
+                                #                                     x - math.ceil((i + 0.5) / queries_shape[1] *
+                                #                                                   self.split_portion)))]
+                                #       )
+                                # print(self.word_align_stats[n][min(self.word_align_stats[n],
+                                #                           key=lambda x: abs(x - math.ceil((i + 0.5) / queries_shape[1] *
+                                #                                                           self.split_portion)))]['mean'])
+                        offsets = torch.tensor([[self.word_align_stats[n][min(self.word_align_stats[n]
+                                                                              & list(range(1, self.split_portion + 1)),
                                                  key=lambda x: abs(x - math.ceil((i + 0.5) / queries_shape[1] *
                                                                                  self.split_portion)))]['mean']
                                                  for i, n in enumerate(original_target)]
