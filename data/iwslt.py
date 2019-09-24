@@ -55,8 +55,6 @@ class IWSLTDataset(AnnotatedTextDataset):
         )
     ]
 
-    ALIGN_STATS = ('forward.subword.align.4.pickle', 'reverse.subword.align.4.pickle')
-
 
 class IWSLTEnJaDataset(AnnotatedTextDataset):
     ''' Class that encapsulates the IWSLT dataset '''
