@@ -35,6 +35,8 @@ class NewAttention(nn.Module):
         self.attn_displacement = attn_config['attn_displacement']
         self.num_layers = attn_config['num_layers']
         self.word_count_ratio = attn_config['word_count_ratio'] if 'word_count_ratio' in attn_config else 1
+        self.word_align_stats = attn_config['word_align_stats'] if 'word_align_stats' in attn_config else None
+        self.split_portion = 4  # TODO: need to change to get from args
         # self.max_prob = attn_config['max_prob']
         # self.window_size = attn_config['window_size']
 
@@ -93,7 +95,8 @@ class NewAttention(nn.Module):
                   -1,
                   self.projection_dim)
 
-    def attention(self, values, keys, queries, key_mask=None, mask=None, layer_i=0, decoder_position=-1, target_lens=None):
+    def attention(self, values, keys, queries, key_mask=None, mask=None, layer_i=0, decoder_position=-1,
+                  target_lens=None, original_targets=None):
         ''' Scaled dot product attention with optional masks '''
 
         # print("values", values.shape)
@@ -122,7 +125,8 @@ class NewAttention(nn.Module):
                 elif len(attn_config_i) == self.num_heads:
                     if len(set(attn_config_i)) == 1:
                         attn_configs.append(attn_config_i[0])
-                    attn_configs.append(attn_config_i)
+                    else:
+                        attn_configs.append(attn_config_i)
                 elif len(attn_config_i) == self.num_layers:
                     attn_configs.append(attn_config_i[layer_i])
                 else:
@@ -226,6 +230,7 @@ class NewAttention(nn.Module):
                     if decoder_position > -1:
                         indices_q[:] = decoder_position
 
+
                     # if target_lens is None:
                     #     if decoder_position > -1:
                     #         indices_q = indices_q * values_shape[1] / queries_shape[1]  # self.word_count_ratio
@@ -237,6 +242,14 @@ class NewAttention(nn.Module):
 
                     if decoder_position > -1 or target_lens is not None:
                         indices_q = indices_q * self.word_count_ratio
+
+                    if decoder_position == -1:
+                        indices_q = indices_q + torch.tensor([self.word_align_stats[min(self.word_align_stats[n],
+                                                                  key=lambda x: abs(x -
+                                                                                    math.ceil((i + 0.5) /
+                                                                                              queries_shape[1] *
+                                                                                              self.split_portion)))]['mean']
+                                                              for i, n in enumerate(original_targets)]).view(-1, 1)
 
                     if attn_position == 'left':
                         indices_q = indices_q - attn_displacement
@@ -321,6 +334,18 @@ class NewAttention(nn.Module):
                         if decoder_position > -1 or target_lens is not None:
                             indices_q = indices_q * self.word_count_ratio
 
+                        if decoder_position == -1:
+                            indices_q = indices_q + torch.tensor([self.word_align_stats[min(self.word_align_stats[n],
+                                                                                            key=lambda x: abs(x -
+                                                                                                              math.ceil(
+                                                                                                                  (
+                                                                                                                              i + 0.5) /
+                                                                                                                  queries_shape[
+                                                                                                                      1] *
+                                                                                                                  self.split_portion)))][
+                                                                      'mean']
+                                                                  for i, n in enumerate(original_targets)]).view(-1, 1)
+
                         if attn_position[i] == 'left':
                             indices_q = indices_q - attn_displacement[i]
                         elif attn_position[i] == 'right':
@@ -393,7 +418,8 @@ class NewAttention(nn.Module):
         )
 
     def forward(self, values, keys, queries, # pylint:disable=arguments-differ
-                key_mask=None, attention_mask=None, num_queries=0, layer_i=0, decoder_position=-1, target_lens=None):
+                key_mask=None, attention_mask=None, num_queries=0, layer_i=0, decoder_position=-1, target_lens=None,
+                original_targets=None):
         ''' Forward pass of the attention '''
         # pylint:disable=unbalanced-tuple-unpacking
         # print("self.attn_type", self.attn_type)
@@ -456,5 +482,6 @@ class NewAttention(nn.Module):
         # print("num_heads", self.num_heads)
         # print("projection_dim", self.projection_dim)
 
-        attended = self.attention(values, keys, queries, key_mask, attention_mask, layer_i, decoder_position, target_lens)
+        attended = self.attention(values, keys, queries, key_mask, attention_mask, layer_i, decoder_position,
+                                  target_lens, original_targets)
         return self.output_projection(attended)

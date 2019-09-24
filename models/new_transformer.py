@@ -154,7 +154,7 @@ class TransformerDecoderLayer(nn.Module):
         self.self_attention.reset_parameters()
         self.source_attention.reset_parameters()
 
-    def forward(self, inputs, sources, layer_i): # pylint:disable=arguments-differ
+    def forward(self, inputs, sources, original_targets, layer_i): # pylint:disable=arguments-differ
         ''' The forward pass '''
         mask = inputs['mask']
         state = inputs['state']
@@ -191,6 +191,7 @@ class TransformerDecoderLayer(nn.Module):
             kwargs['num_queries'] = self.span
             kwargs['decoder_position'] = decoder_position
             kwargs['target_lens'] = target_lens
+            kwargs['original_targets'] = original_targets
             # print("kwargs['decoder_position']", kwargs['decoder_position'])
 
         # print("decoder source attention")
@@ -304,7 +305,7 @@ class NewTransformer(nn.Module):
                                'num_layers': config.enc_dec_num_layers,
                                'num_heads': config.enc_dec_num_heads,
                                'word_count_ratio': self.dataset.word_count_ratio,
-                               'align_stats_file': self.dataset.align_stats_file}
+                               'word_align_stats': self.dataset.word_align_stats}
         # print("enc_dec_attn_config", enc_dec_attn_config)
         args = [dec_attn_config, enc_dec_attn_config, config.num_heads, config.embedding_size, config.hidden_dim]
         return nn.ModuleList([
@@ -379,7 +380,7 @@ class NewTransformer(nn.Module):
         }
         for i, decoder in enumerate(decoders):
             # print("i", i)
-            decoded = decoder(decoded, encoded, i)
+            decoded = decoder(decoded, encoded, targets, i)
 
         # compute projection to the vocabulary
         state = decoded['state']
