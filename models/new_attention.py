@@ -243,13 +243,18 @@ class NewAttention(nn.Module):
                     if decoder_position > -1 or target_lens is not None:
                         indices_q = indices_q * self.word_count_ratio
 
-                    if decoder_position == -1:
-                        indices_q = indices_q + torch.tensor([self.word_align_stats[min(self.word_align_stats[n],
-                                                                  key=lambda x: abs(x -
-                                                                                    math.ceil((i + 0.5) /
-                                                                                              queries_shape[1] *
-                                                                                              self.split_portion)))]['mean']
-                                                              for i, n in enumerate(original_targets)]).view(-1, 1)
+                    if decoder_position == -1 and original_targets is not None:
+                        offsets = torch.tensor([self.word_align_stats[min(self.word_align_stats[n],
+                                                                          key=lambda x: abs(x -
+                                                                                            math.ceil(
+                                                                                                (
+                                                                                                        i + 0.5) /
+                                                                                                queries_shape[
+                                                                                                    1] *
+                                                                                                self.split_portion)))][
+                                                    'mean']
+                                                for i, n in enumerate(original_targets)]).view(-1, 1)
+                        indices_q = indices_q + offsets
 
                     if attn_position == 'left':
                         indices_q = indices_q - attn_displacement
@@ -334,8 +339,8 @@ class NewAttention(nn.Module):
                         if decoder_position > -1 or target_lens is not None:
                             indices_q = indices_q * self.word_count_ratio
 
-                        if decoder_position == -1:
-                            indices_q = indices_q + torch.tensor([self.word_align_stats[min(self.word_align_stats[n],
+                        if decoder_position == -1 and original_targets is not None:
+                            offsets = torch.tensor([self.word_align_stats[min(self.word_align_stats[n],
                                                                                             key=lambda x: abs(x -
                                                                                                               math.ceil(
                                                                                                                   (
@@ -345,6 +350,7 @@ class NewAttention(nn.Module):
                                                                                                                   self.split_portion)))][
                                                                       'mean']
                                                                   for i, n in enumerate(original_targets)]).view(-1, 1)
+                            indices_q = indices_q + offsets
 
                         if attn_position[i] == 'left':
                             indices_q = indices_q - attn_displacement[i]
