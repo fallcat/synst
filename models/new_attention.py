@@ -268,7 +268,7 @@ class NewAttention(nn.Module):
                                 # print(self.word_align_stats[n][min(self.word_align_stats[n],
                                 #                           key=lambda x: abs(x - math.ceil((i + 0.5) / queries_shape[1] *
                                 #                                                           self.split_portion)))]['mean'])
-                        offsets = torch.tensor([[self.word_align_stats[n][min(self.word_align_stats[n]
+                        offsets = torch.tensor([[self.word_align_stats[n][min(self.word_align_stats[n].keys()
                                                                               & list(range(1, self.split_portion + 1)),
                                                  key=lambda x: abs(x - math.ceil((i + 0.5) / queries_shape[1] *
                                                                                  self.split_portion)))]['mean']
