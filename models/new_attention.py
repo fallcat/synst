@@ -285,7 +285,7 @@ class NewAttention(nn.Module):
                         logits = 1 - distance_diff
                         logits = logits / torch.sum(logits, dim=-1, keepdim=True)
                         # logits = F.softmax(logits, dim=-1)
-                    if decoder_position > -1 or original_targets is None:
+                    if decoder_position > -1 and original_targets is None:
                         self.attn_weights[attn_type][attn_position] = logits[0]
                 else:
                     logits = self.attn_weights[attn_type][attn_position][:queries.shape[1], :values.shape[1]]
@@ -309,7 +309,7 @@ class NewAttention(nn.Module):
                 attn_displacement = [attn_displacement] * self.num_heads
             logits_list = []
 
-            if decoder_position == -1 and original_targets is not None:
+            if original_targets is not None:
                 offsets = torch.tensor([[self.word_align_stats[n][min(self.word_align_stats[n].keys()
                                                                       & list(range(1, self.align_stats_bin_size + 1)),
                                                                       key=lambda x: abs(x - math.ceil(
@@ -371,12 +371,12 @@ class NewAttention(nn.Module):
                                                              distance_diff.shape[0],
                                                              distance_diff.shape[1])
 
-                        if decoder_position == -1 and original_targets is not None:
+                        if original_targets is not None:
                             distance_diff_shape = distance_diff.shape
                             # print("distance_diff", distance_diff.shape)
                             # print("offsets", offsets.shape)
                             # print("offsets.unsqueeze(1).unsqueeze(-1)", offsets.unsqueeze(1).unsqueeze(-1).shape)
-                            distance_diff = (distance_diff - offsets.unsqueeze(-1))
+                            distance_diff = (distance_diff - offsets.unsqueeze(-1).type_as(distance_diff))
 
 
                         if attn_type[i] == 'normal':
@@ -391,7 +391,7 @@ class NewAttention(nn.Module):
                             logits = 1 - distance_diff
                             logits = logits / torch.sum(logits, dim=-1, keepdim=True)
                             # logits = F.softmax(logits, dim=-1)
-                        if decoder_position > -1 or original_targets is None:
+                        if decoder_position > -1 and original_targets is None:
                             self.attn_weights[attn_type[i]][attn_position[i]] = logits[0]
                     else:
                         logits = self.attn_weights[attn_type[i]][attn_position[i]][:queries.shape[1], :values.shape[1]]
