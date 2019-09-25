@@ -192,9 +192,9 @@ class TransformerDecoderLayer(nn.Module):
             kwargs['num_queries'] = self.span
             kwargs['decoder_position'] = decoder_position
             kwargs['target_lens'] = target_lens
-            kwargs['original_targets'] = sequences
-        else:
-            kwargs['original_targets'] = original_targets.cpu().numpy()
+            # kwargs['original_targets'] = sequences
+        # else:
+            # kwargs['original_targets'] = original_targets.cpu().numpy()
 
             # print("kwargs['decoder_position']", kwargs['decoder_position'])
         # print("original_targets outside", kwargs['original_targets'])

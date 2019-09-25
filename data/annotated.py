@@ -628,9 +628,12 @@ class AnnotatedTextDataset(TextDataset):
                 self.add_datum(example)
 
     def load_word_align_stats(self):
-        word_align_stats = pickle.load(open(self.word_align_file, 'rb'))
-        for i, w in enumerate(self.id2token):
-            if w in word_align_stats:
-                self.word_align_stats.append(word_align_stats[w])
-            else:
-                self.word_align_stats.append({1: {'mean': 0, 'std': 0}})
+        try:
+            word_align_stats = pickle.load(open(self.word_align_file, 'rb'))
+            for i, w in enumerate(self.id2token):
+                if w in word_align_stats:
+                    self.word_align_stats.append(word_align_stats[w])
+                else:
+                    self.word_align_stats.append({1: {'mean': 0, 'std': 0}})
+        except:
+            print('Word align stats not loaded')
