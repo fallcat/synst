@@ -274,15 +274,20 @@ class NewAttention(nn.Module):
                                                                distance_diff_shape[1], distance_diff_shape[2]) \
                                             - offsets.unsqueeze(1).unsqueeze(-1)).view(distance_diff_shape)
                         else:
-                            offsets = torch.tensor([self.word_align_stats[n][min(self.word_align_stats[n].keys()
+                            offsets = torch.tensor([[self.word_align_stats[n][min(self.word_align_stats[n].keys()
                                                                                   & list(range(1, self.align_stats_bin_size
                                                                                                + 1)),
                                                                                   key=lambda x: abs(x - math.ceil(
                                                                                       (i + 0.5) / queries_shape[1] *
                                                                                       self.align_stats_bin_size)))]['mean']
-                                                     for i, n in enumerate(original_targets)]).view(-1, 1)
+                                                     for i, n in enumerate(original_target)]
+                                                    for j, original_target in enumerate(original_targets)])
                             print("offsets", offsets.shape)
                             print("distance_diff", distance_diff.shape)
+                            distance_diff_shape = distance_diff.shape
+                            distance_diff = (distance_diff.view(int(values.shape[0] / self.num_heads), self.num_heads,
+                                                                distance_diff_shape[1], distance_diff_shape[2]) \
+                                             - offsets.unsqueeze(1).unsqueeze(-1)).view(distance_diff_shape)
 
                     if attn_type == 'normal':
                         # std = 1 / (attn_param * math.sqrt(2 * math.pi))
