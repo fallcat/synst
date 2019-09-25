@@ -221,6 +221,7 @@ class NewAttention(nn.Module):
                         or (queries.shape[1] > self.attn_weights[attn_type][attn_position].shape[0]
                             or values.shape[1] > self.attn_weights[attn_type][attn_position].shape[1])) \
                         or decoder_position != -1 or original_targets is not None:
+
                     indices_q = torch.arange(queries.shape[1]).view(-1, 1).to(dtype=torch.float32)
                     indices_v = torch.arange(values.shape[1]).view(1, -1).to(dtype=torch.float32)
 
@@ -335,6 +336,7 @@ class NewAttention(nn.Module):
                             or (queries.shape[1] > self.attn_weights[attn_type[i]][attn_position[i]].shape[0]
                                 or values.shape[1] > self.attn_weights[attn_type[i]][attn_position[i]].shape[1])) \
                             or decoder_position != -1 or original_targets is not None:
+                        
                         indices_q = torch.arange(queries.shape[1]).view(-1, 1).to(dtype=torch.float32)
                         indices_v = torch.arange(values.shape[1]).view(1, -1).to(dtype=torch.float32)
 
