@@ -281,7 +281,7 @@ class NewAttention(nn.Module):
                                                                                       (i + 0.5) / queries_shape[1] *
                                                                                       self.align_stats_bin_size)))]['mean']
                                                      for i, n in enumerate(original_target)]
-                                                    for j, original_target in enumerate(original_targets)])
+                                                    for j, original_target in enumerate(original_targets)]).type_as(distance_diff)
                             print("offsets", offsets.shape)
                             print("distance_diff", distance_diff.shape)
                             print("offsets", offsets)
