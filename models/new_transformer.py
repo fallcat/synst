@@ -154,18 +154,21 @@ class TransformerDecoderLayer(nn.Module):
         self.self_attention.reset_parameters()
         self.source_attention.reset_parameters()
 
-    def forward(self, inputs, sources, layer_i): # pylint:disable=arguments-differ
+    def forward(self, inputs, sources, layer_i, original_targets, sequences): # pylint:disable=arguments-differ
         ''' The forward pass '''
         mask = inputs['mask']
         state = inputs['state']
         cache = inputs.get('cache')
+        target_lens = inputs['target_lens']
+
 
         kwargs = {'layer_i': layer_i}
+        decoder_position = state.shape[1] - 1
         if self.causal and cache is not None:
             # If caching, only want the last k=span sequence values. Requires no causal masking.
             residual = state[:, -self.span:]
             kwargs['num_queries'] = self.span
-            kwargs['decoder_position'] = state.shape[1] - 1
+            kwargs['decoder_position'] = decoder_position
         else:
             # If not caching, use the full sequence and ensure an appropriate causal mask
             residual = state
@@ -173,16 +176,28 @@ class TransformerDecoderLayer(nn.Module):
             kwargs['attention_mask'] = self.mask(state)
 
         # print("decoder self attention")
+        # print("state before self attention", state.shape)
 
         state = self.self_attention(
             residual, # residual
             state, state, state, **kwargs # passed to multiheaded attention
         )
 
+        # print("state after self attention", state.shape)
+
         source = sources['state']
+        # print("source", source)
         kwargs = {'key_mask': sources['mask'], 'layer_i': layer_i}
         if self.causal and cache is not None:
             kwargs['num_queries'] = self.span
+            kwargs['decoder_position'] = decoder_position
+            kwargs['target_lens'] = target_lens
+            # kwargs['original_targets'] = sequences
+        # else:
+            # kwargs['original_targets'] = original_targets.cpu().numpy()
+
+            # print("kwargs['decoder_position']", kwargs['decoder_position'])
+        # print("original_targets outside", kwargs['original_targets'])
 
         # print("decoder source attention")
 
@@ -203,7 +218,7 @@ class TransformerDecoderLayer(nn.Module):
             else:
                 state = cache[self.uuid] = torch.cat((cached, state), 1)
 
-        return {'state': state, 'mask': mask, 'cache': cache}
+        return {'state': state, 'mask': mask, 'cache': cache, 'target_lens': target_lens}
 
     _masks = threading.local()
     def mask(self, inputs):
@@ -294,7 +309,9 @@ class NewTransformer(nn.Module):
                                'attn_displacement': config.enc_dec_attn_displacement,
                                'num_layers': config.enc_dec_num_layers,
                                'num_heads': config.enc_dec_num_heads,
-                               'word_count_ratio': self.dataset.word_count_ratio}
+                               'word_count_ratio': self.dataset.word_count_ratio,
+                               'word_align_stats': self.dataset.word_align_stats,
+                               'align_stats_bin_size': self.dataset.config.align_stats_bin_size}
         # print("enc_dec_attn_config", enc_dec_attn_config)
         args = [dec_attn_config, enc_dec_attn_config, config.num_heads, config.embedding_size, config.hidden_dim]
         return nn.ModuleList([
@@ -353,7 +370,7 @@ class NewTransformer(nn.Module):
 
         return encoded
 
-    def decode(self, encoded, targets, decoders=None, embedding=None, cache=None, mask=None):
+    def decode(self, encoded, targets, decoders=None, embedding=None, cache=None, mask=None, target_lens=None, sequences=None):
         ''' Decode the encoded sequence to the targets '''
         if decoders is None:
             decoders = self.decoders
@@ -364,10 +381,12 @@ class NewTransformer(nn.Module):
         decoded = {
             'cache': cache,
             'state': self.embed(targets, embedding),
-            'mask': targets.eq(self.padding_idx) if mask is None else mask
+            'mask': targets.eq(self.padding_idx) if mask is None else mask,
+            'target_lens': target_lens
         }
         for i, decoder in enumerate(decoders):
-            decoded = decoder(decoded, encoded, i)
+            # print("i", i)
+            decoded = decoder(decoded, encoded, i, targets, sequences)
 
         # compute projection to the vocabulary
         state = decoded['state']

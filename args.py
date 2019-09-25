@@ -567,6 +567,12 @@ def add_data_args(parser):
         choices=['train', 'valid', 'test', 'dev'],
         help='Location for the preprocessed data'
     )
+    group.add_argument(
+        '--align-stats-bin-size',
+        type=int,
+        default=4,
+        help='Bin size for word align stats'
+    )
 
     return group
 
