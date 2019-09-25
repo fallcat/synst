@@ -284,6 +284,8 @@ class NewAttention(nn.Module):
                                                     for j, original_target in enumerate(original_targets)])
                             print("offsets", offsets.shape)
                             print("distance_diff", distance_diff.shape)
+                            print("offsets", offsets)
+                            print("distance_diff", distance_diff)
                             distance_diff_shape = distance_diff.shape
                             distance_diff = (distance_diff.view(int(values.shape[0] / self.num_heads), self.num_heads,
                                                                 distance_diff_shape[1], distance_diff_shape[2]) \
