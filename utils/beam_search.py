@@ -219,10 +219,6 @@ class BeamSearchDecoder(object):
                 logits = []
                 updated_cache = []
                 chunks = [(encoded_batch, target_lens_batch, batch, sequences)]
-                print("encoded_batch", encoded_batch.shape)
-                print("target_lens_batch", target_lens_batch.shape)
-                print("batch", batch.shape)
-                print("sequences", sequences.shape)
                 while chunks:
                     try:
                         encoded_batch, target_lens_batch, batch, sequences = chunks.pop()
