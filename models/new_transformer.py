@@ -154,7 +154,7 @@ class TransformerDecoderLayer(nn.Module):
         self.self_attention.reset_parameters()
         self.source_attention.reset_parameters()
 
-    def forward(self, inputs, sources, original_targets, layer_i): # pylint:disable=arguments-differ
+    def forward(self, inputs, sources, layer_i, original_targets, sequences): # pylint:disable=arguments-differ
         ''' The forward pass '''
         mask = inputs['mask']
         state = inputs['state']
@@ -187,11 +187,15 @@ class TransformerDecoderLayer(nn.Module):
 
         source = sources['state']
         # print("source", source)
-        kwargs = {'key_mask': sources['mask'], 'layer_i': layer_i, 'original_targets': original_targets.cpu().numpy()}
+        kwargs = {'key_mask': sources['mask'], 'layer_i': layer_i}
         if self.causal and cache is not None:
             kwargs['num_queries'] = self.span
             kwargs['decoder_position'] = decoder_position
             kwargs['target_lens'] = target_lens
+            kwargs['original_targets'] = sequences
+            print("sequences", sequences)
+        else:
+            kwargs['original_targets'] = original_targets.cpu().numpy()
 
             # print("kwargs['decoder_position']", kwargs['decoder_position'])
         # print("original_targets outside", kwargs['original_targets'])
@@ -367,7 +371,7 @@ class NewTransformer(nn.Module):
 
         return encoded
 
-    def decode(self, encoded, targets, decoders=None, embedding=None, cache=None, mask=None, target_lens=None):
+    def decode(self, encoded, targets, decoders=None, embedding=None, cache=None, mask=None, target_lens=None, sequences=None):
         ''' Decode the encoded sequence to the targets '''
         if decoders is None:
             decoders = self.decoders
@@ -383,7 +387,7 @@ class NewTransformer(nn.Module):
         }
         for i, decoder in enumerate(decoders):
             # print("i", i)
-            decoded = decoder(decoded, encoded, targets, i)
+            decoded = decoder(decoded, encoded, i, targets, sequences)
 
         # compute projection to the vocabulary
         state = decoded['state']
