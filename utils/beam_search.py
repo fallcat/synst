@@ -97,7 +97,8 @@ class BeamSearchDecoder(object):
         encoded_batch = utils.cat(encoded_batch)
         target_lens_batch = utils.cat(target_lens_batch)
         cache = utils.cat(cache) if not self.config.disable_cache else None
-        sequences = utils.cat(sequences)
+        print("sequences[0]", sequences[0])
+        sequences = torch.cat(sequences)
         return encoded_batch, target_lens_batch, batch, beam_map, cache, sequences
 
     def initialize_search(self, start_sequences, max_lengths=0, initial_scores=0):
