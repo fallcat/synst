@@ -193,7 +193,6 @@ class TransformerDecoderLayer(nn.Module):
             kwargs['decoder_position'] = decoder_position
             kwargs['target_lens'] = target_lens
             kwargs['original_targets'] = sequences
-            print("sequences", sequences)
         else:
             kwargs['original_targets'] = original_targets.cpu().numpy()
 
