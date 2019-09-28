@@ -261,18 +261,30 @@ class NewAttention(nn.Module):
                     distance_diff = distance_diff.expand(values.shape[0], distance_diff.shape[0], distance_diff.shape[1])
 
                     if original_targets is not None:
-                        offsets = torch.tensor([[self.word_align_stats[n][min(self.word_align_stats[n].keys()
-                                                                              & list(range(1, self.align_stats_bin_size
-                                                                                           + 1)),
-                                                                              key=lambda x: abs(x - math.ceil(
-                                                                                  (i + 0.5) / queries_shape[1] *
-                                                                                  self.align_stats_bin_size)))]['mean']
-                                                 for i, n in enumerate(original_target)]
-                                                for j, original_target in enumerate(original_targets)]).type_as(distance_diff)
+                        if decoder_position == -1:
+                            offsets = torch.tensor([[self.word_align_stats[n][min(self.word_align_stats[n].keys()
+                                                                                  & list(range(1, self.align_stats_bin_size
+                                                                                               + 1)),
+                                                                                  key=lambda x: abs(x - math.ceil(
+                                                                                      (i + 0.5) / queries_shape[1] *
+                                                                                      self.align_stats_bin_size)))]['mean']
+                                                     for i, n in enumerate(original_target)]
+                                                    for j, original_target in enumerate(original_targets)]).type_as(distance_diff)
+                            
+                        else:
+                            offsets = torch.tensor([[self.word_align_stats[n][min(self.word_align_stats[n].keys()
+                                                                                  & list(range(1, self.align_stats_bin_size
+                                                                                               + 1)),
+                                                                                  key=lambda x: abs(x - math.ceil(
+                                                                                      (i + 0.5) / values_shape[1] *
+                                                                                      self.word_count_ratio *
+                                                                                      self.align_stats_bin_size)))]['mean']
+                                                     for i, n in enumerate(original_target)]
+                                                    for j, original_target in enumerate(original_targets)]).type_as(distance_diff)
                         distance_diff_shape = distance_diff.shape
                         distance_diff = (distance_diff.view(int(values.shape[0] / self.num_heads), self.num_heads,
-                                                           distance_diff_shape[1], distance_diff_shape[2]) \
-                                        - offsets.unsqueeze(1).unsqueeze(-1)).view(distance_diff_shape)
+                                                            distance_diff_shape[1], distance_diff_shape[2]) \
+                                         - offsets.unsqueeze(1).unsqueeze(-1)).view(distance_diff_shape)
 
                     if attn_type == 'normal':
                         # std = 1 / (attn_param * math.sqrt(2 * math.pi))
@@ -311,13 +323,23 @@ class NewAttention(nn.Module):
             logits_list = []
 
             if original_targets is not None:
-                offsets = torch.tensor([[self.word_align_stats[n][min(self.word_align_stats[n].keys()
-                                                                      & list(range(1, self.align_stats_bin_size + 1)),
-                                                                      key=lambda x: abs(x - math.ceil(
-                                                                          (i + 0.5) / queries_shape[1] *
-                                                                          self.align_stats_bin_size)))]['mean']
-                                         for i, n in enumerate(original_target)]
-                                        for j, original_target in enumerate(original_targets)])
+                if decoder_position == -1:
+                    offsets = torch.tensor([[self.word_align_stats[n][min(self.word_align_stats[n].keys()
+                                                                          & list(range(1, self.align_stats_bin_size + 1)),
+                                                                          key=lambda x: abs(x - math.ceil(
+                                                                              (i + 0.5) / queries_shape[1] *
+                                                                              self.align_stats_bin_size)))]['mean']
+                                             for i, n in enumerate(original_target)]
+                                            for j, original_target in enumerate(original_targets)])
+                else:
+                    offsets = torch.tensor([[self.word_align_stats[n][min(self.word_align_stats[n].keys()
+                                                                          & list(range(1, self.align_stats_bin_size + 1)),
+                                                                          key=lambda x: abs(x - math.ceil(
+                                                                              (i + 0.5) / values_shape[1] *
+                                                                              self.word_count_ratio *
+                                                                              self.align_stats_bin_size)))]['mean']
+                                             for i, n in enumerate(original_target)]
+                                            for j, original_target in enumerate(original_targets)])
             for i in range(self.num_heads):
                 if attn_type[i] == 'whole':
                     logits = torch.full((queries.shape[1], values.shape[1]), 1 / values.shape[1]).to(
