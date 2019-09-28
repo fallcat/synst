@@ -272,6 +272,17 @@ class NewAttention(nn.Module):
                                                     for j, original_target in enumerate(original_targets)]).type_as(distance_diff)
                             
                         else:
+                            for j, original_target in enumerate(original_targets):
+                                for i, n in enumerate(original_target):
+                                    print("n", n)
+                                    print("decoder_position", decoder_position)
+                                    print("min", min(self.word_align_stats[n].keys()
+                                                  & list(range(1, self.align_stats_bin_size
+                                                               + 1)),
+                                                  key=lambda x: abs(x - math.ceil(
+                                                      (decoder_position + 0.5) / values_shape[1] *
+                                                      self.word_count_ratio *
+                                                      self.align_stats_bin_size))))
                             offsets = torch.tensor([[self.word_align_stats[n][min(self.word_align_stats[n].keys()
                                                                                   & list(range(1, self.align_stats_bin_size
                                                                                                + 1)),
@@ -281,6 +292,7 @@ class NewAttention(nn.Module):
                                                                                       self.align_stats_bin_size)))]['mean']
                                                      for i, n in enumerate(original_target)]
                                                     for j, original_target in enumerate(original_targets)]).type_as(distance_diff)
+                            print("offsets", offsets)
                         distance_diff_shape = distance_diff.shape
                         distance_diff = (distance_diff.view(int(values.shape[0] / self.num_heads), self.num_heads,
                                                             distance_diff_shape[1], distance_diff_shape[2]) \
