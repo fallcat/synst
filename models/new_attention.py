@@ -276,7 +276,7 @@ class NewAttention(nn.Module):
                                                                                   & list(range(1, self.align_stats_bin_size
                                                                                                + 1)),
                                                                                   key=lambda x: abs(x - math.ceil(
-                                                                                      (i + 0.5) / values_shape[1] *
+                                                                                      (decoder_position + 0.5) / values_shape[1] *
                                                                                       self.word_count_ratio *
                                                                                       self.align_stats_bin_size)))]['mean']
                                                      for i, n in enumerate(original_target)]
@@ -335,7 +335,7 @@ class NewAttention(nn.Module):
                     offsets = torch.tensor([[self.word_align_stats[n][min(self.word_align_stats[n].keys()
                                                                           & list(range(1, self.align_stats_bin_size + 1)),
                                                                           key=lambda x: abs(x - math.ceil(
-                                                                              (i + 0.5) / values_shape[1] *
+                                                                              (decoder_position + 0.5) / values_shape[1] *
                                                                               self.word_count_ratio *
                                                                               self.align_stats_bin_size)))]['mean']
                                              for i, n in enumerate(original_target)]
