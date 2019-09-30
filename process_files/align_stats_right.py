@@ -5,6 +5,9 @@ import numpy as np
 split_portion = 4
 WORD_COUNT = (1.0360595565014956, 1)
 
+SOS = '<SOS>'
+EOS = '<EOS>'
+
 with open('../iwslt/train.tok.bpe.32000.en', 'rt') as file_en:
     with open('../iwslt/train.tok.bpe.32000.de', 'rt') as file_de:
         with open('../iwslt/forward.subword.align', 'rt') as file_fa:
@@ -28,12 +31,30 @@ with open('../iwslt/train.tok.bpe.32000.en', 'rt') as file_en:
                             print("key", key)
                             print("b", b)
                             print("len_y", len_y)
-                        if y_list[b] not in z_dict:
-                            z_dict[y_list[b]] = {}
-                        if key in z_dict[y_list[b]]:
-                            z_dict[y_list[b]][key].append(a - b * WORD_COUNT[0])  # round((int(a) + 1) / len_x * split_portion) - 1
+                        if b == 0:
+                            w = SOS
                         else:
-                            z_dict[y_list[b]][key] = [a - b * WORD_COUNT[0]]
+                            w = y_list[b - 1]
+                        if w not in z_dict:
+                            z_dict[w] = {}
+                        if key in z_dict[w]:
+                            z_dict[w][key].append(a - (b - 1) * WORD_COUNT[0])  # round((int(a) + 1) / len_x * split_portion) - 1
+                        else:
+                            z_dict[w][key] = [a - (b - 1) * WORD_COUNT[0]]
+
+                    # last one point to EOS
+                    w = y_list[-1]
+                    key = split_portion
+                    a = len_x
+                    b = len_y - 1
+                    if w not in z_dict:
+                        z_dict[w] = {}
+                    if key in z_dict[w]:
+                        z_dict[w][key].append(
+                            a - (b - 1) * WORD_COUNT[0])  # round((int(a) + 1) / len_x * split_portion) - 1
+                    else:
+                        z_dict[w][key] = [a - (b - 1) * WORD_COUNT[0]]
+
                     for i, y_word in enumerate(y_list):
                         new_i = round((int(i) + 1) / len_x * split_portion) - 1
                         if y_word in z_dict and new_i in z_dict[y_word]:
