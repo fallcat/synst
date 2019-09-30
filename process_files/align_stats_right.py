@@ -33,9 +33,9 @@ with open('../iwslt/train.tok.bpe.32000.en', 'rt') as file_en:
                             print("len_y", len_y)
                         print("b", b)
                         if b == 0:
-                            print("inside")
+                            # print("inside")
                             w = SOS
-                            print("w", w)
+                            # print("w", w)
                         else:
                             w = y_list[b - 1]
                         if w not in z_dict:
