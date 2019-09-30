@@ -31,7 +31,7 @@ with open('../iwslt/train.tok.bpe.32000.en', 'rt') as file_en:
                             print("key", key)
                             print("b", b)
                             print("len_y", len_y)
-                        print("b", b)
+                        # print("b", b)
                         if b == 0:
                             # print("inside")
                             w = SOS
