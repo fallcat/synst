@@ -19,7 +19,7 @@ with open('../iwslt/train.tok.bpe.32000.en', 'rt') as file_en:
                     len_y = len(y_list)
                     for z_element in z.split():
                         try:
-                            a, b = z_element.rsplit('-', 1)
+                            b, a = z_element.rsplit('-', 1)
                         except:
                             print("z_element", z_element)
                         a, b = float(a), int(b)

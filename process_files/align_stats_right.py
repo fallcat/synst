@@ -10,11 +10,11 @@ EOS = '<EOS>'
 
 with open('../iwslt/train.tok.bpe.32000.en', 'rt') as file_en:
     with open('../iwslt/train.tok.bpe.32000.de', 'rt') as file_de:
-        with open('../iwslt/forward.subword.align', 'rt') as file_fa:
-            with open('../iwslt/forward.subword.align.right.4.pickle', 'wb') as file_fas:
+        with open('../iwslt/reverse.subword.align', 'rt') as file_fa:
+            with open('../iwslt/reverse.subword.align.right.4.pickle', 'wb') as file_fas:
                 final_count = {}
                 stats = {}
-                for x, y, z in zip(file_en, file_de, file_fa):
+                for x, y, z in zip(file_de, file_en, file_fa):
                     z_dict = {}
                     x_list = x.split()
                     y_list = y.split()
@@ -22,7 +22,7 @@ with open('../iwslt/train.tok.bpe.32000.en', 'rt') as file_en:
                     len_y = len(y_list)
                     for z_element in z.split():
                         try:
-                            a, b = z_element.rsplit('-', 1)
+                            b, a = z_element.rsplit('-', 1)
                         except:
                             print("z_element", z_element)
                         a, b = float(a), int(b)
@@ -38,9 +38,9 @@ with open('../iwslt/train.tok.bpe.32000.en', 'rt') as file_en:
                         if w not in z_dict:
                             z_dict[w] = {}
                         if key in z_dict[w]:
-                            z_dict[w][key].append(a - (b - 1) * WORD_COUNT[0])  # round((int(a) + 1) / len_x * split_portion) - 1
+                            z_dict[w][key].append(a - (b - 1) / WORD_COUNT[0])  # round((int(a) + 1) / len_x * split_portion) - 1
                         else:
-                            z_dict[w][key] = [a - (b - 1) * WORD_COUNT[0]]
+                            z_dict[w][key] = [a - (b - 1) / WORD_COUNT[0]]
 
                     # last one point to EOS
                     w = y_list[-1]
