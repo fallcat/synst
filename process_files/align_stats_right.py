@@ -11,7 +11,7 @@ EOS = '<EOS>'
 with open('../iwslt/train.tok.bpe.32000.en', 'rt') as file_en:
     with open('../iwslt/train.tok.bpe.32000.de', 'rt') as file_de:
         with open('../iwslt/forward.subword.align', 'rt') as file_fa:
-            with open('../iwslt/forward.subword.align.right.4.pickle', 'wb') as file_fas:
+            with open('../iwslt/forward.subword.align.right2.4.pickle', 'wb') as file_fas:
                 final_count = {}
                 stats = {}
                 for x, y, z in zip(file_en, file_de, file_fa):
@@ -41,9 +41,9 @@ with open('../iwslt/train.tok.bpe.32000.en', 'rt') as file_en:
                         if w not in z_dict:
                             z_dict[w] = {}
                         if key in z_dict[w]:
-                            z_dict[w][key].append(a - (b - 1) * WORD_COUNT[0])  # round((int(a) + 1) / len_x * split_portion) - 1
+                            z_dict[w][key].append(a - b * WORD_COUNT[0])  # round((int(a) + 1) / len_x * split_portion) - 1
                         else:
-                            z_dict[w][key] = [a - (b - 1) * WORD_COUNT[0]]
+                            z_dict[w][key] = [a - b * WORD_COUNT[0]]
 
                     # last one point to EOS
                     w = y_list[-1]
