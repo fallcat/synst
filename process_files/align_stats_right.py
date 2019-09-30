@@ -58,29 +58,53 @@ with open('../iwslt/train.tok.bpe.32000.en', 'rt') as file_en:
                     else:
                         z_dict[w][key] = [a - (b - 1) * WORD_COUNT[0]]
 
-                    for i, y_word in enumerate(y_list):
-                        new_i = round((int(i) + 1) / len_x * split_portion) - 1
-                        if y_word in z_dict and new_i in z_dict[y_word]:
-                            if y_word not in final_count:
-                                final_count[y_word] = {}
-                            if new_i in final_count[y_word]:
-                                old_mean = final_count[y_word][new_i]['mean']
-                                old_var = final_count[y_word][new_i]['var']
-                                old_count = final_count[y_word][new_i]['count']
-                                current_count = len(z_dict[y_word][new_i])
-                                current_mean = np.mean(z_dict[y_word][new_i])
-                                current_var = np.var(z_dict[y_word][new_i])
+                    for w in z_dict:
+                        for k in z_dict[w]:
+                            if w not in final_count:
+                                final_count[w] = {}
+                            if k in final_count[w]:
+                                old_mean = final_count[w][k]['mean']
+                                old_var = final_count[w][k]['var']
+                                old_count = final_count[w][k]['count']
+                                current_count = len(z_dict[w][k])
+                                current_mean = np.mean(z_dict[w][k])
+                                current_var = np.var(z_dict[w][k])
                                 new_count = old_count + current_count
-                                new_mean = (old_mean * old_count + sum(z_dict[y_word][new_i])) / new_count
+                                new_mean = (old_mean * old_count + sum(z_dict[w][k])) / new_count
                                 new_var = (old_count * (old_var + (old_mean - new_mean) ** 2) + current_count * (current_var + (current_mean - new_mean) ** 2)) / new_count
-                                final_count[y_word][new_i]['mean'] = new_mean
-                                final_count[y_word][new_i]['var'] = new_var
-                                final_count[y_word][new_i]['count'] = new_count
+                                final_count[w][k]['mean'] = new_mean
+                                final_count[w][k]['var'] = new_var
+                                final_count[w][k]['count'] = new_count
                             else:
-                                final_count[y_word][new_i] = {}
-                                final_count[y_word][new_i]['mean'] = np.mean(z_dict[y_word][new_i])
-                                final_count[y_word][new_i]['var'] = np.var(z_dict[y_word][new_i])
-                                final_count[y_word][new_i]['count'] = len(z_dict[y_word][new_i])
+                                final_count[w][k] = {}
+                                final_count[w][k]['mean'] = np.mean(z_dict[w][k])
+                                final_count[w][k]['var'] = np.var(z_dict[w][k])
+                                final_count[w][k]['count'] = len(z_dict[w][k])
+
+                    # for i, y_word in enumerate(y_list):
+                    #     new_i = round((int(i) + 1) / len_x * split_portion) - 1
+                    #     if y_word in z_dict and new_i in z_dict[y_word]:
+                    #         if y_word not in final_count:
+                    #             final_count[y_word] = {}
+                    #         if new_i in final_count[y_word]:
+                    #             old_mean = final_count[y_word][new_i]['mean']
+                    #             old_var = final_count[y_word][new_i]['var']
+                    #             old_count = final_count[y_word][new_i]['count']
+                    #             current_count = len(z_dict[y_word][new_i])
+                    #             current_mean = np.mean(z_dict[y_word][new_i])
+                    #             current_var = np.var(z_dict[y_word][new_i])
+                    #             new_count = old_count + current_count
+                    #             new_mean = (old_mean * old_count + sum(z_dict[y_word][new_i])) / new_count
+                    #             new_var = (old_count * (old_var + (old_mean - new_mean) ** 2) + current_count * (current_var + (current_mean - new_mean) ** 2)) / new_count
+                    #             final_count[y_word][new_i]['mean'] = new_mean
+                    #             final_count[y_word][new_i]['var'] = new_var
+                    #             final_count[y_word][new_i]['count'] = new_count
+                    #         else:
+                    #             final_count[y_word][new_i] = {}
+                    #             final_count[y_word][new_i]['mean'] = np.mean(z_dict[y_word][new_i])
+                    #             final_count[y_word][new_i]['var'] = np.var(z_dict[y_word][new_i])
+                    #             final_count[y_word][new_i]['count'] = len(z_dict[y_word][new_i])
+
                 for key in final_count:
                     stats[key] = {}
                     means = []
