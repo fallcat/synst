@@ -56,7 +56,7 @@ class AnnotatedTextDataset(TextDataset):
     NAME = ''
     LANGUAGE_PAIR = ('en', 'en')
     WORD_COUNT = (4215814, 4186988)
-    ALIGN_STATS = ('forward.subword.align.right', 'reverse.subword.align.right')
+    ALIGN_STATS = ('forward.subword.align.right2', 'reverse.subword.align.right2')
 
     URLS = []
     RAW_SPLITS = {}
