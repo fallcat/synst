@@ -8,7 +8,7 @@ WORD_COUNT = (1.0360595565014956, 1)
 with open('../iwslt/train.tok.bpe.32000.en', 'rt') as file_en:
     with open('../iwslt/train.tok.bpe.32000.de', 'rt') as file_de:
         with open('../iwslt/forward.subword.align', 'rt') as file_fa:
-            with open('../iwslt/forward.subword.align.4.pickle', 'wb') as file_fas:
+            with open('../iwslt/forward.subword.align.right.4.pickle', 'wb') as file_fas:
                 final_count = {}
                 stats = {}
                 for x, y, z in zip(file_en, file_de, file_fa):
@@ -47,7 +47,7 @@ with open('../iwslt/train.tok.bpe.32000.en', 'rt') as file_en:
                                 current_mean = np.mean(z_dict[y_word][new_i])
                                 current_var = np.var(z_dict[y_word][new_i])
                                 new_count = old_count + current_count
-                                new_mean = (old_mean * old_count + sum(z_dict[new_i])) / new_count
+                                new_mean = (old_mean * old_count + sum(z_dict[y_word][new_i])) / new_count
                                 new_var = (old_count * (old_var + (old_mean - new_mean) ** 2) + current_count * (current_var + (current_mean - new_mean) ** 2)) / new_count
                                 final_count[y_word][new_i]['mean'] = new_mean
                                 final_count[y_word][new_i]['var'] = new_var
