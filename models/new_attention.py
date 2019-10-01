@@ -293,7 +293,7 @@ class NewAttention(nn.Module):
                                                      for i, n in enumerate(original_target)]
                                                     for j, original_target in enumerate(original_targets)]).type_as(distance_diff)
 
-                        offsets = offsets * values_shape[1]
+                        # offsets = offsets * values_shape[1]
                         # print("offsets", offsets)
                         distance_diff_shape = distance_diff.shape
                         distance_diff = (distance_diff.view(int(values.shape[0] / self.num_heads), self.num_heads,
@@ -354,7 +354,7 @@ class NewAttention(nn.Module):
                                                                               self.align_stats_bin_size)))]['mean']
                                              for i, n in enumerate(original_target)]
                                             for j, original_target in enumerate(original_targets)])
-                offsets = offsets * values_shape[1]
+                # offsets = offsets * values_shape[1]
                 # print("offsets", offsets)
             for i in range(self.num_heads):
                 if attn_type[i] == 'whole':
