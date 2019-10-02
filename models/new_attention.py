@@ -315,6 +315,8 @@ class NewAttention(nn.Module):
             for attn_config_i in [attn_type, attn_position, attn_param, attn_displacement, use_word_align_stats]:
                 if type(attn_config_i) is not list:
                     attn_config.append([attn_config_i] * self.num_heads)
+                else:
+                    attn_config.append(attn_config_i)
 
             attn_type, attn_position, attn_param, attn_displacement, use_word_align_stats = attn_config
 
