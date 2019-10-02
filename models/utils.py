@@ -266,7 +266,7 @@ class Translator(object):
             )
             targets = [
                 beam.best_hypothesis.sequence[self.span - 1:]
-                for beam in decoder.decode(encoded, beams)
+                for beam in decoder.decode(encoded, beams, target_lens=batch['target_lens'])
             ]
 
             gold_targets = []

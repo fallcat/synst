@@ -276,6 +276,15 @@ def add_new_transformer_args(parser):
              'The number of steps to take to that direction.'
     )
 
+    group.add_argument(
+        '--enc-dec-attn-align',
+        type=int,
+        nargs='+',
+        default=0,
+        choices=[0, 1],
+        help='Whether or not use word aligner stats. 0 to not use, 1 to use.'
+    )
+
     return group
 
 
@@ -566,6 +575,12 @@ def add_data_args(parser):
         default='train',
         choices=['train', 'valid', 'test', 'dev'],
         help='Location for the preprocessed data'
+    )
+    group.add_argument(
+        '--align-stats-bin-size',
+        type=int,
+        default=4,
+        help='Bin size for word align stats'
     )
 
     return group
