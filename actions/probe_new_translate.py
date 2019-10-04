@@ -118,7 +118,7 @@ class ProbeNewTranslator(object):
                             for k in range(encoder_attn_weights_tensor.shape[1]):
                                 attn_filename = f'encoder_attn_weights{example_id}_l{j}_h{k}.png'
                                 attn_path = os.path.join(self.config.output_directory, attn_filename)
-                                save_attention('<SOS>' + source_sentence, '<SOS>' + source_sentence,
+                                save_attention('<SOS> ' + source_sentence, '<SOS> ' + source_sentence,
                                                encoder_attn_weights_tensor[j][k].cpu().numpy(), attn_path)
 
                     if self.config.order_output:
@@ -135,11 +135,11 @@ class ProbeNewTranslator(object):
                         for k in range(result['decoder_attn_weights_tensor'].shape[1]):
                             attn_filename = f'decoder_attn_weights{example_id}_l{j}_h{k}.png'
                             attn_path = os.path.join(self.config.output_directory, attn_filename)
-                            save_attention('<SOS>' + output_sentences[i], '<SOS>' + output_sentences[i],
+                            save_attention('<SOS> ' + output_sentences[i], '<SOS> ' + output_sentences[i],
                                            result['decoder_attn_weights_tensor'][j][k].cpu().numpy(), attn_path)
                             attn_filename = f'enc_dec_attn_weights{example_id}_l{j}_h{k}.png'
                             attn_path = os.path.join(self.config.output_directory, attn_filename)
-                            save_attention('<SOS>' + source_sentences[i], '<PAD> <SOS>' + output_sentences[i],
+                            save_attention('<SOS> ' + source_sentences[i], '<PAD> <SOS> ' + output_sentences[i],
                                            result['enc_dec_attn_weights_tensor'][j][k].cpu().numpy(), attn_path)
 
             for _, outputs in sorted(ordered_outputs, key=lambda x: x[0]): # pylint:disable=consider-using-enumerate
