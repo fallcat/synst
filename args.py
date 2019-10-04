@@ -285,6 +285,14 @@ def add_new_transformer_args(parser):
         help='Whether or not use word aligner stats. 0 to not use, 1 to use.'
     )
 
+    group.add_argument(
+        '--enc-dec-attn-concat',
+        type=int,
+        default=0,
+        choices=[0, 1],
+        help='Whether or not concat previous embedding with new embedded. 0 to not concat, 1 to concat.'
+    )
+
     return group
 
 

@@ -31,7 +31,7 @@ class TransformerSublayer(nn.Module):
         self.dropout = nn.Dropout(dropout_p, inplace=True)
         self.reset_parameters()
 
-    def reset_parameters(self):
+    def reset_parametuers(self):
         ''' Reset parameters using xavier initialiation '''
         self.norm.reset_parameters()
 
@@ -310,7 +310,8 @@ class NewTransformer(nn.Module):
                                'word_count_ratio': self.dataset.word_count_ratio,
                                'word_align_stats': self.dataset.word_align_stats,
                                'align_stats_bin_size': self.dataset.config.align_stats_bin_size,
-                               'use_word_align_stats': config.enc_dec_attn_align}
+                               'use_word_align_stats': config.enc_dec_attn_align,
+                               'attn_concat': config.enc_dec_attn_concat}
         # print("enc_dec_attn_config", enc_dec_attn_config)
         args = [dec_attn_config, enc_dec_attn_config, config.num_heads, config.embedding_size, config.hidden_dim]
         return nn.ModuleList([
