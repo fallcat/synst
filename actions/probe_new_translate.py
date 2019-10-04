@@ -113,7 +113,7 @@ class ProbeNewTranslator(object):
                         source_sentences.append(source_sentence)
 
                         # Encoder heatmap
-                        print("saving encoder heatmap")
+                        # print("saving encoder heatmap")
                         for j in range(encoder_attn_weights_tensor.shape[0]):
                             for k in range(encoder_attn_weights_tensor.shape[1]):
                                 attn_filename = f'encoder_attn_weights{example_id}_l{j}_h{k}.png'
@@ -129,7 +129,7 @@ class ProbeNewTranslator(object):
                 self.dataset.collate_field(batch, 'target', new_targets)
                 result = self.model(batch)
                 # Decoder heatmap
-                print("saving decoder heatmap")
+                # print("saving decoder heatmap")
                 for i, example_id in enumerate(batch['example_ids']):
                     for j in range(result['decoder_attn_weights_tensor'].shape[0]):
                         for k in range(result['decoder_attn_weights_tensor'].shape[1]):

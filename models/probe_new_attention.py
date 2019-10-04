@@ -465,7 +465,7 @@ class ProbeNewAttention(nn.Module):
         # print("key_mask", key_mask)
         # print("attention_mask", attention_mask)
         # print("num_queries", num_queries)
-        print("in probe new attention")
+        # print("in probe new attention")
         if 'learned' in self.attn_type or 'learned' == self.attn_type:
             # print("in")
             if same_tensor(values, keys, queries):
