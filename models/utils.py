@@ -536,10 +536,11 @@ def save_attention(input_sentence, output_words, attentions, file_path):
     fig.colorbar(cax)
 
     # Set up axes
-    print("input_sentence", input_sentence)
-    print("input_sentence len", len(input_sentence.split(' ')))
-    print("output_words", output_words)
-    print("output_words len", len(output_words.split(' ')))
+    with open('/Users/weiqiuyou/Documents/UMass/research/NMT/synst', 'wt') as f:
+        f.write("input_sentence: " + input_sentence)
+        f.write("input_sentence len: " + len(input_sentence.split(' ')))
+        f.write("output_words: " + output_words)
+        f.write("output_words len:" + len(output_words.split(' ')))
     ax.set_xticklabels([''] + input_sentence.split(' ') +
                        ['<EOS>'], rotation=90)
     ax.set_yticklabels([''] + output_words.split(' '))
