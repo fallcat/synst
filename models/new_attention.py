@@ -516,6 +516,6 @@ class NewAttention(nn.Module):
         attended = self.attention(values, keys, queries, key_mask, attention_mask, layer_i, decoder_position,
                                   target_lens, original_targets=original_targets)
 
-        if self.attn_concat is not None:
+        if self.attn_concat_weights is not None:
             attended = F.linear(torch.cat(attended, values, dim=-1), self.attn_concat_weights)
         return self.output_projection(attended)
