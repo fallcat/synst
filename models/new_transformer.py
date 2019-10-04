@@ -31,7 +31,7 @@ class TransformerSublayer(nn.Module):
         self.dropout = nn.Dropout(dropout_p, inplace=True)
         self.reset_parameters()
 
-    def reset_parametuers(self):
+    def reset_parameters(self):
         ''' Reset parameters using xavier initialiation '''
         self.norm.reset_parameters()
 
