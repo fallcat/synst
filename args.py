@@ -1225,7 +1225,7 @@ def parse_args(argv=None):
     model_groups['probe_transformer'] = add_probe_transformer_args(parser)
     model_groups['new_transformer'] = add_new_transformer_args(parser)
     model_groups['parse_transformer'] = add_parse_transformer_args(parser)
-    model_groups['probe_new_transformer'] = add_probe_new_transformer_args(parser)
+    model_groups['probe_new_transformer'] = add_new_transformer_args(parser)
 
     subparsers = parser.add_subparsers()
     train_parser = subparsers.add_parser('train', help='Train a model')
@@ -1274,7 +1274,7 @@ def parse_args(argv=None):
     )
 
     probe_new_translate_parser = subparsers.add_parser('probe_new_translate', help='Probe New Translate from a model')
-    groups['probe_new_translate'] = add_new_translate_args(probe_new_translate_parser)
+    groups['probe_new_translate'] = add_translate_args(probe_new_translate_parser)
     probe_new_translate_parser.set_defaults(
         action=ProbeNewTranslator,
         action_type='probe_new_translate',
