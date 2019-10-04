@@ -61,7 +61,8 @@ class NewAttention(nn.Module):
         gain = nn.init.calculate_gain('linear')
         nn.init.xavier_uniform_(self.input_weights, gain)
         nn.init.xavier_uniform_(self.output_projection.weight, gain)
-        nn.init.xavier_uniform_(self.attn_concat.weight, gain)
+        if self.attn_concat is not None:
+            nn.init.xavier_uniform_(self.attn_concat.weight, gain)
 
     def project(self, inputs, index=0, chunks=1):
         ''' Produce a linear projection using the weights '''
