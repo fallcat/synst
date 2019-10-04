@@ -143,18 +143,20 @@ class TransformerDecoderLayer(nn.Module):
         self.self_attention.reset_parameters()
         self.source_attention.reset_parameters()
 
-    def forward(self, inputs, sources, layer_i): # pylint:disable=arguments-differ
+    def forward(self, inputs, sources, layer_i, original_targets, sequences): # pylint:disable=arguments-differ
         ''' The forward pass '''
         mask = inputs['mask']
         state = inputs['state']
         cache = inputs.get('cache')
+        target_lens = inputs['target_lens']
 
         kwargs = {'layer_i': layer_i}
+        decoder_position = state.shape[1] - 1
         if self.causal and cache is not None:
             # If caching, only want the last k=span sequence values. Requires no causal masking.
             residual = state[:, -self.span:]
             kwargs['num_queries'] = self.span
-            kwargs['decoder_position'] = state.shape[1] - 1
+            kwargs['decoder_position'] = decoder_position
         else:
             # If not caching, use the full sequence and ensure an appropriate causal mask
             residual = state
@@ -169,9 +171,14 @@ class TransformerDecoderLayer(nn.Module):
         )
 
         source = sources['state']
-        kwargs = {'key_mask': sources['mask']}
+        kwargs = {'key_mask': sources['mask'], 'layer_i': layer_i}
         if self.causal and cache is not None:
             kwargs['num_queries'] = self.span
+            kwargs['decoder_position'] = decoder_position
+            kwargs['target_lens'] = target_lens
+            kwargs['original_targets'] = sequences
+        else:
+            kwargs['original_targets'] = original_targets.cpu().numpy()
 
         # print("decoder source attention")
 
@@ -192,7 +199,7 @@ class TransformerDecoderLayer(nn.Module):
             else:
                 state = cache[self.uuid] = torch.cat((cached, state), 1)
 
-        return {'state': state, 'mask': mask, 'cache': cache,
+        return {'state': state, 'mask': mask, 'cache': cache, 'target_lens': target_lens,
                 'decoder_attn_weights': decoder_attn_weights,
                 'enc_dec_attn_weights': enc_dec_attn_weights}
 
@@ -241,7 +248,7 @@ class ProbeNewTransformer(nn.Module):
 
         # Allow for overriding the encoders and decoders in dervied classes
         self.encoders = type(self).create_encoders(config)
-        self.decoders = type(self).create_decoders(config)
+        self.decoders = self.create_decoders(config)
 
         self.label_smoothing = LabelSmoothingLoss(
             config.label_smoothing or 0,
@@ -269,8 +276,8 @@ class ProbeNewTransformer(nn.Module):
             for _ in range(config.num_layers)
         ])
 
-    @classmethod
-    def create_decoders(cls, config):
+    # @classmethod
+    def create_decoders(self, config):
         ''' Create the transformer decoders '''
         kwargs = {'dropout_p': config.dropout_p, 'span': config.span}
         dec_attn_config = {'attn_type': config.dec_attn_type,
@@ -284,7 +291,12 @@ class ProbeNewTransformer(nn.Module):
                                'attn_param': config.enc_dec_attn_param,
                                'attn_displacement': config.enc_dec_attn_displacement,
                                'num_layers': config.enc_dec_num_layers,
-                               'num_heads': config.enc_dec_num_heads}
+                               'num_heads': config.enc_dec_num_heads,
+                               'word_count_ratio': self.dataset.word_count_ratio,
+                               'word_align_stats': self.dataset.word_align_stats,
+                               'align_stats_bin_size': self.dataset.config.align_stats_bin_size,
+                               'use_word_align_stats': config.enc_dec_attn_align
+                               }
         # print("enc_dec_attn_config", enc_dec_attn_config)
         args = [dec_attn_config, enc_dec_attn_config, config.num_heads, config.embedding_size, config.hidden_dim]
         return nn.ModuleList([
@@ -352,7 +364,7 @@ class ProbeNewTransformer(nn.Module):
 
         return encoded, encoder_attn_weights_tensor
 
-    def decode(self, encoded, targets, decoders=None, embedding=None, cache=None, mask=None):
+    def decode(self, encoded, targets, decoders=None, embedding=None, cache=None, mask=None, target_lens=None, sequences=None):
         ''' Decode the encoded sequence to the targets '''
         if decoders is None:
             decoders = self.decoders
@@ -363,12 +375,13 @@ class ProbeNewTransformer(nn.Module):
         decoded = {
             'cache': cache,
             'state': self.embed(targets, embedding),
-            'mask': targets.eq(self.padding_idx) if mask is None else mask
+            'mask': targets.eq(self.padding_idx) if mask is None else mask,
+            'target_lens': target_lens
         }
         decoder_attn_weights_list = []
         enc_dec_attn_weights_list = []
         for i, decoder in enumerate(decoders):
-            decoded = decoder(decoded, encoded, i)
+            decoded = decoder(decoded, encoded, i, targets, sequences)
             decoder_attn_weights_list.append(decoded['decoder_attn_weights'])
             enc_dec_attn_weights_list.append(decoded['enc_dec_attn_weights'])
 
