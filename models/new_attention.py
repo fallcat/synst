@@ -38,7 +38,7 @@ class NewAttention(nn.Module):
         self.word_align_stats = attn_config['word_align_stats'] if 'word_align_stats' in attn_config else None
         self.align_stats_bin_size = attn_config['align_stats_bin_size'] if 'align_stats_bin_size' in attn_config else None
         self.use_word_align_stats = attn_config['use_word_align_stats'] if 'use_word_align_stats' in attn_config else 0
-        self.attn_concat = nn.Linear(2 * embed_dim, embed_dim, bias=False) if 'attn_concat' in attn_config and 'attn_concat' == 1 else None
+        self.attn_concat_weights = nn.Parameter(torch.Tensor(2 * embed_dim, embed_dim)) if 'attn_concat' in attn_config and 'attn_concat' == 1 else None
         # self.max_prob = attn_config['max_prob']
         # self.window_size = attn_config['window_size']
 
@@ -61,8 +61,8 @@ class NewAttention(nn.Module):
         gain = nn.init.calculate_gain('linear')
         nn.init.xavier_uniform_(self.input_weights, gain)
         nn.init.xavier_uniform_(self.output_projection.weight, gain)
-        if self.attn_concat is not None:
-            nn.init.xavier_uniform_(self.attn_concat.weight, gain)
+        if self.attn_concat_weights is not None:
+            nn.init.xavier_uniform_(self.attn_concat_weight, gain)
 
     def project(self, inputs, index=0, chunks=1):
         ''' Produce a linear projection using the weights '''
@@ -517,5 +517,5 @@ class NewAttention(nn.Module):
                                   target_lens, original_targets=original_targets)
 
         if self.attn_concat is not None:
-            attended = self.attn_concat(torch.cat(attended, dim=-1))
+            attended = F.linear(torch.cat(attended, values, dim=-1), self.attn_concat_weights)
         return self.output_projection(attended)
