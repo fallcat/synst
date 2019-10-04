@@ -79,8 +79,7 @@ class ProbeNewTranslator(object):
             self.model.eval()
             ordered_outputs = []
             for batch in batches:
-                print("in probe new translate")
-                sys.stdout.flush()
+                print("in probe new translate", flush=True)
                 # run the data through the model
                 batches.set_description_str(get_description())
                 sequences, attn_weights_tensors_dict = self.translator.translate(batch)
