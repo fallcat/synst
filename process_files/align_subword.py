@@ -9,8 +9,7 @@ with open('../iwslt/train.bpe.idx.mapping.de', 'rt') as source_file:
                     output_list = []
                     for item in align_list:
                         source = item[1]
-                        target = item[0
-                        ]
+                        target = item[0]
                         new_source = source_list[source]
                         new_target = target_list[target]
                         if len(new_source) == 1 and len(new_target) == 1:

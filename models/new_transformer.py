@@ -176,14 +176,11 @@ class TransformerDecoderLayer(nn.Module):
             kwargs['attention_mask'] = self.mask(state)
 
         # print("decoder self attention")
-        # print("state before self attention", state.shape)
 
         state = self.self_attention(
             residual, # residual
             state, state, state, **kwargs # passed to multiheaded attention
         )
-
-        # print("state after self attention", state.shape)
 
         source = sources['state']
         # print("source", source)
@@ -192,12 +189,13 @@ class TransformerDecoderLayer(nn.Module):
             kwargs['num_queries'] = self.span
             kwargs['decoder_position'] = decoder_position
             kwargs['target_lens'] = target_lens
-            # kwargs['original_targets'] = sequences
-        # else:
-            # kwargs['original_targets'] = original_targets.cpu().numpy()
+            kwargs['original_targets'] = sequences
+        else:
+            kwargs['original_targets'] = original_targets.cpu().numpy()
 
             # print("kwargs['decoder_position']", kwargs['decoder_position'])
         # print("original_targets outside", kwargs['original_targets'])
+        # print("kwargs", kwargs)
 
         # print("decoder source attention")
 
@@ -311,7 +309,8 @@ class NewTransformer(nn.Module):
                                'num_heads': config.enc_dec_num_heads,
                                'word_count_ratio': self.dataset.word_count_ratio,
                                'word_align_stats': self.dataset.word_align_stats,
-                               'align_stats_bin_size': self.dataset.config.align_stats_bin_size}
+                               'align_stats_bin_size': self.dataset.config.align_stats_bin_size,
+                               'use_word_align_stats': config.enc_dec_attn_align}
         # print("enc_dec_attn_config", enc_dec_attn_config)
         args = [dec_attn_config, enc_dec_attn_config, config.num_heads, config.embedding_size, config.hidden_dim]
         return nn.ModuleList([
