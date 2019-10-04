@@ -536,7 +536,7 @@ def save_attention(input_sentence, output_words, attentions, file_path):
     fig.colorbar(cax)
 
     # Set up axes
-    with open('/Users/weiqiuyou/Documents/UMass/research/NMT/synst/214.txt', 'wt') as f:
+    with open('/mnt/nfs/work1/miyyer/wyou/synst/214.txt', 'wt') as f:
         f.write("input_sentence: " + input_sentence)
         f.write("input_sentence len: " + len(input_sentence.split(' ')))
         f.write("output_words: " + output_words)
