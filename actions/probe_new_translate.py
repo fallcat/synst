@@ -75,75 +75,75 @@ class ProbeNewTranslator(object):
             file=sys.stdout # needed to make tqdm_wrap_stdout work
         )
 
-        # with tqdm_wrap_stdout():
-        self.model.eval()
-        ordered_outputs = []
-        for batch in batches:
-            print("in probe new translate", flush=True)
-            # run the data through the model
-            batches.set_description_str(get_description())
-            sequences, attn_weights_tensors_dict = self.translator.translate(batch)
+        with tqdm_wrap_stdout():
+            self.model.eval()
+            ordered_outputs = []
+            for batch in batches:
+                # print("in probe new translate", flush=True)
+                # run the data through the model
+                batches.set_description_str(get_description())
+                sequences, attn_weights_tensors_dict = self.translator.translate(batch)
 
-            if self.config.timed:
-                continue
+                if self.config.timed:
+                    continue
 
-            target_sequences = next(iter(sequences.values()))
-            encoder_attn_weights_tensor = attn_weights_tensors_dict['encoder_attn_weights_tensor']
-            new_targets = []
-            output_sentences = []
-            source_sentences = []
-            for i, example_id in enumerate(batch['example_ids']):
-                outputs = []
-                if verbose > 1:
-                    trim = verbose < 2
-                    join = verbose < 3
-                    for key in sequences.keys():
-                        sequence = sequences[key][i]
-                        sequence = ' '.join(self.dataset.decode(sequence, join, trim))
-                        outputs.append(f'{key}: {sequence}\n')
-                    outputs.append(f'+++++++++++++++++++++++++++++\n')
-                else:
-                    sequence = target_sequences[i]
-                    new_targets.append(torch.LongTensor(sequence))
-                    decoded = ' '.join(self.dataset.decode(sequence, trim=not verbose))
-                    outputs.append(f'{decoded}\n')
-                    output_sentence = ' '.join(self.dataset.decode(sequence, join=False, trim=not verbose))
-                    output_sentences.append(output_sentence)
-                    source_sentence = ' '.join(self.dataset.decode(batch['inputs'][i], join=False, trim=not verbose))
-                    source_sentences.append(source_sentence)
+                target_sequences = next(iter(sequences.values()))
+                encoder_attn_weights_tensor = attn_weights_tensors_dict['encoder_attn_weights_tensor']
+                new_targets = []
+                output_sentences = []
+                source_sentences = []
+                for i, example_id in enumerate(batch['example_ids']):
+                    outputs = []
+                    if verbose > 1:
+                        trim = verbose < 2
+                        join = verbose < 3
+                        for key in sequences.keys():
+                            sequence = sequences[key][i]
+                            sequence = ' '.join(self.dataset.decode(sequence, join, trim))
+                            outputs.append(f'{key}: {sequence}\n')
+                        outputs.append(f'+++++++++++++++++++++++++++++\n')
+                    else:
+                        sequence = target_sequences[i]
+                        new_targets.append(torch.LongTensor(sequence))
+                        decoded = ' '.join(self.dataset.decode(sequence, trim=not verbose))
+                        outputs.append(f'{decoded}\n')
+                        output_sentence = ' '.join(self.dataset.decode(sequence, join=False, trim=not verbose))
+                        output_sentences.append(output_sentence)
+                        source_sentence = ' '.join(self.dataset.decode(batch['inputs'][i], join=False, trim=not verbose))
+                        source_sentences.append(source_sentence)
 
-                    # Encoder heatmap
-                    print("saving encoder heatmap")
-                    for j in range(encoder_attn_weights_tensor.shape[0]):
-                        for k in range(encoder_attn_weights_tensor.shape[1]):
-                            attn_filename = f'encoder_attn_weights{example_id}_l{j}_h{k}.png'
+                        # Encoder heatmap
+                        print("saving encoder heatmap")
+                        for j in range(encoder_attn_weights_tensor.shape[0]):
+                            for k in range(encoder_attn_weights_tensor.shape[1]):
+                                attn_filename = f'encoder_attn_weights{example_id}_l{j}_h{k}.png'
+                                attn_path = os.path.join(self.config.output_directory, attn_filename)
+                                save_attention(source_sentence, source_sentence,
+                                               encoder_attn_weights_tensor[j][k].cpu().numpy(), attn_path)
+
+                    if self.config.order_output:
+                        ordered_outputs.append((example_id, outputs))
+                    else:
+                        output_file.writelines(outputs)
+
+                self.dataset.collate_field(batch, 'target', new_targets)
+                result = self.model(batch)
+                # Decoder heatmap
+                print("saving decoder heatmap")
+                for i, example_id in enumerate(batch['example_ids']):
+                    for j in range(result['decoder_attn_weights_tensor'].shape[0]):
+                        for k in range(result['decoder_attn_weights_tensor'].shape[1]):
+                            attn_filename = f'decoder_attn_weights{example_id}_l{j}_h{k}.png'
                             attn_path = os.path.join(self.config.output_directory, attn_filename)
-                            save_attention(source_sentence, source_sentence,
-                                           encoder_attn_weights_tensor[j][k].cpu().numpy(), attn_path)
+                            save_attention(output_sentences[i], output_sentences[i],
+                                           result['decoder_attn_weights_tensor'][j][k].cpu().numpy(), attn_path)
+                            attn_filename = f'enc_dec_attn_weights{example_id}_l{j}_h{k}.png'
+                            attn_path = os.path.join(self.config.output_directory, attn_filename)
+                            save_attention(source_sentences[i], output_sentences[i],
+                                           result['enc_dec_attn_weights_tensor'][j][k].cpu().numpy(), attn_path)
 
-                if self.config.order_output:
-                    ordered_outputs.append((example_id, outputs))
-                else:
-                    output_file.writelines(outputs)
-
-            self.dataset.collate_field(batch, 'target', new_targets)
-            result = self.model(batch)
-            # Decoder heatmap
-            print("saving decoder heatmap")
-            for i, example_id in enumerate(batch['example_ids']):
-                for j in range(result['decoder_attn_weights_tensor'].shape[0]):
-                    for k in range(result['decoder_attn_weights_tensor'].shape[1]):
-                        attn_filename = f'decoder_attn_weights{example_id}_l{j}_h{k}.png'
-                        attn_path = os.path.join(self.config.output_directory, attn_filename)
-                        save_attention(output_sentences[i], output_sentences[i],
-                                       result['decoder_attn_weights_tensor'][j][k].cpu().numpy(), attn_path)
-                        attn_filename = f'enc_dec_attn_weights{example_id}_l{j}_h{k}.png'
-                        attn_path = os.path.join(self.config.output_directory, attn_filename)
-                        save_attention(source_sentences[i], output_sentences[i],
-                                       result['enc_dec_attn_weights_tensor'][j][k].cpu().numpy(), attn_path)
-
-        for _, outputs in sorted(ordered_outputs, key=lambda x: x[0]): # pylint:disable=consider-using-enumerate
-            output_file.writelines(outputs)
+            for _, outputs in sorted(ordered_outputs, key=lambda x: x[0]): # pylint:disable=consider-using-enumerate
+                output_file.writelines(outputs)
 
     def __call__(self, epoch, experiment, verbose=0):
         ''' Generate from the model '''
