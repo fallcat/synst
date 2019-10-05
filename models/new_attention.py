@@ -518,6 +518,7 @@ class NewAttention(nn.Module):
 
         print("attended", attended.shape)
         print("queries", queries.shape)
+        print("values", values.shape)
 
         if self.attn_concat_weights is not None:
             attended = F.linear(torch.cat(attended, queries, dim=-1), self.attn_concat_weights)
