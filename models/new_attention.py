@@ -427,6 +427,13 @@ class NewAttention(nn.Module):
         attended = torch.bmm(attn_weights,
                              values)
 
+        print("attended", attended.shape)
+        print("queries", queries.shape)
+        print("values", values.shape)
+
+        if self.attn_concat_weights is not None:
+            attended = F.linear(torch.cat(attended, queries, dim=1).transpose(-2, -1), self.attn_concat_weights).transpose(-2, -1)
+
         # torch.set_printoptions(profile='full')
         # print("values", values)
         # print("values shape", values.shape)
@@ -516,10 +523,4 @@ class NewAttention(nn.Module):
         attended = self.attention(values, keys, queries, key_mask, attention_mask, layer_i, decoder_position,
                                   target_lens, original_targets=original_targets)
 
-        print("attended", attended.shape)
-        print("queries", queries.shape)
-        print("values", values.shape)
-
-        if self.attn_concat_weights is not None:
-            attended = F.linear(torch.cat(attended, queries, dim=-1), self.attn_concat_weights)
         return self.output_projection(attended)
