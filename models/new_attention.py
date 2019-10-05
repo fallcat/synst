@@ -517,7 +517,7 @@ class NewAttention(nn.Module):
                                   target_lens, original_targets=original_targets)
 
         print("attended", attended.shape)
-        print("queries", queries.shape)
+        print("queries", queries.shapeg)
 
         if self.attn_concat_weights is not None:
             attended = F.linear(torch.cat(attended, queries, dim=-1), self.attn_concat_weights)
