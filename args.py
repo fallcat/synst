@@ -210,6 +210,13 @@ def add_new_transformer_args(parser):
              'The number of steps to take to that direction.'
     )
     group.add_argument(
+        '--attn-concat',
+        type=int,
+        default=0,
+        choices=[0, 1],
+        help='Whether or not concat previous embedding with new embedded. 0 to not concat, 1 to concat.'
+    )
+    group.add_argument(
         '--dec-attn-type',
         type=str,
         nargs='+',
@@ -241,6 +248,13 @@ def add_new_transformer_args(parser):
         default=1,
         help='Only works when corresponding attn-position is left or right.'
              'The number of steps to take to that direction.'
+    )
+    group.add_argument(
+        '--dec-attn-concat',
+        type=int,
+        default=0,
+        choices=[0, 1],
+        help='Whether or not concat previous embedding with new embedded. 0 to not concat, 1 to concat.'
     )
     group.add_argument(
         '--enc-dec-attn-type',

@@ -154,7 +154,7 @@ class TransformerDecoderLayer(nn.Module):
         self.self_attention.reset_parameters()
         self.source_attention.reset_parameters()
 
-    def forward(self, inputs, sources, layer_i, original_targets, sequences): # pylint:disable=arguments-differ
+    def forward(self, inputs, sources, layer_i, original_targets, sequences, embedded_target): # pylint:disable=arguments-differ
         ''' The forward pass '''
         mask = inputs['mask']
         state = inputs['state']
@@ -284,7 +284,8 @@ class NewTransformer(nn.Module):
                        'attn_param': config.attn_param,
                        'attn_displacement': config.attn_displacement,
                        'num_layers': config.num_layers,
-                       'num_heads': config.num_heads}
+                       'num_heads': config.num_heads,
+                       'attn_concat': config.attn_concat}
         args = [attn_config, config.num_heads, config.embedding_size, config.hidden_dim]
         return nn.ModuleList([
             TransformerEncoderLayer(*args, **kwargs)
@@ -300,7 +301,8 @@ class NewTransformer(nn.Module):
                            'attn_param': config.dec_attn_param,
                            'attn_displacement': config.dec_attn_displacement,
                            'num_layers': config.dec_num_layers,
-                           'num_heads': config.dec_num_heads}
+                           'num_heads': config.dec_num_heads,
+                           'attn_concat': config.dec_attn_concat}
         enc_dec_attn_config = {'attn_type': config.enc_dec_attn_type,
                                'attn_position': config.enc_dec_attn_position,
                                'attn_param': config.enc_dec_attn_param,
@@ -378,15 +380,17 @@ class NewTransformer(nn.Module):
         if embedding is None:
             embedding = self.embedding
 
+        embedded_target = self.embed(targets, embedding)
+
         decoded = {
             'cache': cache,
-            'state': self.embed(targets, embedding),
+            'state': embedded_target,
             'mask': targets.eq(self.padding_idx) if mask is None else mask,
             'target_lens': target_lens
         }
         for i, decoder in enumerate(decoders):
             # print("i", i)
-            decoded = decoder(decoded, encoded, i, targets, sequences)
+            decoded = decoder(decoded, encoded, i, targets, sequences, embedded_target)
 
         # compute projection to the vocabulary
         state = decoded['state']
