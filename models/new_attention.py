@@ -536,6 +536,7 @@ class NewAttention(nn.Module):
             print("attended", attended.shape)
             print("queries", queries.shape)
             print("values", values.shape)
+            print("torch.cat((attended, queries), dim=-1)", torch.cat((attended, queries), dim=-1).shape)
 
             attended = F.linear(torch.cat((attended, queries), dim=-1), self.attn_concat_weights)
             print("new attended", attended.shape)
