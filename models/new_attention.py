@@ -38,6 +38,7 @@ class NewAttention(nn.Module):
         self.word_align_stats = attn_config['word_align_stats'] if 'word_align_stats' in attn_config else None
         self.align_stats_bin_size = attn_config['align_stats_bin_size'] if 'align_stats_bin_size' in attn_config else None
         self.use_word_align_stats = attn_config['use_word_align_stats'] if 'use_word_align_stats' in attn_config else 0
+        print(attn_config)
         self.attn_concat_weights = nn.Parameter(torch.Tensor(2 * num_heads * embed_dim, num_heads * embed_dim)) \
             if 'attn_concat' in attn_config and 'attn_concat' == 1 else None
         # self.max_prob = attn_config['max_prob']
