@@ -518,9 +518,9 @@ class NewAttention(nn.Module):
         attended = self.attention(values, keys, queries, key_mask, attention_mask, layer_i, decoder_position,
                                   target_lens, original_targets=original_targets)
 
-        print("'learned' not in self.attn_type", 'learned' not in self.attn_type)
-        print("'learned' != self.attn_type", 'learned' != self.attn_type)
-        print("self.attn_concat_weights is not None", self.attn_concat_weights is not None)
+        # print("'learned' not in self.attn_type", 'learned' not in self.attn_type)
+        # print("'learned' != self.attn_type", 'learned' != self.attn_type)
+        # print("self.attn_concat_weights is not None", self.attn_concat_weights is not None)
         if 'learned' not in self.attn_type and 'learned' != self.attn_type and self.attn_concat_weights is not None:
             queries = queries.view(
                 batch_size,
@@ -533,12 +533,12 @@ class NewAttention(nn.Module):
                 self.num_heads * self.projection_dim
             )
 
-            print("attended", attended.shape)
-            print("queries", queries.shape)
-            print("values", values.shape)
-            print("torch.cat((attended, queries), dim=-1)", torch.cat((attended, queries), dim=-1).shape)
+            # print("attended", attended.shape)
+            # print("queries", queries.shape)
+            # print("values", values.shape)
+            # print("torch.cat((attended, queries), dim=-1)", torch.cat((attended, queries), dim=-1).shape)
 
             attended = F.linear(torch.cat((attended, queries), dim=-1), self.attn_concat_weights)
-            print("new attended", attended.shape)
+            # print("new attended", attended.shape)
 
         return self.output_projection(attended)
