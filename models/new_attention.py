@@ -38,7 +38,8 @@ class NewAttention(nn.Module):
         self.word_align_stats = attn_config['word_align_stats'] if 'word_align_stats' in attn_config else None
         self.align_stats_bin_size = attn_config['align_stats_bin_size'] if 'align_stats_bin_size' in attn_config else None
         self.use_word_align_stats = attn_config['use_word_align_stats'] if 'use_word_align_stats' in attn_config else 0
-        self.attn_concat_weights = nn.Parameter(torch.Tensor(2 * embed_dim, embed_dim)) if 'attn_concat' in attn_config and 'attn_concat' == 1 else None
+        self.attn_concat_weights = nn.Parameter(torch.Tensor(2 * num_heads * embed_dim, num_heads * embed_dim)) \
+            if 'attn_concat' in attn_config and 'attn_concat' == 1 else None
         # self.max_prob = attn_config['max_prob']
         # self.window_size = attn_config['window_size']
 
@@ -427,13 +428,6 @@ class NewAttention(nn.Module):
         attended = torch.bmm(attn_weights,
                              values)
 
-        print("attended", attended.shape)
-        print("queries", queries.shape)
-        print("values", values.shape)
-
-        if self.attn_concat_weights is not None:
-            attended = F.linear(torch.cat(attended, queries, dim=1).transpose(-2, -1), self.attn_concat_weights).transpose(-2, -1)
-
         # torch.set_printoptions(profile='full')
         # print("values", values)
         # print("values shape", values.shape)
@@ -472,6 +466,8 @@ class NewAttention(nn.Module):
         # print("layer_i", layer_i)
         # print("original_targets", original_targets)
         # print("decoder_position", decoder_position)
+        batch_size = values.shape[0]
+
         if 'learned' in self.attn_type or 'learned' == self.attn_type:
             # print("in")
             if same_tensor(values, keys, queries):
@@ -484,8 +480,6 @@ class NewAttention(nn.Module):
                 keys, = self.project(keys, 1)
                 queries, = self.project(queries, 2)
         else:
-            batch_size = values.shape[0]
-
             values = F.linear(values, self.input_weights).view(
                 batch_size,
                 -1,
@@ -522,5 +516,24 @@ class NewAttention(nn.Module):
 
         attended = self.attention(values, keys, queries, key_mask, attention_mask, layer_i, decoder_position,
                                   target_lens, original_targets=original_targets)
+
+        if 'learned' not in self.attn_type and 'learned' != self.attn_type and self.attn_concat_weights is not None:
+            queries = queries.view(
+                batch_size,
+                self.num_heads,
+                -1,
+                self.projection_dim
+            ).transpose(2, 1).contiguous().view(
+                batch_size,
+                -1,
+                self.num_heads * self.projection_dim
+            )
+
+            print("attended", attended.shape)
+            print("queries", queries.shape)
+            print("values", values.shape)
+
+            attended = F.linear(torch.cat(attended, queries, dim=-1), self.attn_concat_weights)
+            print("new attended", attended.shape)
 
         return self.output_projection(attended)
