@@ -3,7 +3,7 @@ A module which implements the basic Transformer
 '''
 import uuid
 import threading
-
+import pdb
 import torch
 from torch import nn
 
@@ -345,6 +345,7 @@ class NewTransformer(nn.Module):
 
     def forward(self, batch): # pylint:disable=arguments-differ
         ''' A batch of inputs and targets '''
+        pdb.set_trace()
         decoded = self.decode(
             self.encode(batch['inputs']),
             right_shift(right_shift(batch['targets']), shift=self.span - 1, fill=self.sos_idx),

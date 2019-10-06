@@ -3,7 +3,7 @@ Base for text datasets.
 '''
 import collections
 from itertools import chain
-
+import pdb
 import torch
 from torch import nn
 from torch.utils.data import Dataset
@@ -170,7 +170,7 @@ class TextDataset(Dataset):
         self.load_vocab()
         self.load_text()
         self.load_word_align_stats()
-
+        pdb.set_trace()
         return self
 
     @property
