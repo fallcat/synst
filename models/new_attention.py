@@ -39,8 +39,13 @@ class NewAttention(nn.Module):
         self.align_stats_bin_size = attn_config['align_stats_bin_size'] if 'align_stats_bin_size' in attn_config else None
         self.use_word_align_stats = attn_config['use_word_align_stats'] if 'use_word_align_stats' in attn_config else 0
         # print("attn_config['attn_concat']", attn_config['attn_concat'])
-        self.attn_concat_weights = nn.Parameter(torch.Tensor(embed_dim, 2 * embed_dim)) \
-            if 'attn_concat' in attn_config and attn_config['attn_concat'] == 1 else None
+        self.attn_concat = attn_config['attn_concat'] if 'attn_concat' in attn_config else 0
+        if self.attn_concat in [1, 2]:
+            self.attn_concat_weights = nn.Parameter(torch.Tensor(embed_dim, 2 * embed_dim))
+        elif self.attn_concat == 3:
+            self.attn_concat_weights = nn.Parameter(torch.Tensor(embed_dim, 3 * embed_dim))
+        else:
+            self.attn_concat_weights = None
         # self.max_prob = attn_config['max_prob']
         # self.window_size = attn_config['window_size']
 
@@ -450,7 +455,7 @@ class NewAttention(nn.Module):
 
     def forward(self, values, keys, queries, # pylint:disable=arguments-differ
                 key_mask=None, attention_mask=None, num_queries=0, layer_i=0, decoder_position=-1, target_lens=None,
-                original_targets=None):
+                original_targets=None, embedded_target=None):
         ''' Forward pass of the attention '''
         # pylint:disable=unbalanced-tuple-unpacking
         # print("self.attn_type", self.attn_type)
@@ -533,12 +538,29 @@ class NewAttention(nn.Module):
                 self.num_heads * self.projection_dim
             )
 
-            # print("attended", attended.shape)
-            # print("queries", queries.shape)
+            embedded_target = embedded_target.view(
+                batch_size,
+                self.num_heads,
+                -1,
+                self.projection_dim
+            ).transpose(2, 1).contiguous().view(
+                batch_size,
+                -1,
+                self.num_heads * self.projection_dim
+            )
+
+            print("attended", attended.shape)
+            print("queries", queries.shape)
+            print("embedded_target", embedded_target.shape)
             # print("values", values.shape)
             # print("torch.cat((attended, queries), dim=-1)", torch.cat((attended, queries), dim=-1).shape)
+            if self.attn_concat == 1:
+                attended = F.linear(torch.cat((attended, queries), dim=-1), self.attn_concat_weights)
+            elif self.attn_concat == 2:
+                attended = F.linear(torch.cat((attended, embedded_target), dim=-1), self.attn_concat_weights)
+            else:
+                attended = F.linear(torch.cat((attended, queries, embedded_target), dim=-1), self.attn_concat_weights)
 
-            attended = F.linear(torch.cat((attended, queries), dim=-1), self.attn_concat_weights)
             # print("new attended", attended.shape)
 
         return self.output_projection(attended)

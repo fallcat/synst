@@ -213,8 +213,9 @@ def add_new_transformer_args(parser):
         '--attn-concat',
         type=int,
         default=0,
-        choices=[0, 1],
-        help='Whether or not concat previous embedding with new embedded. 0 to not concat, 1 to concat.'
+        choices=[0, 1, 2, 3],
+        help='Whether or not concat previous embedding with new embedded. 0 to not concat, '
+             '1 to concat just previous embedding, 2 to concat just word embedding, 3 to concat both.'
     )
     group.add_argument(
         '--dec-attn-type',
@@ -253,8 +254,9 @@ def add_new_transformer_args(parser):
         '--dec-attn-concat',
         type=int,
         default=0,
-        choices=[0, 1],
-        help='Whether or not concat previous embedding with new embedded. 0 to not concat, 1 to concat.'
+        choices=[0, 1, 2, 3],
+        help='Whether or not concat previous embedding with new embedded. 0 to not concat, '
+             '1 to concat just previous embedding, 2 to concat just word embedding, 3 to concat both.'
     )
     group.add_argument(
         '--enc-dec-attn-type',
@@ -303,8 +305,9 @@ def add_new_transformer_args(parser):
         '--enc-dec-attn-concat',
         type=int,
         default=0,
-        choices=[0, 1],
-        help='Whether or not concat previous embedding with new embedded. 0 to not concat, 1 to concat.'
+        choices=[0, 1, 2, 3],
+        help='Whether or not concat previous embedding with new embedded. 0 to not concat, '
+             '1 to concat just previous embedding, 2 to concat just word embedding, 3 to concat both.'
     )
 
     return group
