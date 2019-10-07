@@ -308,9 +308,10 @@ class NewTransformer(nn.Module):
                                'num_layers': config.enc_dec_num_layers,
                                'num_heads': config.enc_dec_num_heads,
                                'word_count_ratio': self.dataset.word_count_ratio,
-                               'word_align_stats': self.dataset.word_align_stats,
-                               'align_stats_bin_size': self.dataset.config.align_stats_bin_size,
-                               'use_word_align_stats': config.enc_dec_attn_align}
+                               #'word_align_stats': self.dataset.word_align_stats,
+                               #'align_stats_bin_size': self.dataset.config.align_stats_bin_size,
+                               #'use_word_align_stats': config.enc_dec_attn_align
+        }
         # print("enc_dec_attn_config", enc_dec_attn_config)
         args = [dec_attn_config, enc_dec_attn_config, config.num_heads, config.embedding_size, config.hidden_dim]
         return nn.ModuleList([
@@ -345,7 +346,7 @@ class NewTransformer(nn.Module):
 
     def forward(self, batch): # pylint:disable=arguments-differ
         ''' A batch of inputs and targets '''
-        pdb.set_trace()
+        #pdb.set_trace()
         decoded = self.decode(
             self.encode(batch['inputs']),
             right_shift(right_shift(batch['targets']), shift=self.span - 1, fill=self.sos_idx),

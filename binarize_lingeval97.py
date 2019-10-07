@@ -33,6 +33,8 @@ def load_vocab():
 			token = line.strip()
 			token2id[token] = len(id2token)
 			id2token.append(token)
+	token2id[''] = len(id2token)
+	id2token.append('')
 	token2id[PAD] = len(id2token)
 	id2token.append(PAD)
 	token2id[BOS] = len(id2token)
@@ -51,7 +53,7 @@ def tensorize(sent, token2id, tgt=False):
 		ret.append(token2id[tok])
 	if tgt:
 		ret.append(token2id[EOS])
-	return torch.Tensor([ret])
+	return torch.LongTensor([ret])
 
 def binarize():
 
@@ -71,8 +73,8 @@ def binarize():
 		for idx, (s_sent, t_sent) in enumerate(zip(src_lines, tgt_lines)):
 			s_tensor = tensorize(s_sent, token2id)
 			t_tensor = tensorize(t_sent, token2id, tgt=True)
-			s_lens = torch.Tensor([s_tensor.shape[1]])
-			t_lens = torch.Tensor([t_tensor.shape[1]])
+			s_lens = torch.LongTensor([s_tensor.shape[1]])
+			t_lens = torch.LongTensor([t_tensor.shape[1]])
 			it = {}
 			it['example_ids'] = (idx,)
 			it['inputs'] = s_tensor
