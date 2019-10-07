@@ -87,7 +87,7 @@ class TransformerEncoderLayer(nn.Module):
         self.ffn.reset_parameters()
         self.self_attention.reset_parameters()
 
-    def forward(self, inputs, layer_i): # pylint:disable=arguments-differ
+    def forward(self, inputs, layer_i, word_embedding):  # pylint:disable=arguments-differ
         ''' The forward pass '''
         mask = inputs['mask']
         state = inputs['state']
@@ -97,9 +97,9 @@ class TransformerEncoderLayer(nn.Module):
         # print("outside layer_i", layer_i)
 
         state = self.self_attention(
-            state, # residual
-            state, state, state, mask, # passed to multiheaded attention
-            layer_i=layer_i
+            state,  # residual
+            state, state, state, mask,  # passed to multiheaded attention
+            layer_i=layer_i, word_embedding=word_embedding
         )
 
         state = self.ffn(
@@ -154,7 +154,7 @@ class TransformerDecoderLayer(nn.Module):
         self.self_attention.reset_parameters()
         self.source_attention.reset_parameters()
 
-    def forward(self, inputs, sources, layer_i, original_targets, sequences, embedded_target): # pylint:disable=arguments-differ
+    def forward(self, inputs, sources, layer_i, original_targets, sequences, word_embedding): # pylint:disable=arguments-differ
         ''' The forward pass '''
         mask = inputs['mask']
         state = inputs['state']
@@ -162,7 +162,7 @@ class TransformerDecoderLayer(nn.Module):
         target_lens = inputs['target_lens']
 
 
-        kwargs = {'layer_i': layer_i}
+        kwargs = {'layer_i': layer_i, 'word_embedding': word_embedding}
         decoder_position = state.shape[1] - 1
         if self.causal and cache is not None:
             # If caching, only want the last k=span sequence values. Requires no causal masking.
@@ -184,7 +184,7 @@ class TransformerDecoderLayer(nn.Module):
 
         source = sources['state']
         # print("source", source)
-        kwargs = {'key_mask': sources['mask'], 'layer_i': layer_i, 'embedded_target': embedded_target}
+        kwargs = {'key_mask': sources['mask'], 'layer_i': layer_i, 'word_embedding': word_embedding}
         if self.causal and cache is not None:
             kwargs['num_queries'] = self.span
             kwargs['decoder_position'] = decoder_position
@@ -363,12 +363,13 @@ class NewTransformer(nn.Module):
 
     def encode(self, inputs):
         ''' Encode the inputs '''
+        word_embedding = self.embed(inputs, self.embedding)
         encoded = {
-            'state': self.embed(inputs, self.embedding),
+            'state': word_embedding,
             'mask': inputs.eq(self.padding_idx)
         }
         for i, encoder in enumerate(self.encoders):
-            encoded = encoder(encoded, i)
+            encoded = encoder(encoded, i, word_embedding)
 
         return encoded
 
@@ -380,17 +381,17 @@ class NewTransformer(nn.Module):
         if embedding is None:
             embedding = self.embedding
 
-        embedded_target = self.embed(targets, embedding)
+        word_embedding = self.embed(targets, embedding)
 
         decoded = {
             'cache': cache,
-            'state': embedded_target,
+            'state': word_embedding,
             'mask': targets.eq(self.padding_idx) if mask is None else mask,
             'target_lens': target_lens
         }
         for i, decoder in enumerate(decoders):
             # print("i", i)
-            decoded = decoder(decoded, encoded, i, targets, sequences, embedded_target)
+            decoded = decoder(decoded, encoded, i, targets, sequences, word_embedding)
 
         # compute projection to the vocabulary
         state = decoded['state']

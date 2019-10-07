@@ -455,7 +455,7 @@ class NewAttention(nn.Module):
 
     def forward(self, values, keys, queries, # pylint:disable=arguments-differ
                 key_mask=None, attention_mask=None, num_queries=0, layer_i=0, decoder_position=-1, target_lens=None,
-                original_targets=None, embedded_target=None):
+                original_targets=None, word_embedding=None):
         ''' Forward pass of the attention '''
         # pylint:disable=unbalanced-tuple-unpacking
         # print("self.attn_type", self.attn_type)
@@ -538,7 +538,7 @@ class NewAttention(nn.Module):
                 self.num_heads * self.projection_dim
             )
 
-            embedded_target = embedded_target.view(
+            word_embedding = word_embedding.view(
                 batch_size,
                 self.num_heads,
                 -1,
@@ -558,9 +558,9 @@ class NewAttention(nn.Module):
             if self.attn_concat == 1:
                 attended = F.linear(torch.cat((attended, queries), dim=-1), self.attn_concat_weights)
             elif self.attn_concat == 2:
-                attended = F.linear(torch.cat((attended, embedded_target), dim=-1), self.attn_concat_weights)
+                attended = F.linear(torch.cat((attended, word_embedding), dim=-1), self.attn_concat_weights)
             else:
-                attended = F.linear(torch.cat((attended, queries, embedded_target), dim=-1), self.attn_concat_weights)
+                attended = F.linear(torch.cat((attended, queries, word_embedding), dim=-1), self.attn_concat_weights)
 
             # print("new attended", attended.shape)
 
