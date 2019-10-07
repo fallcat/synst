@@ -551,7 +551,7 @@ class NewAttention(nn.Module):
 
             print("attended", attended.shape)
             print("queries", queries.shape)
-            print("embedded_target", embedded_target.shape)
+            print("embedded_target", word_embedding.shape)
             print("self.attn_concat_weights", self.attn_concat_weights.shape)
             # print("values", values.shape)
             # print("torch.cat((attended, queries), dim=-1)", torch.cat((attended, queries), dim=-1).shape)
