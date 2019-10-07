@@ -561,6 +561,6 @@ class NewAttention(nn.Module):
             else:
                 attended = F.linear(torch.cat((attended, queries, embedded_target), dim=-1), self.attn_concat_weights)
 
-            # print("new attended", attended.shape)
+            print("new attended", attended.shape)
 
         return self.output_projection(attended)
