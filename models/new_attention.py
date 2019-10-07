@@ -549,10 +549,10 @@ class NewAttention(nn.Module):
                 self.num_heads * self.projection_dim
             )
 
-            # print("attended", attended.shape)
-            # print("queries", queries.shape)
-            # print("embedded_target", embedded_target.shape)
-            # print("self.attn_concat_weights", self.attn_concat_weights.shape)
+            print("attended", attended.shape)
+            print("queries", queries.shape)
+            print("embedded_target", embedded_target.shape)
+            print("self.attn_concat_weights", self.attn_concat_weights.shape)
             # print("values", values.shape)
             # print("torch.cat((attended, queries), dim=-1)", torch.cat((attended, queries), dim=-1).shape)
             if self.attn_concat == 1:
