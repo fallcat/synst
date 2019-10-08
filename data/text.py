@@ -185,7 +185,7 @@ class TextDataset(Dataset):
         self.load_vocab()
         self.load_text()
         self.load_word_align_stats()
-        pdb.set_trace()
+        #pdb.set_trace()
         return self
 
     @property
