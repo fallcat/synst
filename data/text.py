@@ -125,6 +125,7 @@ class TextDataset(Dataset):
         ):
             if sort:
                 # Sort within each chunk
+                pdb.set_trace()
                 data = [sorter(d) for d in data]
 
             ids, examples = zip(*(flatten(d) for d in data))
