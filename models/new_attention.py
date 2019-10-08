@@ -334,6 +334,7 @@ class NewAttention(nn.Module):
                         # logits = F.softmax(logits, dim=-1)
                     if decoder_position > -1 and original_targets is None:
                         self.attn_weights[attn_type][attn_position] = logits[0]
+                    print("computed new")
                 else:
                     print("didn't compute new")
                     logits = self.attn_weights[attn_type][attn_position][:queries.shape[1], :values.shape[1]]
@@ -449,6 +450,7 @@ class NewAttention(nn.Module):
                             # logits = F.softmax(logits, dim=-1)
                         if decoder_position > -1 and original_targets is None:
                             self.attn_weights[attn_type[i]][attn_position[i]] = logits[0]
+                        print("computed new")
                     else:
                         print("didn't compute new")
                         logits = self.attn_weights[attn_type[i]][attn_position[i]][:queries.shape[1], :values.shape[1]]
