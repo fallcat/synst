@@ -231,6 +231,7 @@ class NewAttention(nn.Module):
                 key_mask_shape = key_mask.shape
                 last_indices = torch.tensor([key_mask_shape[1] - a[::-1].index(0)
                                              for a in key_mask.cpu().numpy().tolist()], dtype=torch.float32).view(-1, 1)
+                print("last_indices", last_indices)
             else:
                 last_indices = torch.tensor([values_shape[1]] * queries_shape[0], dtype=torch.float32).view(-1, 1)
 
@@ -464,9 +465,9 @@ class NewAttention(nn.Module):
         # torch.set_printoptions(profile='full')
         # print("values", values)
         # print("values shape", values.shape)
-        torch.set_printoptions(profile="full")
-        print("attn_weights", attn_weights)
-        print("attn_weights shape", attn_weights.shape)
+        # torch.set_printoptions(profile="full")
+        # print("attn_weights", attn_weights)
+        # print("attn_weights shape", attn_weights.shape)
         # print("attended", attended)
         # print("attended shape", attended.shape)
 
@@ -494,8 +495,9 @@ class NewAttention(nn.Module):
         # print("queries outside", queries)
         # print("self.input_weights", self.input_weights)
         # torch.set_printoptions(profile='full')
-        # print("key_mask", key_mask)
-        # print("attention_mask", attention_mask)
+        if key_mask is not None:
+            print("key_mask", key_mask.shape)
+            print("attention_mask", attention_mask)
         # print("num_queries", num_queries)
         # print("layer_i", layer_i)
         # print("original_targets", original_targets)
