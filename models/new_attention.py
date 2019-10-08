@@ -225,15 +225,16 @@ class NewAttention(nn.Module):
 
         if 'last' in attn_position:
             if key_mask is not None:
+                print("key_mask", key_mask.shape)
+                print("queries", queries_shape)
+                print("values", values_shape)
                 key_mask_shape = key_mask.shape
                 last_indices = torch.tensor([key_mask_shape[1] - a[::-1].index(0)
                                              for a in key_mask.cpu().numpy().tolist()], dtype=torch.float32).view(-1, 1)
             else:
                 last_indices = torch.tensor([values_shape[1]] * queries_shape[1], dtype=torch.float32).view(-1, 1)
 
-        print("key_mask", key_mask.shape)
-        print("queries", queries_shape)
-        print("values", values_shape)
+
 
         if type(attn_type) is not list and type(attn_position) is not list:
             # print("enter first")
