@@ -231,6 +231,10 @@ class NewAttention(nn.Module):
             else:
                 last_indices = torch.tensor([values_shape[1]] * queries_shape[1], dtype=torch.float32).view(-1, 1)
 
+        print("key_mask", key_mask.shape)
+        print("queries", queries_shape)
+        print("values", values_shape)
+
         if type(attn_type) is not list and type(attn_position) is not list:
             # print("enter first")
             if attn_type == 'whole':
