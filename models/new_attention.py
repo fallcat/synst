@@ -248,16 +248,11 @@ class NewAttention(nn.Module):
             else:
                 if attn_type not in self.attn_weights:
                     self.attn_weights[attn_type] = {}
-                print("attn_position not in self.attn_weights[attn_type]", attn_position not in self.attn_weights[attn_type])
-                if attn_position in self.attn_weights[attn_type]:
-                    print("queries.shape[1] > self.attn_weights[attn_type][attn_position].shape[0]", queries.shape[1] > self.attn_weights[attn_type][attn_position].shape[0])
-                    print("values.shape[1] > self.attn_weights[attn_type][attn_position].shape[1]", values.shape[1] > self.attn_weights[attn_type][attn_position].shape[1])
-                print("decoder_position != -1", decoder_position != -1)
-                print("original_targets is not None", original_targets is not None)
                 if (attn_position not in self.attn_weights[attn_type]
                         or (queries.shape[1] > self.attn_weights[attn_type][attn_position].shape[0]
                             or values.shape[1] > self.attn_weights[attn_type][attn_position].shape[1])) \
-                        or decoder_position != -1 or original_targets is not None:
+                        or decoder_position != -1 or original_targets is not None \
+                        or attn_position in ['last', 'middle']:
 
                     indices_v = torch.arange(values.shape[1]).view(1, -1).to(dtype=torch.float32)
 
@@ -338,11 +333,9 @@ class NewAttention(nn.Module):
                         logits = 1 - distance_diff
                         logits = logits / torch.sum(logits, dim=-1, keepdim=True)
                         # logits = F.softmax(logits, dim=-1)
-                    if decoder_position > -1 and original_targets is None:
+                    if decoder_position == -1 and original_targets is None:
                         self.attn_weights[attn_type][attn_position] = logits[0]
-                    print("computed new")
                 else:
-                    print("didn't compute new")
                     logits = self.attn_weights[attn_type][attn_position][:queries.shape[1], :values.shape[1]]
                     logits = logits.expand(values.shape[0], logits.shape[0], logits.shape[1])
             # print("logits", logits)
@@ -398,8 +391,8 @@ class NewAttention(nn.Module):
                     if (attn_position[i] not in self.attn_weights[attn_type[i]]
                             or (queries.shape[1] > self.attn_weights[attn_type[i]][attn_position[i]].shape[0]
                                 or values.shape[1] > self.attn_weights[attn_type[i]][attn_position[i]].shape[1])) \
-                            or decoder_position != -1 or original_targets is not None:
-                        
+                            or decoder_position != -1 or original_targets is not None \
+                            or attn_position[i] in ['last', 'middle']:
 
                         indices_v = torch.arange(values.shape[1]).view(1, -1).to(dtype=torch.float32)
 
@@ -454,11 +447,9 @@ class NewAttention(nn.Module):
                             logits = 1 - distance_diff
                             logits = logits / torch.sum(logits, dim=-1, keepdim=True)
                             # logits = F.softmax(logits, dim=-1)
-                        if decoder_position > -1 and original_targets is None:
+                        if decoder_position == -1 and original_targets is None:
                             self.attn_weights[attn_type[i]][attn_position[i]] = logits[0]
-                        print("computed new")
                     else:
-                        print("didn't compute new")
                         logits = self.attn_weights[attn_type[i]][attn_position[i]][:queries.shape[1], :values.shape[1]]
                         logits = logits.expand(int(values.shape[0] / self.num_heads), logits.shape[0], logits.shape[1])
                     logits = logits.type_as(values)
