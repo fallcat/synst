@@ -280,7 +280,7 @@ class NewAttention(nn.Module):
                         print("distance_diff", distance_diff.shape)
                         print("values", values_shape)
                         print("queries", queries_shape)
-                        distance_diff = distance_diff.expand(batch_size, self.num_heads, queries_shape[1], values_shape[1])
+                        distance_diff = distance_diff.expand(batch_size, self.num_heads, queries_shape[1], values_shape[1]).contiguous()
                         distance_diff = distance_diff.view(values_shape[0], queries_shape[1], values_shape[1])
 
 
