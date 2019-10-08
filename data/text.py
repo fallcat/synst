@@ -96,6 +96,8 @@ class TextDataset(Dataset):
         ''' Collate the data into a batch '''
         if not data:
             return []
+        if data == [()]:
+            return []
 
         def make_batch(ids, examples):
             ''' Make a batch given a dict of lists with inputs and targets '''
