@@ -46,6 +46,7 @@ class NewAttention(nn.Module):
             self.attn_concat_weights = nn.Parameter(torch.Tensor(embed_dim, 3 * embed_dim))
         else:
             self.attn_concat_weights = None
+        self.which_attn = attn_config['which_attn']
         # self.max_prob = attn_config['max_prob']
         # self.window_size = attn_config['window_size']
 
@@ -222,6 +223,14 @@ class NewAttention(nn.Module):
 
             learned_count = 0
 
+        if 'last' in attn_position:
+            if key_mask is not None:
+                key_mask_shape = key_mask.shape
+                last_indices = torch.tensor([key_mask_shape[1] - a[::-1].index(0)
+                                             for a in key_mask_shape.numpy().tolist()], dtype=torch.float32).view(-1, 1)
+            else:
+                last_indices = torch.tensor([values_shape[1]] * queries_shape[1], dtype=torch.float32).view(-1, 1)
+
         if type(attn_type) is not list and type(attn_position) is not list:
             # print("enter first")
             if attn_type == 'whole':
@@ -240,8 +249,7 @@ class NewAttention(nn.Module):
                     if decoder_position > -1:
                         indices_q[:] = decoder_position
 
-                    if decoder_position > -1 or target_lens is not None:
-                        indices_q = indices_q * self.word_count_ratio
+                    indices_q = indices_q * self.word_count_ratio
 
                     if attn_position == 'left':
                         indices_q = indices_q - attn_displacement
@@ -250,7 +258,7 @@ class NewAttention(nn.Module):
                     elif attn_position == 'first':
                         indices_q[:] = 0
                     elif attn_position == 'last':
-                        indices_q[:] = indices_v.size()[1] - 1
+                        indices_q[:] = last_indices
                     elif attn_position == 'middle':
                         indices_q[:] = (indices_v.size()[1] + 1) / 2 - 1
 
@@ -376,7 +384,7 @@ class NewAttention(nn.Module):
                         elif attn_position[i] == 'first':
                             indices_q[:] = 0
                         elif attn_position[i] == 'last':
-                            indices_q[:] = indices_v.size()[1] - 1
+                            indices_q[:] = last_indices
                         elif attn_position[i] == 'middle':
                             indices_q[:] = (indices_v.size()[1] + 1) / 2 - 1
 
@@ -437,8 +445,8 @@ class NewAttention(nn.Module):
         # torch.set_printoptions(profile='full')
         # print("values", values)
         # print("values shape", values.shape)
-        # print("attn_weights", attn_weights)
-        # print("attn_weights shape", attn_weights.shape)
+        print("attn_weights", attn_weights)
+        print("attn_weights shape", attn_weights.shape)
         # print("attended", attended)
         # print("attended shape", attended.shape)
 
