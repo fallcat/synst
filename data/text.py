@@ -121,7 +121,7 @@ class TextDataset(Dataset):
             except:
                 print(examples[0])
                 exit(-1)
-
+            return ret
 
         if any(
                 isinstance(d, tuple) and len(d) and
