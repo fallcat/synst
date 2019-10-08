@@ -523,7 +523,7 @@ def add_data_args(parser):
     group.add_argument(
         '--max-line-length',
         type=int,
-        default=500,
+        default=0,
         help='Maximum line length during data preprocessing. Throw out lines greater than this.'
     )
     group.add_argument(
@@ -535,7 +535,7 @@ def add_data_args(parser):
     group.add_argument(
         '--max-target-length',
         type=int,
-        default=0,
+        default=500,
         help='Maximum target tokens per example'
     )
     group.add_argument(
