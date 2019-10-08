@@ -532,7 +532,6 @@ class NewAttention(nn.Module):
                 queries, = self.project(queries, 2)
         else:
             if self.input_weights is None:
-                print("no attn_weights")
                 values = values.view(
                     batch_size,
                     -1,
