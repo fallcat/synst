@@ -116,7 +116,12 @@ class TextDataset(Dataset):
 
         def sorter(examples, key='input'):
             ''' Sort the list of examples based on the length of the sequence for the given key '''
-            return sorted(examples, key=lambda x: len(x[1][key]), reverse=True)
+            try:             
+                ret = sorted(examples, key=lambda x: len(x[1][key]), reverse=True)
+            except:
+                print(examples[0])
+                exit(-1)
+
 
         if any(
                 isinstance(d, tuple) and len(d) and
@@ -125,7 +130,7 @@ class TextDataset(Dataset):
         ):
             if sort:
                 # Sort within each chunk
-                pdb.set_trace()
+                # pdb.set_trace()
                 data = [sorter(d) for d in data]
 
             ids, examples = zip(*(flatten(d) for d in data))
