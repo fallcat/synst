@@ -553,11 +553,6 @@ class NewAttention(nn.Module):
 
             word_embedding = word_embedding.view(
                 batch_size,
-                self.num_heads,
-                -1,
-                self.projection_dim
-            ).transpose(2, 1).contiguous().view(
-                batch_size,
                 -1,
                 self.num_heads * self.projection_dim
             )
