@@ -274,7 +274,8 @@ class NewAttention(nn.Module):
 
                     else:
                         indices_q = last_indices.unsqueeze(-1)
-                        distance_diff = indices_v.unsqueeze(1) - indices_q
+                        distance_diff = (indices_v.unsqueeze(1) - indices_q)
+                        distance_diff = distance_diff.expand(values_shape[0], queries_shape[1], values_shape[1])
                         print("distance_diff", distance_diff.shape)
                         print("indices_q", indices_q.shape)
                         print("indices_v.unsqueeze(1)", indices_v.unsqueeze(1).shape)
