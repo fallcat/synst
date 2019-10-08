@@ -248,6 +248,11 @@ class NewAttention(nn.Module):
             else:
                 if attn_type not in self.attn_weights:
                     self.attn_weights[attn_type] = {}
+                print("attn_position not in self.attn_weights[attn_type]", attn_position not in self.attn_weights[attn_type])
+                print("queries.shape[1] > self.attn_weights[attn_type][attn_position].shape[0]", queries.shape[1] > self.attn_weights[attn_type][attn_position].shape[0])
+                print("values.shape[1] > self.attn_weights[attn_type][attn_position].shape[1]", values.shape[1] > self.attn_weights[attn_type][attn_position].shape[1])
+                print("decoder_position != -1", decoder_position != -1)
+                print("original_targets is not None", original_targets is not None)
                 if (attn_position not in self.attn_weights[attn_type]
                         or (queries.shape[1] > self.attn_weights[attn_type][attn_position].shape[0]
                             or values.shape[1] > self.attn_weights[attn_type][attn_position].shape[1])) \
