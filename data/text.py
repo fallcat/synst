@@ -133,8 +133,8 @@ class TextDataset(Dataset):
                     # Sort within each chunk
                     data = [sorter(d) for d in data]
             except:
-                print("skip empty sample")
-                return []
+                print(data)
+                exit(-1)
 
             ids, examples = zip(*(flatten(d) for d in data))
             ids = chain.from_iterable(ids)
@@ -148,8 +148,8 @@ class TextDataset(Dataset):
                 if sort:
                     data = sorter(data)
             except:
-                print("skip empty sample")
-                return []
+                print(data)
+                exit(-1)
 
             return make_batch(*flatten(data))
 
