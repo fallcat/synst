@@ -551,12 +551,6 @@ class NewAttention(nn.Module):
                 self.num_heads * self.projection_dim
             )
 
-            word_embedding = word_embedding.view(
-                batch_size,
-                -1,
-                self.num_heads * self.projection_dim
-            )
-
             # print("attended", attended.shape)
             # print("queries", queries.shape)
             # print("embedded_target", word_embedding.shape)
