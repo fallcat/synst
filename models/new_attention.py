@@ -227,7 +227,7 @@ class NewAttention(nn.Module):
             if key_mask is not None:
                 key_mask_shape = key_mask.shape
                 last_indices = torch.tensor([key_mask_shape[1] - a[::-1].index(0)
-                                             for a in key_mask_shape.numpy().tolist()], dtype=torch.float32).view(-1, 1)
+                                             for a in key_mask.numpy().tolist()], dtype=torch.float32).view(-1, 1)
             else:
                 last_indices = torch.tensor([values_shape[1]] * queries_shape[1], dtype=torch.float32).view(-1, 1)
 
