@@ -335,6 +335,7 @@ class NewAttention(nn.Module):
                     if decoder_position > -1 and original_targets is None:
                         self.attn_weights[attn_type][attn_position] = logits[0]
                 else:
+                    print("didn't compute new")
                     logits = self.attn_weights[attn_type][attn_position][:queries.shape[1], :values.shape[1]]
                     logits = logits.expand(values.shape[0], logits.shape[0], logits.shape[1])
             # print("logits", logits)
@@ -520,7 +521,6 @@ class NewAttention(nn.Module):
         batch_size = values.shape[0]
 
         if 'learned' in self.attn_type or 'learned' == self.attn_type:
-            # print("in")
             if same_tensor(values, keys, queries):
                 values, keys, queries = self.project(values, chunks=3)
             elif same_tensor(values, keys):
