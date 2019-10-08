@@ -232,7 +232,7 @@ class NewAttention(nn.Module):
                 last_indices = torch.tensor([key_mask_shape[1] - a[::-1].index(0)
                                              for a in key_mask.cpu().numpy().tolist()], dtype=torch.float32).view(-1, 1)
             else:
-                last_indices = torch.tensor([values_shape[1]] * queries_shape[1], dtype=torch.float32).view(-1, 1)
+                last_indices = torch.tensor([values_shape[1]] * queries_shape[0], dtype=torch.float32).view(-1, 1)
 
 
 
@@ -248,29 +248,37 @@ class NewAttention(nn.Module):
                             or values.shape[1] > self.attn_weights[attn_type][attn_position].shape[1])) \
                         or decoder_position != -1 or original_targets is not None:
 
-                    indices_q = torch.arange(queries.shape[1]).view(-1, 1).to(dtype=torch.float32)
                     indices_v = torch.arange(values.shape[1]).view(1, -1).to(dtype=torch.float32)
 
-                    if decoder_position > -1:
-                        indices_q[:] = decoder_position
+                    if attn_position != 'last':
+                        indices_q = torch.arange(queries.shape[1]).view(-1, 1).to(dtype=torch.float32)
 
-                    indices_q = indices_q * self.word_count_ratio
+                        if decoder_position > -1:
+                            indices_q[:] = decoder_position
 
-                    if attn_position == 'left':
-                        indices_q = indices_q - attn_displacement
-                    elif attn_position == 'right':
-                        indices_q = indices_q + attn_displacement
-                    elif attn_position == 'first':
-                        indices_q[:] = 0
-                    elif attn_position == 'last':
-                        indices_q[:] = last_indices
-                    elif attn_position == 'middle':
-                        indices_q[:] = (indices_v.size()[1] + 1) / 2 - 1
+                        indices_q = indices_q * self.word_count_ratio
 
-                    distance_diff = indices_v - indices_q
-                    # print("distance_diff", distance_diff)
+                        if attn_position == 'left':
+                            indices_q = indices_q - attn_displacement
+                        elif attn_position == 'right':
+                            indices_q = indices_q + attn_displacement
+                        elif attn_position == 'first':
+                            indices_q[:] = 0
+                        elif attn_position == 'middle':
+                            indices_q[:] = (indices_v.size()[1] + 1) / 2 - 1
 
-                    distance_diff = distance_diff.expand(values.shape[0], distance_diff.shape[0], distance_diff.shape[1])
+                        distance_diff = indices_v - indices_q
+                        # print("distance_diff", distance_diff)
+
+                        distance_diff = distance_diff.expand(values.shape[0], distance_diff.shape[0], distance_diff.shape[1])
+
+                    else:
+                        indices_q = last_indices.unsqueeze(-1)
+                        distance_diff = indices_v.unsqueeze(1) - indices_q
+                        print("distance_diff", distance_diff.shape)
+                        print("indices_q", indices_q.shape)
+                        print("indices_v.unsqueeze(1)", indices_v.unsqueeze(1).shape)
+
 
                     if original_targets is not None and use_word_align_stats:
                         if decoder_position == -1:
