@@ -119,8 +119,8 @@ class TextDataset(Dataset):
             try:             
                 ret = sorted(examples, key=lambda x: len(x[1][key]), reverse=True)
             except:
-                print(examples[0])
-                exit(-1)
+                print(examples)
+                pdb.set_trace()
             return ret
 
         if any(
