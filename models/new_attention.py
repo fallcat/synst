@@ -273,14 +273,14 @@ class NewAttention(nn.Module):
                         distance_diff = distance_diff.expand(values.shape[0], distance_diff.shape[0], distance_diff.shape[1])
 
                     else:
-                        indices_q = last_indices.unsqueeze(-1)
-                        distance_diff = (indices_v.unsqueeze(1) - indices_q)
+                        indices_q = last_indices
+                        distance_diff = (indices_v - indices_q)
                         print("indices_q", indices_q.shape)
                         print("indices_v.unsqueeze(1)", indices_v.unsqueeze(1).shape)
                         print("distance_diff", distance_diff.shape)
                         print("values", values_shape)
                         print("queries", queries_shape)
-                        distance_diff = distance_diff.expand(values_shape[0], 1, values_shape[1])
+                        distance_diff = distance_diff.expand(values_shape[0], values_shape[1]).unsqueeze(1)
                         distance_diff = distance_diff.expand(values_shape[0], queries_shape[1], values_shape[1])
 
 
