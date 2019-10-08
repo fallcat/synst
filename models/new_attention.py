@@ -225,13 +225,13 @@ class NewAttention(nn.Module):
 
         if 'last' in attn_position:
             if key_mask is not None:
-                print("key_mask", key_mask.shape)
-                print("queries", queries_shape)
-                print("values", values_shape)
+                # print("key_mask", key_mask.shape)
+                # print("queries", queries_shape)
+                # print("values", values_shape)
                 key_mask_shape = key_mask.shape
                 last_indices = torch.tensor([key_mask_shape[1] - a[::-1].index(0)
                                              for a in key_mask.cpu().numpy().tolist()], dtype=torch.float32).view(-1, 1)
-                print("last_indices", last_indices)
+                # print("last_indices", last_indices)
             else:
                 last_indices = torch.tensor([values_shape[1]] * queries_shape[0], dtype=torch.float32).view(-1, 1)
 
@@ -276,11 +276,11 @@ class NewAttention(nn.Module):
                     else:
                         indices_q = last_indices
                         distance_diff = (indices_v - indices_q).unsqueeze(1).unsqueeze(2)
-                        print("indices_q", indices_q.shape)
-                        print("indices_v.unsqueeze(1)", indices_v.unsqueeze(1).shape)
-                        print("distance_diff", distance_diff.shape)
-                        print("values", values_shape)
-                        print("queries", queries_shape)
+                        # print("indices_q", indices_q.shape)
+                        # print("indices_v.unsqueeze(1)", indices_v.unsqueeze(1).shape)
+                        # print("distance_diff", distance_diff.shape)
+                        # print("values", values_shape)
+                        # print("queries", queries_shape)
                         distance_diff = distance_diff.expand(batch_size, self.num_heads, queries_shape[1], values_shape[1]).contiguous()
                         distance_diff = distance_diff.view(values_shape[0], queries_shape[1], values_shape[1])
 
@@ -388,32 +388,43 @@ class NewAttention(nn.Module):
                                 or values.shape[1] > self.attn_weights[attn_type[i]][attn_position[i]].shape[1])) \
                             or decoder_position != -1 or original_targets is not None:
                         
-                        indices_q = torch.arange(queries.shape[1]).view(-1, 1).to(dtype=torch.float32)
+
                         indices_v = torch.arange(values.shape[1]).view(1, -1).to(dtype=torch.float32)
 
-                        if decoder_position > -1:
-                            indices_q[:] = decoder_position
+                        if attn_position[i] != 'last':
+                            indices_q = torch.arange(queries.shape[1]).view(-1, 1).to(dtype=torch.float32)
 
-                        if decoder_position > -1 or target_lens is not None:
-                            indices_q = indices_q * self.word_count_ratio
+                            if decoder_position > -1:
+                                indices_q[:] = decoder_position
 
-                        if attn_position[i] == 'left':
-                            indices_q = indices_q - attn_displacement[i]
-                        elif attn_position[i] == 'right':
-                            indices_q = indices_q + attn_displacement[i]
-                        elif attn_position[i] == 'first':
-                            indices_q[:] = 0
-                        elif attn_position[i] == 'last':
-                            indices_q[:] = last_indices
-                        elif attn_position[i] == 'middle':
-                            indices_q[:] = (indices_v.size()[1] + 1) / 2 - 1
+                            if decoder_position > -1 or target_lens is not None:
+                                indices_q = indices_q * self.word_count_ratio
 
-                        distance_diff = indices_v - indices_q
-                        # print("distance_diff", distance_diff)
+                            if attn_position[i] == 'left':
+                                indices_q = indices_q - attn_displacement[i]
+                            elif attn_position[i] == 'right':
+                                indices_q = indices_q + attn_displacement[i]
+                            elif attn_position[i] == 'first':
+                                indices_q[:] = 0
+                            elif attn_position[i] == 'middle':
+                                indices_q[:] = (indices_v.size()[1] + 1) / 2 - 1
 
-                        distance_diff = distance_diff.expand(int(values.shape[0] / self.num_heads),
-                                                             distance_diff.shape[0],
-                                                             distance_diff.shape[1])
+                            distance_diff = indices_v - indices_q
+                            # print("distance_diff", distance_diff)
+
+                            distance_diff = distance_diff.expand(batch_size,
+                                                                 distance_diff.shape[0],
+                                                                 distance_diff.shape[1])
+                        else:
+                            indices_q = last_indices
+                            distance_diff = (indices_v - indices_q).unsqueeze(1)
+                            # print("indices_q", indices_q.shape)
+                            # print("indices_v.unsqueeze(1)", indices_v.unsqueeze(1).shape)
+                            # print("distance_diff", distance_diff.shape)
+                            # print("values", values_shape)
+                            # print("queries", queries_shape)
+                            distance_diff = distance_diff.expand(batch_size, queries_shape[1],
+                                                                 values_shape[1]).contiguous()
 
                         if original_targets is not None and use_word_align_stats[i] == 1:
                             distance_diff = (distance_diff - offsets.unsqueeze(-1).type_as(distance_diff))
@@ -465,9 +476,9 @@ class NewAttention(nn.Module):
         # torch.set_printoptions(profile='full')
         # print("values", values)
         # print("values shape", values.shape)
-        # torch.set_printoptions(profile="full")
-        # print("attn_weights", attn_weights)
-        # print("attn_weights shape", attn_weights.shape)
+        torch.set_printoptions(profile="full")
+        print("attn_weights", attn_weights)
+        print("attn_weights shape", attn_weights.shape)
         # print("attended", attended)
         # print("attended shape", attended.shape)
 
@@ -495,9 +506,9 @@ class NewAttention(nn.Module):
         # print("queries outside", queries)
         # print("self.input_weights", self.input_weights)
         # torch.set_printoptions(profile='full')
-        if key_mask is not None:
-            print("key_mask", key_mask.shape)
-            print("attention_mask", attention_mask)
+        # if key_mask is not None:
+        #     print("key_mask", key_mask.shape)
+        #     print("attention_mask", attention_mask)
         # print("num_queries", num_queries)
         # print("layer_i", layer_i)
         # print("original_targets", original_targets)
