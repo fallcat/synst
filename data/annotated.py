@@ -624,7 +624,9 @@ class AnnotatedTextDataset(TextDataset):
                 ):
                     example['source_annotation'] = source_annotation_data_file.readline()
                     example['target_annotation'] = target_annotation_data_file.readline()
-
+                
+                if example == {}:
+                    return
                 self.add_datum(example)
 
     def load_word_align_stats(self):
