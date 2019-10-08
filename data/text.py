@@ -120,11 +120,7 @@ class TextDataset(Dataset):
             #print(examples[0])
             #print(examples[1])
             #pdb.set_trace()
-            try:             
-                ret = sorted(examples, key=lambda x: len(x[1][key]), reverse=True)
-            except:
-                print(examples)
-                #pdb.set_trace()
+            ret = sorted(examples, key=lambda x: len(x[1][key]), reverse=True)
             return ret
 
         if any(
@@ -132,10 +128,13 @@ class TextDataset(Dataset):
                 isinstance(d[0], collections.Sequence)
                 for d in data
         ):
-            if sort:
-                # Sort within each chunk
-                # pdb.set_trace()
-                data = [sorter(d) for d in data]
+            try:
+                if sort:
+                    # Sort within each chunk
+                    data = [sorter(d) for d in data]
+            except:
+                print("skip empty sample")
+                return []
 
             ids, examples = zip(*(flatten(d) for d in data))
             ids = chain.from_iterable(ids)
@@ -145,8 +144,12 @@ class TextDataset(Dataset):
             batch['chunk_sizes'] = [len(l) for l in data]
             return batch
         else:
-            if sort:
-                data = sorter(data)
+            try:
+                if sort:
+                    data = sorter(data)
+            except:
+                print("skip empty sample")
+                return []
 
             return make_batch(*flatten(data))
 
