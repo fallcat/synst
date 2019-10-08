@@ -289,7 +289,8 @@ class NewTransformer(nn.Module):
                        'num_layers': config.num_layers,
                        'num_heads': config.num_heads,
                        'attn_concat': config.attn_concat,
-                       'which_attn': 'encoder'}
+                       'which_attn': 'encoder',
+                       'attn_weights': config.attn_weights}
         args = [attn_config, config.num_heads, config.embedding_size, config.hidden_dim]
         return nn.ModuleList([
             TransformerEncoderLayer(*args, **kwargs)
@@ -307,7 +308,8 @@ class NewTransformer(nn.Module):
                            'num_layers': config.dec_num_layers,
                            'num_heads': config.dec_num_heads,
                            'attn_concat': config.dec_attn_concat,
-                           'which_attn': 'decoder'}
+                           'which_attn': 'decoder',
+                           'attn_weights': config.dec_attn_weights}
         enc_dec_attn_config = {'attn_type': config.enc_dec_attn_type,
                                'attn_position': config.enc_dec_attn_position,
                                'attn_param': config.enc_dec_attn_param,
@@ -319,7 +321,8 @@ class NewTransformer(nn.Module):
                                'align_stats_bin_size': self.dataset.config.align_stats_bin_size,
                                'use_word_align_stats': config.enc_dec_attn_align,
                                'attn_concat': config.enc_dec_attn_concat,
-                               'which_attn': 'source'}
+                               'which_attn': 'source',
+                               'attn_weights': config.enc_dec_attn_weights}
         # print("enc_dec_attn_config", enc_dec_attn_config)
         args = [dec_attn_config, enc_dec_attn_config, config.num_heads, config.embedding_size, config.hidden_dim]
         return nn.ModuleList([

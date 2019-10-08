@@ -218,6 +218,13 @@ def add_new_transformer_args(parser):
              '1 to concat just previous embedding, 2 to concat just word embedding, 3 to concat both.'
     )
     group.add_argument(
+        '--attn-weights',
+        type=int,
+        default=1,
+        choices=[0, 1],
+        help='Whether or not use weights in non-learned attention. 0 no weights, 1 with weights.'
+    )
+    group.add_argument(
         '--dec-attn-type',
         type=str,
         nargs='+',
@@ -258,6 +265,14 @@ def add_new_transformer_args(parser):
         help='Whether or not concat previous embedding with new embedded. 0 to not concat, '
              '1 to concat just previous embedding, 2 to concat just word embedding, 3 to concat both.'
     )
+    group.add_argument(
+        '--dec-attn-weights',
+        type=int,
+        default=1,
+        choices=[0, 1],
+        help='Whether or not use weights in non-learned attention. 0 no weights, 1 with weights.'
+    )
+
     group.add_argument(
         '--enc-dec-attn-type',
         type=str,
@@ -308,6 +323,14 @@ def add_new_transformer_args(parser):
         choices=[0, 1, 2, 3],
         help='Whether or not concat previous embedding with new embedded. 0 to not concat, '
              '1 to concat just previous embedding, 2 to concat just word embedding, 3 to concat both.'
+    )
+
+    group.add_argument(
+        '--enc-dec-attn-weights',
+        type=int,
+        default=1,
+        choices=[0, 1],
+        help='Whether or not use weights in non-learned attention. 0 no weights, 1 with weights.'
     )
 
     return group

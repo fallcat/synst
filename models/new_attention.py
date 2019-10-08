@@ -57,7 +57,10 @@ class NewAttention(nn.Module):
             self.input_weights = nn.Parameter(torch.Tensor(3 * embed_dim, embed_dim))
         else:
             # print("not here")
-            self.input_weights = nn.Parameter(torch.Tensor(embed_dim, embed_dim))
+            if attn_config['attn_weights']:
+                self.input_weights = nn.Parameter(torch.Tensor(embed_dim, embed_dim))
+            else:
+                self.input_weights = None
         self.output_projection = nn.Linear(embed_dim, embed_dim, bias=False)
         self.reset_parameters()
 
@@ -527,16 +530,29 @@ class NewAttention(nn.Module):
                 keys, = self.project(keys, 1)
                 queries, = self.project(queries, 2)
         else:
-            values = F.linear(values, self.input_weights).view(
-                batch_size,
-                -1,
-                self.num_heads,
-                self.projection_dim
-            ).transpose(2, 1).contiguous().view(
-                batch_size * self.num_heads,
-                -1,
-                self.projection_dim
-            )
+            if self.attn_weights is None:
+                print("no attn_weights")
+                values = values.view(
+                    batch_size,
+                    -1,
+                    self.num_heads,
+                    self.projection_dim
+                ).transpose(2, 1).contiguous().view(
+                    batch_size * self.num_heads,
+                    -1,
+                    self.projection_dim
+                )
+            else:
+                values = F.linear(values, self.input_weights).view(
+                    batch_size,
+                    -1,
+                    self.num_heads,
+                    self.projection_dim
+                ).transpose(2, 1).contiguous().view(
+                    batch_size * self.num_heads,
+                    -1,
+                    self.projection_dim
+                )
 
             queries = queries.view(
                 batch_size,
