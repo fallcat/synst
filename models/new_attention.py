@@ -70,7 +70,8 @@ class NewAttention(nn.Module):
         ''' Reset parameters using xavier initialization '''
         # Initialize using Xavier
         gain = nn.init.calculate_gain('linear')
-        nn.init.xavier_uniform_(self.input_weights, gain)
+        if self.input_weights is not None:
+            nn.init.xavier_uniform_(self.input_weights, gain)
         nn.init.xavier_uniform_(self.output_projection.weight, gain)
         if self.attn_concat_weights is not None:
             nn.init.xavier_uniform_(self.attn_concat_weights, gain)
