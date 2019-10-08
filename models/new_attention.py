@@ -450,6 +450,7 @@ class NewAttention(nn.Module):
                         if decoder_position > -1 and original_targets is None:
                             self.attn_weights[attn_type[i]][attn_position[i]] = logits[0]
                     else:
+                        print("didn't compute new")
                         logits = self.attn_weights[attn_type[i]][attn_position[i]][:queries.shape[1], :values.shape[1]]
                         logits = logits.expand(int(values.shape[0] / self.num_heads), logits.shape[0], logits.shape[1])
                     logits = logits.type_as(values)
