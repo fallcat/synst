@@ -71,7 +71,7 @@ def main(argv=None):
             for module_name, module in action.modules.items()
             if module_name not in args.reset_parameters
         }
-        pdb.set_trace()
+        #pdb.set_trace()
 
         epoch, step = restore(
             args.restore,
