@@ -600,8 +600,8 @@ class NewAttention(nn.Module):
             print("attended", attended.shape)
             print("torch.bmm(scores, attended).transpose(1, 2)", torch.bmm(scores, attended).transpose(1, 2).shape)
             print("self.attn_score_project_out_weights", self.attn_score_project_out_weights.shape)
-            attended = F.linear(torch.bmm(scores, attended).transpose(1, 2),
-                                self.attn_score_project_out_weights).transpose(1, 2)
+            attended = F.linear(torch.bmm(scores, attended).squeeze(1),
+                                self.attn_score_project_out_weights).view(attended_shape)
 
         if 'learned' not in self.attn_type and 'learned' != self.attn_type and self.attn_concat_weights is not None:
             if self.attn_concat == 1:
