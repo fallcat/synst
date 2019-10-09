@@ -87,7 +87,7 @@ if __name__ == "__main__":
 		            map_location=args.device.type,
 		            strict=not args.reset_parameters
 				)
-
+	pdb.set_trace()
 	print("computing scores ...")
 	scores = get_scores(model, data['batches'])
 
