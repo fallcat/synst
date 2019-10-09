@@ -596,10 +596,6 @@ class NewAttention(nn.Module):
                                      self.num_heads,
                                      self.projection_dim)
             scores = torch.bmm(projected_queries, attended.transpose(1, 2)).softmax(dim=-1)
-            print("scores", scores.shape)
-            print("attended", attended.shape)
-            print("torch.bmm(scores, attended).transpose(1, 2)", torch.bmm(scores, attended).transpose(1, 2).shape)
-            print("self.attn_score_project_out_weights", self.attn_score_project_out_weights.shape)
             attended = F.linear(torch.bmm(scores, attended).squeeze(1),
                                 self.attn_score_project_out_weights).view(attended_shape)
 
