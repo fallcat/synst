@@ -7,6 +7,7 @@ import time
 import numpy as np
 from torch import nn
 from torch.nn import functional as F
+from models.attention import MultiHeadedAttention
 
 from utils import same_tensor
 
@@ -47,6 +48,9 @@ class NewAttention(nn.Module):
         else:
             self.attn_concat_weights = None
         self.which_attn = attn_config['which_attn']
+        self.attn_score = attn_config['attn_score']
+        self.attn_score_project_in_weights = nn.Parameter(torch.Tensor(self.projection_dim, embed_dim))
+        self.attn_score_project_out_weights = nn.Parameter(torch.Tensor(embed_dim, self.projection_dim))
         # self.max_prob = attn_config['max_prob']
         # self.window_size = attn_config['window_size']
 
@@ -566,41 +570,36 @@ class NewAttention(nn.Module):
             )
         # pylint:enable=unbalanced-tuple-unpacking
 
-        # print("num_queries", num_queries)
-
         if num_queries:
             queries = queries[:, -num_queries:]
-
-
-        # print("values", values.shape)
-        # print("batch_size", batch_size)
-        # print("num_heads", self.num_heads)
-        # print("projection_dim", self.projection_dim)
 
         attended = self.attention(values, keys, queries, key_mask, attention_mask, layer_i, decoder_position,
                                   target_lens, original_targets=original_targets)
 
-        # print("'learned' not in self.attn_type", 'learned' not in self.attn_type)
-        # print("'learned' != self.attn_type", 'learned' != self.attn_type)
-        # print("self.attn_concat_weights is not None", self.attn_concat_weights is not None)
-        if 'learned' not in self.attn_type and 'learned' != self.attn_type and self.attn_concat_weights is not None:
-            queries = queries.view(
-                batch_size,
-                self.num_heads,
-                -1,
-                self.projection_dim
-            ).transpose(2, 1).contiguous().view(
-                batch_size,
-                -1,
-                self.num_heads * self.projection_dim
-            )
+        queries = queries.view(
+            batch_size,
+            self.num_heads,
+            -1,
+            self.projection_dim
+        ).transpose(2, 1).contiguous().view(
+            batch_size,
+            -1,
+            self.num_heads * self.projection_dim
+        )
 
-            # print("attended", attended.shape)
-            # print("queries", queries.shape)
-            # print("embedded_target", word_embedding.shape)
-            # print("self.attn_concat_weights", self.attn_concat_weights.shape)
-            # print("values", values.shape)
-            # print("torch.cat((attended, queries), dim=-1)", torch.cat((attended, queries), dim=-1).shape)
+        if self.attn_score:
+            projected_queries = F.linear(queries, self.attn_score_project_in_weights).view(-1,
+                                                                                           1,
+                                                                                           self.projection_dim)
+            attended_shape = attended.shape
+            attended = attended.view(-1,
+                                     self.num_heads,
+                                     self.projection_dim)
+            scores = torch.bmm(projected_queries, attended.transpose(1, 2)).softmax(dim=-1)
+            attended = F.linear(torch.bmm(scores, attended).transpose(1, 2),
+                                self.attn_score_project_out_weights).transpose(1, 2)
+
+        if 'learned' not in self.attn_type and 'learned' != self.attn_type and self.attn_concat_weights is not None:
             if self.attn_concat == 1:
                 attended = F.linear(torch.cat((attended, queries), dim=-1), self.attn_concat_weights)
             elif self.attn_concat == 2:
