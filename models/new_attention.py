@@ -129,6 +129,8 @@ class NewAttention(nn.Module):
 
         attn_configs = []
 
+        attn_configs_names = ['attn_type', 'attn_position', 'attn_param', 'attn_displacement']
+
         for i, attn_config_i in enumerate([self.attn_type, self.attn_position, self.attn_param, self.attn_displacement]):
             if type(attn_config_i) is list:
                 if len(attn_config_i) == 1:
@@ -140,11 +142,18 @@ class NewAttention(nn.Module):
                         attn_configs.append(attn_config_i)
                 elif len(attn_config_i) == self.num_layers:
                     attn_configs.append(attn_config_i[layer_i])
-                else:
+                elif len(attn_config_i) == self.num_heads * self.num_layers:
                     if len(set(attn_config_i[layer_i * self.num_heads:(layer_i + 1) * self.num_heads])) == 1:
                         attn_configs.append(attn_config_i[layer_i * self.num_heads])
                     else:
                         attn_configs.append(attn_config_i[layer_i * self.num_heads:(layer_i + 1) * self.num_heads])
+                else:
+                    raise Exception("The number of {} is {}, but it has to be either number of heads {}, "
+                                    "number of layers {}, or the product of them {}.".format(attn_configs_names[i],
+                                                                                             len(attn_config_i),
+                                                                                             self.num_heads,
+                                                                                             self.num_layers,
+                                                                                             self.num_heads * self.num_layers))
             else:
                 attn_configs.append(attn_config_i)
         attn_type, attn_position, attn_param, attn_displacement = attn_configs
