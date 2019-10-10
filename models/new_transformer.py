@@ -215,7 +215,7 @@ class TransformerDecoderLayer(nn.Module):
             else:
                 state = cache[self.uuid] = torch.cat((cached, state), 1)
 
-        return {'state': state, 'mask': mask, 'cache': cache, 'target_lens': target_lens}
+        return {'state': state, 'mask': mask, 'cache': cache}
 
     _masks = threading.local()
     def mask(self, inputs):
