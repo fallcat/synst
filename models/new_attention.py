@@ -116,8 +116,7 @@ class NewAttention(nn.Module):
                   -1,
                   self.projection_dim)
 
-    def attention(self, values, keys, queries, key_mask=None, mask=None, layer_i=0, decoder_position=-1,
-                  target_lens=None, original_targets=None):
+    def attention(self, values, keys, queries, key_mask=None, mask=None, layer_i=0, decoder_position=-1):
         ''' Scaled dot product attention with optional masks '''
 
         # print("values", values.shape)
@@ -253,7 +252,7 @@ class NewAttention(nn.Module):
                 if (attn_position not in self.attn_weights[attn_type]
                         or (queries.shape[1] > self.attn_weights[attn_type][attn_position].shape[0]
                             or values.shape[1] > self.attn_weights[attn_type][attn_position].shape[1])) \
-                        or decoder_position != -1 or original_targets is not None \
+                        or decoder_position != -1 \
                         or attn_position in ['last', 'middle']:
 
                     indices_v = torch.arange(values.shape[1]).view(1, -1).to(dtype=torch.float32)
@@ -335,8 +334,7 @@ class NewAttention(nn.Module):
                         logits = 1 - distance_diff
                         logits = logits / torch.sum(logits, dim=-1, keepdim=True)
                         # logits = F.softmax(logits, dim=-1)
-                    if decoder_position == -1 and original_targets is None:
-                        self.attn_weights[attn_type][attn_position] = logits[0]
+                    self.attn_weights[attn_type][attn_position] = logits[0]
                 else:
                     logits = self.attn_weights[attn_type][attn_position][:queries.shape[1], :values.shape[1]]
                     logits = logits.expand(values.shape[0], logits.shape[0], logits.shape[1])
@@ -393,7 +391,7 @@ class NewAttention(nn.Module):
                     if (attn_position[i] not in self.attn_weights[attn_type[i]]
                             or (queries.shape[1] > self.attn_weights[attn_type[i]][attn_position[i]].shape[0]
                                 or values.shape[1] > self.attn_weights[attn_type[i]][attn_position[i]].shape[1])) \
-                            or decoder_position != -1 or original_targets is not None \
+                            or decoder_position != -1 \
                             or attn_position[i] in ['last', 'middle']:
 
                         indices_v = torch.arange(values.shape[1]).view(1, -1).to(dtype=torch.float32)
@@ -404,8 +402,7 @@ class NewAttention(nn.Module):
                             if decoder_position > -1:
                                 indices_q[:] = decoder_position
 
-                            if decoder_position > -1 or target_lens is not None:
-                                indices_q = indices_q * self.word_count_ratio
+                            indices_q = indices_q * self.word_count_ratio
 
                             if attn_position[i] == 'left':
                                 indices_q = indices_q - attn_displacement[i]
@@ -449,8 +446,7 @@ class NewAttention(nn.Module):
                             logits = 1 - distance_diff
                             logits = logits / torch.sum(logits, dim=-1, keepdim=True)
                             # logits = F.softmax(logits, dim=-1)
-                        if decoder_position == -1 and original_targets is None:
-                            self.attn_weights[attn_type[i]][attn_position[i]] = logits[0]
+                        self.attn_weights[attn_type[i]][attn_position[i]] = logits[0]
                     else:
                         logits = self.attn_weights[attn_type[i]][attn_position[i]][:queries.shape[1], :values.shape[1]]
                         logits = logits.expand(int(values.shape[0] / self.num_heads), logits.shape[0], logits.shape[1])
@@ -571,8 +567,7 @@ class NewAttention(nn.Module):
         if num_queries:
             queries = queries[:, -num_queries:]
 
-        attended = self.attention(values, keys, queries, key_mask, attention_mask, layer_i, decoder_position,
-                                  target_lens, original_targets=original_targets)
+        attended = self.attention(values, keys, queries, key_mask, attention_mask, layer_i, decoder_position)
 
         queries = queries.view(
             batch_size,

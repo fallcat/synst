@@ -154,7 +154,7 @@ class TransformerDecoderLayer(nn.Module):
         self.self_attention.reset_parameters()
         self.source_attention.reset_parameters()
 
-    def forward(self, inputs, sources, layer_i, original_targets, sequences, word_embedding): # pylint:disable=arguments-differ
+    def forward(self, inputs, sources, layer_i, word_embedding): # pylint:disable=arguments-differ
         ''' The forward pass '''
         mask = inputs['mask']
         state = inputs['state']
@@ -189,11 +189,8 @@ class TransformerDecoderLayer(nn.Module):
         if self.causal and cache is not None:
             kwargs['num_queries'] = self.span
             kwargs['decoder_position'] = decoder_position
-            kwargs['target_lens'] = target_lens
-            kwargs['original_targets'] = sequences
             kwargs['word_embedding'] = word_embedding[:, -self.span:]
         else:
-            kwargs['original_targets'] = original_targets.cpu().numpy()
             kwargs['word_embedding'] = word_embedding
 
             # print("kwargs['decoder_position']", kwargs['decoder_position'])
@@ -385,7 +382,7 @@ class NewTransformer(nn.Module):
 
         return encoded
 
-    def decode(self, encoded, targets, decoders=None, embedding=None, cache=None, mask=None, target_lens=None, sequences=None):
+    def decode(self, encoded, targets, decoders=None, embedding=None, cache=None, mask=None):
         ''' Decode the encoded sequence to the targets '''
         if decoders is None:
             decoders = self.decoders
@@ -398,12 +395,11 @@ class NewTransformer(nn.Module):
         decoded = {
             'cache': cache,
             'state': word_embedding,
-            'mask': targets.eq(self.padding_idx) if mask is None else mask,
-            'target_lens': target_lens
+            'mask': targets.eq(self.padding_idx) if mask is None else mask
         }
         for i, decoder in enumerate(decoders):
             # print("i", i)
-            decoded = decoder(decoded, encoded, i, targets, sequences, word_embedding)
+            decoded = decoder(decoded, encoded, i, word_embedding)
 
         # compute projection to the vocabulary
         state = decoded['state']

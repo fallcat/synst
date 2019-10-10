@@ -321,15 +321,6 @@ def add_new_transformer_args(parser):
     )
 
     group.add_argument(
-        '--enc-dec-attn-align',
-        type=int,
-        nargs='+',
-        default=0,
-        choices=[0, 1],
-        help='Whether or not use word aligner stats. 0 to not use, 1 to use.'
-    )
-
-    group.add_argument(
         '--enc-dec-attn-concat',
         type=int,
         default=0,
