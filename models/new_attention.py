@@ -479,6 +479,7 @@ class NewAttention(nn.Module):
         )
 
         if self.attn_score:
+            print("queries", queries)
             projected_queries = F.linear(queries, self.attn_score_project_in_weights).view(-1,
                                                                                            1,
                                                                                            self.projection_dim)
