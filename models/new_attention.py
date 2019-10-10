@@ -45,9 +45,9 @@ class NewAttention(nn.Module):
             self.attn_concat_weights = None
         self.which_attn = attn_config['which_attn']
         self.attn_score = attn_config['attn_score']
-        # if self.attn_score:
-        self.attn_score_project_in_weights = nn.Parameter(torch.Tensor(self.projection_dim, embed_dim))
-        self.attn_score_project_out_weights = nn.Parameter(torch.Tensor(embed_dim, self.projection_dim))
+        if self.attn_score:
+            self.attn_score_project_in_weights = nn.Parameter(torch.Tensor(self.projection_dim, embed_dim))
+            self.attn_score_project_out_weights = nn.Parameter(torch.Tensor(embed_dim, self.projection_dim))
 
         # Combine projections for multiple heads into a single linear layer for efficiency
         if attn_config['attn_weights']:
@@ -482,20 +482,16 @@ class NewAttention(nn.Module):
         )
 
         if self.attn_score:
-            print("queries", queries)
             projected_queries = F.linear(queries, self.attn_score_project_in_weights).view(-1,
                                                                                            1,
                                                                                            self.projection_dim)
-            print("projected_queries", projected_queries)
             attended_shape = attended.shape
             attended = attended.view(-1,
                                      self.num_heads,
                                      self.projection_dim)
             scores = torch.bmm(projected_queries, attended.transpose(1, 2)).softmax(dim=-1)
-            print("scores", scores)
             attended = F.linear(torch.bmm(scores, attended).squeeze(1),
                                 self.attn_score_project_out_weights).view(attended_shape)
-            print("attened", attended)
 
         if 'learned' not in self.attn_type and 'learned' != self.attn_type and self.attn_concat_weights is not None:
             if self.attn_concat == 1:
