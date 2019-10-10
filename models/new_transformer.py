@@ -94,8 +94,6 @@ class TransformerEncoderLayer(nn.Module):
 
         # print("encoder self attention")
 
-        # print("outside layer_i", layer_i)
-
         state = self.self_attention(
             state,  # residual
             state, state, state, mask,  # passed to multiheaded attention
@@ -130,23 +128,10 @@ class TransformerDecoderLayer(nn.Module):
             dim, dropout_p
         )
 
-        # self.self_attention = TransformerSublayer(
-        #     MultiHeadedAttention(dim, num_heads),
-        #     dim, dropout_p
-        # )
-
-        # print("create source")
-
         self.source_attention = TransformerSublayer(
             NewAttention(enc_dec_attn_config, dim, num_heads),
             dim, dropout_p
         )
-
-
-        # self.source_attention = TransformerSublayer(
-        #     MultiHeadedAttention(dim, num_heads),
-        #     dim, dropout_p
-        # )
 
     def reset_parameters(self):
         ''' Reset the parameters of the module '''
@@ -191,10 +176,6 @@ class TransformerDecoderLayer(nn.Module):
             kwargs['word_embedding'] = word_embedding[:, -self.span:]
         else:
             kwargs['word_embedding'] = word_embedding
-
-            # print("kwargs['decoder_position']", kwargs['decoder_position'])
-        # print("original_targets outside", kwargs['original_targets'])
-        # print("kwargs", kwargs)
 
         # print("decoder source attention")
 
@@ -315,14 +296,10 @@ class NewTransformer(nn.Module):
                                'num_layers': config.enc_dec_num_layers,
                                'num_heads': config.enc_dec_num_heads,
                                'word_count_ratio': self.dataset.word_count_ratio,
-                               'word_align_stats': self.dataset.word_align_stats,
-                               'align_stats_bin_size': self.dataset.config.align_stats_bin_size,
-                               'use_word_align_stats': config.enc_dec_attn_align,
                                'attn_concat': config.enc_dec_attn_concat,
                                'which_attn': 'source',
                                'attn_weights': config.enc_dec_attn_weights,
                                'attn_score': config.enc_dec_attn_score}
-        # print("enc_dec_attn_config", enc_dec_attn_config)
         args = [dec_attn_config, enc_dec_attn_config, config.num_heads, config.embedding_size, config.hidden_dim]
         return nn.ModuleList([
             TransformerDecoderLayer(*args, **kwargs)
