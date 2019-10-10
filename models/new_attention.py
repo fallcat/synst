@@ -71,6 +71,9 @@ class NewAttention(nn.Module):
         nn.init.xavier_uniform_(self.output_projection.weight, gain)
         if self.attn_concat_weights is not None:
             nn.init.xavier_uniform_(self.attn_concat_weights, gain)
+        if self.attn_score:
+            nn.init.xavier_uniform_(self.attn_score_project_in_weights, gain)
+            nn.init.xavier_uniform_(self.attn_score_project_out_weights, gain)
 
     def project(self, inputs, index=0, chunks=1):
         ''' Produce a linear projection using the weights '''
