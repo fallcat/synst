@@ -94,8 +94,6 @@ class TransformerEncoderLayer(nn.Module):
 
         # print("encoder self attention")
 
-        # print("outside layer_i", layer_i)
-
         state = self.self_attention(
             state,  # residual
             state, state, state, mask,  # passed to multiheaded attention
@@ -130,23 +128,10 @@ class TransformerDecoderLayer(nn.Module):
             dim, dropout_p
         )
 
-        # self.self_attention = TransformerSublayer(
-        #     MultiHeadedAttention(dim, num_heads),
-        #     dim, dropout_p
-        # )
-
-        # print("create source")
-
         self.source_attention = TransformerSublayer(
             NewAttention(enc_dec_attn_config, dim, num_heads),
             dim, dropout_p
         )
-
-
-        # self.source_attention = TransformerSublayer(
-        #     MultiHeadedAttention(dim, num_heads),
-        #     dim, dropout_p
-        # )
 
     def reset_parameters(self):
         ''' Reset the parameters of the module '''
@@ -154,12 +139,11 @@ class TransformerDecoderLayer(nn.Module):
         self.self_attention.reset_parameters()
         self.source_attention.reset_parameters()
 
-    def forward(self, inputs, sources, layer_i, original_targets, sequences, word_embedding): # pylint:disable=arguments-differ
+    def forward(self, inputs, sources, layer_i, word_embedding): # pylint:disable=arguments-differ
         ''' The forward pass '''
         mask = inputs['mask']
         state = inputs['state']
         cache = inputs.get('cache')
-        target_lens = inputs['target_lens']
 
         kwargs = {'layer_i': layer_i}
         decoder_position = state.shape[1] - 1
@@ -189,16 +173,9 @@ class TransformerDecoderLayer(nn.Module):
         if self.causal and cache is not None:
             kwargs['num_queries'] = self.span
             kwargs['decoder_position'] = decoder_position
-            kwargs['target_lens'] = target_lens
-            kwargs['original_targets'] = sequences
             kwargs['word_embedding'] = word_embedding[:, -self.span:]
         else:
-            kwargs['original_targets'] = original_targets.cpu().numpy()
             kwargs['word_embedding'] = word_embedding
-
-            # print("kwargs['decoder_position']", kwargs['decoder_position'])
-        # print("original_targets outside", kwargs['original_targets'])
-        # print("kwargs", kwargs)
 
         # print("decoder source attention")
 
@@ -219,7 +196,7 @@ class TransformerDecoderLayer(nn.Module):
             else:
                 state = cache[self.uuid] = torch.cat((cached, state), 1)
 
-        return {'state': state, 'mask': mask, 'cache': cache, 'target_lens': target_lens}
+        return {'state': state, 'mask': mask, 'cache': cache}
 
     _masks = threading.local()
     def mask(self, inputs):
@@ -290,7 +267,8 @@ class NewTransformer(nn.Module):
                        'num_heads': config.num_heads,
                        'attn_concat': config.attn_concat,
                        'which_attn': 'encoder',
-                       'attn_weights': config.attn_weights}
+                       'attn_weights': config.attn_weights,
+                       'attn_score': config.attn_score}
         args = [attn_config, config.num_heads, config.embedding_size, config.hidden_dim]
         return nn.ModuleList([
             TransformerEncoderLayer(*args, **kwargs)
@@ -309,7 +287,8 @@ class NewTransformer(nn.Module):
                            'num_heads': config.dec_num_heads,
                            'attn_concat': config.dec_attn_concat,
                            'which_attn': 'decoder',
-                           'attn_weights': config.dec_attn_weights}
+                           'attn_weights': config.dec_attn_weights,
+                           'attn_score': config.dec_attn_score}
         enc_dec_attn_config = {'attn_type': config.enc_dec_attn_type,
                                'attn_position': config.enc_dec_attn_position,
                                'attn_param': config.enc_dec_attn_param,
@@ -317,13 +296,10 @@ class NewTransformer(nn.Module):
                                'num_layers': config.enc_dec_num_layers,
                                'num_heads': config.enc_dec_num_heads,
                                'word_count_ratio': self.dataset.word_count_ratio,
-                               'word_align_stats': self.dataset.word_align_stats,
-                               'align_stats_bin_size': self.dataset.config.align_stats_bin_size,
-                               'use_word_align_stats': config.enc_dec_attn_align,
                                'attn_concat': config.enc_dec_attn_concat,
                                'which_attn': 'source',
-                               'attn_weights': config.enc_dec_attn_weights}
-        # print("enc_dec_attn_config", enc_dec_attn_config)
+                               'attn_weights': config.enc_dec_attn_weights,
+                               'attn_score': config.enc_dec_attn_score}
         args = [dec_attn_config, enc_dec_attn_config, config.num_heads, config.embedding_size, config.hidden_dim]
         return nn.ModuleList([
             TransformerDecoderLayer(*args, **kwargs)
@@ -382,7 +358,7 @@ class NewTransformer(nn.Module):
 
         return encoded
 
-    def decode(self, encoded, targets, decoders=None, embedding=None, cache=None, mask=None, target_lens=None, sequences=None):
+    def decode(self, encoded, targets, decoders=None, embedding=None, cache=None, mask=None):
         ''' Decode the encoded sequence to the targets '''
         if decoders is None:
             decoders = self.decoders
@@ -395,12 +371,11 @@ class NewTransformer(nn.Module):
         decoded = {
             'cache': cache,
             'state': word_embedding,
-            'mask': targets.eq(self.padding_idx) if mask is None else mask,
-            'target_lens': target_lens
+            'mask': targets.eq(self.padding_idx) if mask is None else mask
         }
         for i, decoder in enumerate(decoders):
             # print("i", i)
-            decoded = decoder(decoded, encoded, i, targets, sequences, word_embedding)
+            decoded = decoder(decoded, encoded, i, word_embedding)
 
         # compute projection to the vocabulary
         state = decoded['state']
