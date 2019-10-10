@@ -36,9 +36,9 @@ class NewAttention(nn.Module):
         self.attn_displacement = attn_config['attn_displacement']
         self.num_layers = attn_config['num_layers']
         self.word_count_ratio = attn_config['word_count_ratio'] if 'word_count_ratio' in attn_config else 1
-        self.word_align_stats = attn_config['word_align_stats'] if 'word_align_stats' in attn_config else None
-        self.align_stats_bin_size = attn_config['align_stats_bin_size'] if 'align_stats_bin_size' in attn_config else None
-        self.use_word_align_stats = attn_config['use_word_align_stats'] if 'use_word_align_stats' in attn_config else 0
+        # self.word_align_stats = attn_config['word_align_stats'] if 'word_align_stats' in attn_config else None
+        # self.align_stats_bin_size = attn_config['align_stats_bin_size'] if 'align_stats_bin_size' in attn_config else None
+        # self.use_word_align_stats = attn_config['use_word_align_stats'] if 'use_word_align_stats' in attn_config else 0
         # print("attn_config['attn_concat']", attn_config['attn_concat'])
         self.attn_concat = attn_config['attn_concat'] if 'attn_concat' in attn_config else 0
         if self.attn_concat in [1, 2]:
@@ -49,8 +49,9 @@ class NewAttention(nn.Module):
             self.attn_concat_weights = None
         self.which_attn = attn_config['which_attn']
         self.attn_score = attn_config['attn_score']
-        self.attn_score_project_in_weights = nn.Parameter(torch.Tensor(self.projection_dim, embed_dim))
-        self.attn_score_project_out_weights = nn.Parameter(torch.Tensor(embed_dim, self.projection_dim))
+        if self.attn_score:
+            self.attn_score_project_in_weights = nn.Parameter(torch.Tensor(self.projection_dim, embed_dim))
+            self.attn_score_project_out_weights = nn.Parameter(torch.Tensor(embed_dim, self.projection_dim))
         # self.max_prob = attn_config['max_prob']
         # self.window_size = attn_config['window_size']
 
@@ -138,8 +139,7 @@ class NewAttention(nn.Module):
 
         attn_configs = []
 
-        for i, attn_config_i in enumerate([self.attn_type, self.attn_position, self.attn_param, self.attn_displacement,
-                                           self.use_word_align_stats]):
+        for i, attn_config_i in enumerate([self.attn_type, self.attn_position, self.attn_param, self.attn_displacement]):
             if type(attn_config_i) is list:
                 if len(attn_config_i) == 1:
                     attn_configs.append(attn_config_i[0])
@@ -157,7 +157,7 @@ class NewAttention(nn.Module):
                         attn_configs.append(attn_config_i[layer_i * self.num_heads:(layer_i + 1) * self.num_heads])
             else:
                 attn_configs.append(attn_config_i)
-        attn_type, attn_position, attn_param, attn_displacement, use_word_align_stats = attn_configs
+        attn_type, attn_position, attn_param, attn_displacement = attn_configs
 
         # print("attn_type", attn_type)
 
@@ -243,8 +243,6 @@ class NewAttention(nn.Module):
             else:
                 last_indices = torch.tensor([values_shape[1]] * queries_shape[0], dtype=torch.float32).view(-1, 1)
 
-
-
         if type(attn_type) is not list and type(attn_position) is not list:
             # print("enter first")
             if attn_type == 'whole':
@@ -296,34 +294,34 @@ class NewAttention(nn.Module):
 
 
 
-                    if original_targets is not None and use_word_align_stats:
-                        if decoder_position == -1:
-                            offsets = torch.tensor([[self.word_align_stats[n][min(self.word_align_stats[n].keys()
-                                                                                  & list(range(1, self.align_stats_bin_size
-                                                                                               + 1)),
-                                                                                  key=lambda x: abs(x - math.ceil(
-                                                                                      (i + 0.5) / queries_shape[1] *
-                                                                                      self.align_stats_bin_size)))]['mean']
-                                                     for i, n in enumerate(original_target)]
-                                                    for j, original_target in enumerate(original_targets)]).type_as(distance_diff)
-                            
-                        else:
-                            offsets = torch.tensor([[self.word_align_stats[n][min(self.word_align_stats[n].keys()
-                                                                                  & list(range(1, self.align_stats_bin_size
-                                                                                               + 1)),
-                                                                                  key=lambda x: abs(x - math.ceil(
-                                                                                      (decoder_position + 0.5) / values_shape[1] *
-                                                                                      self.word_count_ratio *
-                                                                                      self.align_stats_bin_size)))]['mean']
-                                                     for i, n in enumerate(original_target)]
-                                                    for j, original_target in enumerate(original_targets)]).type_as(distance_diff)
-
-                        # offsets = offsets * values_shape[1]
-                        # print("offsets", offsets)
-                        distance_diff_shape = distance_diff.shape
-                        distance_diff = (distance_diff.view(int(values.shape[0] / self.num_heads), self.num_heads,
-                                                            distance_diff_shape[1], distance_diff_shape[2]) \
-                                         - offsets.unsqueeze(1).unsqueeze(-1)).view(distance_diff_shape)
+                    # if original_targets is not None and use_word_align_stats:
+                    #     if decoder_position == -1:
+                    #         offsets = torch.tensor([[self.word_align_stats[n][min(self.word_align_stats[n].keys()
+                    #                                                               & list(range(1, self.align_stats_bin_size
+                    #                                                                            + 1)),
+                    #                                                               key=lambda x: abs(x - math.ceil(
+                    #                                                                   (i + 0.5) / queries_shape[1] *
+                    #                                                                   self.align_stats_bin_size)))]['mean']
+                    #                                  for i, n in enumerate(original_target)]
+                    #                                 for j, original_target in enumerate(original_targets)]).type_as(distance_diff)
+                    #
+                    #     else:
+                    #         offsets = torch.tensor([[self.word_align_stats[n][min(self.word_align_stats[n].keys()
+                    #                                                               & list(range(1, self.align_stats_bin_size
+                    #                                                                            + 1)),
+                    #                                                               key=lambda x: abs(x - math.ceil(
+                    #                                                                   (decoder_position + 0.5) / values_shape[1] *
+                    #                                                                   self.word_count_ratio *
+                    #                                                                   self.align_stats_bin_size)))]['mean']
+                    #                                  for i, n in enumerate(original_target)]
+                    #                                 for j, original_target in enumerate(original_targets)]).type_as(distance_diff)
+                    #
+                    #     # offsets = offsets * values_shape[1]
+                    #     # print("offsets", offsets)
+                    #     distance_diff_shape = distance_diff.shape
+                    #     distance_diff = (distance_diff.view(int(values.shape[0] / self.num_heads), self.num_heads,
+                    #                                         distance_diff_shape[1], distance_diff_shape[2]) \
+                    #                      - offsets.unsqueeze(1).unsqueeze(-1)).view(distance_diff_shape)
 
                     if attn_type == 'normal':
                         # std = 1 / (attn_param * math.sqrt(2 * math.pi))
@@ -348,36 +346,36 @@ class NewAttention(nn.Module):
         else:
             # print("enter second")
             attn_config = []
-            for attn_config_i in [attn_type, attn_position, attn_param, attn_displacement, use_word_align_stats]:
+            for attn_config_i in [attn_type, attn_position, attn_param, attn_displacement]:
                 if type(attn_config_i) is not list:
                     attn_config.append([attn_config_i] * self.num_heads)
                 else:
                     attn_config.append(attn_config_i)
 
-            attn_type, attn_position, attn_param, attn_displacement, use_word_align_stats = attn_config
+            attn_type, attn_position, attn_param, attn_displacement = attn_config
 
             logits_list = []
 
-            if original_targets is not None and 1 in use_word_align_stats:
-                if decoder_position == -1:
-                    offsets = torch.tensor([[self.word_align_stats[n][min(self.word_align_stats[n].keys()
-                                                                          & list(range(1, self.align_stats_bin_size + 1)),
-                                                                          key=lambda x: abs(x - math.ceil(
-                                                                              (i + 0.5) / queries_shape[1] *
-                                                                              self.align_stats_bin_size)))]['mean']
-                                             for i, n in enumerate(original_target)]
-                                            for j, original_target in enumerate(original_targets)])
-                else:
-                    offsets = torch.tensor([[self.word_align_stats[n][min(self.word_align_stats[n].keys()
-                                                                          & list(range(1, self.align_stats_bin_size + 1)),
-                                                                          key=lambda x: abs(x - math.ceil(
-                                                                              (decoder_position + 0.5) / values_shape[1] *
-                                                                              self.word_count_ratio *
-                                                                              self.align_stats_bin_size)))]['mean']
-                                             for i, n in enumerate(original_target)]
-                                            for j, original_target in enumerate(original_targets)])
-                # offsets = offsets * values_shape[1]
-                # print("offsets", offsets)
+            # if original_targets is not None and 1 in use_word_align_stats:
+            #     if decoder_position == -1:
+            #         offsets = torch.tensor([[self.word_align_stats[n][min(self.word_align_stats[n].keys()
+            #                                                               & list(range(1, self.align_stats_bin_size + 1)),
+            #                                                               key=lambda x: abs(x - math.ceil(
+            #                                                                   (i + 0.5) / queries_shape[1] *
+            #                                                                   self.align_stats_bin_size)))]['mean']
+            #                                  for i, n in enumerate(original_target)]
+            #                                 for j, original_target in enumerate(original_targets)])
+            #     else:
+            #         offsets = torch.tensor([[self.word_align_stats[n][min(self.word_align_stats[n].keys()
+            #                                                               & list(range(1, self.align_stats_bin_size + 1)),
+            #                                                               key=lambda x: abs(x - math.ceil(
+            #                                                                   (decoder_position + 0.5) / values_shape[1] *
+            #                                                                   self.word_count_ratio *
+            #                                                                   self.align_stats_bin_size)))]['mean']
+            #                                  for i, n in enumerate(original_target)]
+            #                                 for j, original_target in enumerate(original_targets)])
+            #     # offsets = offsets * values_shape[1]
+            #     # print("offsets", offsets)
             for i in range(self.num_heads):
                 if attn_type[i] == 'whole':
                     logits = torch.full((queries.shape[1], values.shape[1]), 1 / values.shape[1]).to(
@@ -435,8 +433,8 @@ class NewAttention(nn.Module):
                             distance_diff = distance_diff.expand(batch_size, queries_shape[1],
                                                                  values_shape[1]).contiguous()
 
-                        if original_targets is not None and use_word_align_stats[i] == 1:
-                            distance_diff = (distance_diff - offsets.unsqueeze(-1).type_as(distance_diff))
+                        # if original_targets is not None and use_word_align_stats[i] == 1:
+                        #     distance_diff = (distance_diff - offsets.unsqueeze(-1).type_as(distance_diff))
 
 
                         if attn_type[i] == 'normal':
