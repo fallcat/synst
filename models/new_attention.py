@@ -50,13 +50,13 @@ class NewAttention(nn.Module):
             self.attn_score_project_out_weights = nn.Parameter(torch.Tensor(embed_dim, self.projection_dim))
 
         # Combine projections for multiple heads into a single linear layer for efficiency
-        if 'learned' in self.attn_type or 'learned' == self.attn_type:
-            self.input_weights = nn.Parameter(torch.Tensor(3 * embed_dim, embed_dim))
-        else:
-            if attn_config['attn_weights']:
-                self.input_weights = nn.Parameter(torch.Tensor(embed_dim, embed_dim))
+        if attn_config['attn_weights']:
+            if 'learned' in self.attn_type or 'learned' == self.attn_type:
+                self.input_weights = nn.Parameter(torch.Tensor(3 * embed_dim, embed_dim))
             else:
-                self.input_weights = None
+                self.input_weights = nn.Parameter(torch.Tensor(embed_dim, embed_dim))
+        else:
+            self.input_weights = None
         self.output_projection = nn.Linear(embed_dim, embed_dim, bias=False)
         self.reset_parameters()
 
@@ -404,38 +404,42 @@ class NewAttention(nn.Module):
         batch_size = values.shape[0]
 
         if 'learned' in self.attn_type or 'learned' == self.attn_type:
-            if same_tensor(values, keys, queries):
-                values, keys, queries = self.project(values, chunks=3)
-            elif same_tensor(values, keys):
-                values, keys = self.project(values, chunks=2)
-                queries, = self.project(queries, 2)
+            if self.input_weights is not None:
+                if same_tensor(values, keys, queries):
+                    values, keys, queries = self.project(values, chunks=3)
+                elif same_tensor(values, keys):
+                    values, keys = self.project(values, chunks=2)
+                    queries, = self.project(queries, 2)
+                else:
+                    values, = self.project(values, 0)
+                    keys, = self.project(keys, 1)
+                    queries, = self.project(queries, 2)
             else:
-                values, = self.project(values, 0)
-                keys, = self.project(keys, 1)
-                queries, = self.project(queries, 2)
+                inputs = []
+                for inp in [values, keys, queries]:
+                    inputs.append(inp.view(batch_size,
+                                           -1,
+                                           self.num_heads,
+                                           self.projection_dim
+                                           ).transpose(2, 1).contiguous().view(
+                        batch_size * self.num_heads,
+                        -1,
+                        self.projection_dim
+                    ))
+                values, keys, queries = inputs
         else:
-            if self.input_weights is None:
-                values = values.view(
-                    batch_size,
-                    -1,
-                    self.num_heads,
-                    self.projection_dim
-                ).transpose(2, 1).contiguous().view(
-                    batch_size * self.num_heads,
-                    -1,
-                    self.projection_dim
-                )
-            else:
-                values = F.linear(values, self.input_weights).view(
-                    batch_size,
-                    -1,
-                    self.num_heads,
-                    self.projection_dim
-                ).transpose(2, 1).contiguous().view(
-                    batch_size * self.num_heads,
-                    -1,
-                    self.projection_dim
-                )
+            if self.input_weights is not None:
+                values = F.linear(values, self.input_weights)
+            values = values.view(
+                batch_size,
+                -1,
+                self.num_heads,
+                self.projection_dim
+            ).transpose(2, 1).contiguous().view(
+                batch_size * self.num_heads,
+                -1,
+                self.projection_dim
+            )
 
             queries = queries.view(
                 batch_size,
