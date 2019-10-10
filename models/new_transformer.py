@@ -159,7 +159,6 @@ class TransformerDecoderLayer(nn.Module):
         mask = inputs['mask']
         state = inputs['state']
         cache = inputs.get('cache')
-        target_lens = inputs['target_lens']
 
         kwargs = {'layer_i': layer_i}
         decoder_position = state.shape[1] - 1
