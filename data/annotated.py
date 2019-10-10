@@ -56,7 +56,6 @@ class AnnotatedTextDataset(TextDataset):
     NAME = ''
     LANGUAGE_PAIR = ('en', 'en')
     WORD_COUNT = (4215814, 4186988)
-    ALIGN_STATS = ('forward.subword.align.right2', 'reverse.subword.align.right2')
 
     URLS = []
     RAW_SPLITS = {}
@@ -102,12 +101,6 @@ class AnnotatedTextDataset(TextDataset):
         ''' Return the word count ratio between source and target languages '''
         return type(self).WORD_COUNT[1] / type(self).WORD_COUNT[0] if self.swap \
             else type(self).WORD_COUNT[0] / type(self).WORD_COUNT[1]
-
-    @property
-    def word_align_file(self):
-        ''' Return the name of word align file for subwords'''
-        return os.path.join(self.config.data_directory, type(self).ALIGN_STATS[1 if self.swap else 0] +
-                            '.' + str(self.config.align_stats_bin_size) + '.pickle')
 
     @property
     def mask_idx(self):
@@ -628,14 +621,3 @@ class AnnotatedTextDataset(TextDataset):
                 if example == {}:
                     return
                 self.add_datum(example)
-
-    def load_word_align_stats(self):
-        try:
-            word_align_stats = pickle.load(open(self.word_align_file, 'rb'))
-            for i, w in enumerate(self.id2token):
-                if w in word_align_stats:
-                    self.word_align_stats.append(word_align_stats[w])
-                else:
-                    self.word_align_stats.append({1: {'mean': 0, 'std': 0}})
-        except:
-            print('Word align stats not loaded')

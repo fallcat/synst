@@ -225,6 +225,13 @@ def add_new_transformer_args(parser):
         help='Whether or not use weights in non-learned attention. 0 no weights, 1 with weights.'
     )
     group.add_argument(
+        '--attn-score',
+        type=int,
+        default=0,
+        choices=[0, 1],
+        help='Whether or not use query to score the different heads. 0 do not score, 1 do score.'
+    )
+    group.add_argument(
         '--dec-attn-type',
         type=str,
         nargs='+',
@@ -272,7 +279,13 @@ def add_new_transformer_args(parser):
         choices=[0, 1],
         help='Whether or not use weights in non-learned attention. 0 no weights, 1 with weights.'
     )
-
+    group.add_argument(
+        '--dec-attn-score',
+        type=int,
+        default=0,
+        choices=[0, 1],
+        help='Whether or not use query to score the different heads. 0 do not score, 1 do score.'
+    )
     group.add_argument(
         '--enc-dec-attn-type',
         type=str,
@@ -308,15 +321,6 @@ def add_new_transformer_args(parser):
     )
 
     group.add_argument(
-        '--enc-dec-attn-align',
-        type=int,
-        nargs='+',
-        default=0,
-        choices=[0, 1],
-        help='Whether or not use word aligner stats. 0 to not use, 1 to use.'
-    )
-
-    group.add_argument(
         '--enc-dec-attn-concat',
         type=int,
         default=0,
@@ -331,6 +335,14 @@ def add_new_transformer_args(parser):
         default=1,
         choices=[0, 1],
         help='Whether or not use weights in non-learned attention. 0 no weights, 1 with weights.'
+    )
+
+    group.add_argument(
+        '--enc-dec-attn-score',
+        type=int,
+        default=0,
+        choices=[0, 1],
+        help='Whether or not use query to score the different heads. 0 do not score, 1 do score.'
     )
 
     return group
