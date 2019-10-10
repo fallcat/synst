@@ -45,9 +45,9 @@ class NewAttention(nn.Module):
             self.attn_concat_weights = None
         self.which_attn = attn_config['which_attn']
         self.attn_score = attn_config['attn_score']
-        if self.attn_score:
-            self.attn_score_project_in_weights = nn.Parameter(torch.Tensor(self.projection_dim, embed_dim))
-            self.attn_score_project_out_weights = nn.Parameter(torch.Tensor(embed_dim, self.projection_dim))
+        # if self.attn_score:
+        self.attn_score_project_in_weights = nn.Parameter(torch.Tensor(self.projection_dim, embed_dim))
+        self.attn_score_project_out_weights = nn.Parameter(torch.Tensor(embed_dim, self.projection_dim))
 
         # Combine projections for multiple heads into a single linear layer for efficiency
         if attn_config['attn_weights']:
