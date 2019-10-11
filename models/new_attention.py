@@ -418,6 +418,8 @@ class NewAttention(nn.Module):
         ''' Forward pass of the attention '''
         batch_size = values.shape[0]
 
+        print("self.attn_linear_transform", self.attn_linear_transform)
+
         if 'learned' in self.attn_type or 'learned' == self.attn_type:
             if self.attn_linear_transform == 1:
                 if same_tensor(values, keys, queries):
@@ -430,6 +432,8 @@ class NewAttention(nn.Module):
                     keys, = self.project(keys, 1)
                     queries, = self.project(queries, 2)
             elif self.attn_linear_transform == 2:
+                print("into 2")
+                print("self.input_weights.shape", self.input_weights.shape)
                 if same_tensor(keys, queries):
                     keys, queries = self.project(queries, chunks=2)
                 else:
@@ -444,6 +448,9 @@ class NewAttention(nn.Module):
                     -1,
                     self.projection_dim
                 )
+                print("keys", keys)
+                print("queries", queries)
+                print("values", values)
             else:
                 inputs = []
                 for inp in [values, keys, queries]:
