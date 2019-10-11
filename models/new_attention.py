@@ -133,7 +133,7 @@ class NewAttention(nn.Module):
 
         for i, attn_config_i in enumerate([self.attn_type, self.attn_position, self.attn_param, self.attn_displacement]):
             if type(attn_config_i) is list:
-                pdb.set_trace()
+                #pdb.set_trace()
                 if len(attn_config_i) == 1:
                     attn_configs.append(attn_config_i[0])
                 elif len(attn_config_i) == self.num_heads:
