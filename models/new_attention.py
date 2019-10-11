@@ -439,8 +439,8 @@ class NewAttention(nn.Module):
                     keys, queries = self.project(queries, chunks=2)
                 else:
                     print("key != queries")
-                    keys = self.project(keys, 0)
-                    queries = self.project(queries, 1)
+                    keys, = self.project(keys, 0)
+                    queries, = self.project(queries, 1)
                 values = values.view(batch_size,
                                      -1,
                                      self.num_heads,
