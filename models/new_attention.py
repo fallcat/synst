@@ -435,8 +435,10 @@ class NewAttention(nn.Module):
                 print("into 2")
                 print("self.input_weights.shape", self.input_weights.shape)
                 if same_tensor(keys, queries):
+                    print("key = queries")
                     keys, queries = self.project(queries, chunks=2)
                 else:
+                    print("key != queries")
                     keys = self.project(keys, 0)
                     queries = self.project(queries, 1)
                 values = values.view(batch_size,
