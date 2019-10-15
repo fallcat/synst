@@ -397,7 +397,7 @@ class AnnotatedTextDataset(TextDataset):
 
     def preprocess(self):
         ''' Do any data preprocessing if needed '''
-        pdb.set_trace()
+        #pdb.set_trace()
         if (
                 all(os.path.exists(p) for p in self.data_paths) and
                 all(os.path.exists(p) for p in self.vocab_paths)
