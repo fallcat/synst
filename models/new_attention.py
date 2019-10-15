@@ -499,6 +499,16 @@ class NewAttention(nn.Module):
             self.num_heads * self.projection_dim
         )
 
+        if 'learned' not in self.attn_type and 'learned' != self.attn_type and self.attn_concat_weights is not None:
+            if self.attn_concat == 1:
+                attended = F.linear(torch.cat((attended, queries), dim=-1), self.attn_concat_weights)
+            elif self.attn_concat == 2:
+                attended = F.linear(torch.cat((attended, word_embedding), dim=-1), self.attn_concat_weights)
+            else:
+                attended = F.linear(torch.cat((attended, queries, word_embedding), dim=-1), self.attn_concat_weights)
+
+            # print("new attended", attended.shape)
+
         if self.attn_score:
             projected_queries = F.linear(queries, self.attn_score_project_in_weights).view(-1,
                                                                                            1,
@@ -510,15 +520,5 @@ class NewAttention(nn.Module):
             scores = torch.bmm(projected_queries, attended.transpose(1, 2)).softmax(dim=-1)
             attended = F.linear(torch.bmm(scores, attended).squeeze(1),
                                 self.attn_score_project_out_weights).view(attended_shape)
-
-        if 'learned' not in self.attn_type and 'learned' != self.attn_type and self.attn_concat_weights is not None:
-            if self.attn_concat == 1:
-                attended = F.linear(torch.cat((attended, queries), dim=-1), self.attn_concat_weights)
-            elif self.attn_concat == 2:
-                attended = F.linear(torch.cat((attended, word_embedding), dim=-1), self.attn_concat_weights)
-            else:
-                attended = F.linear(torch.cat((attended, queries, word_embedding), dim=-1), self.attn_concat_weights)
-
-            # print("new attended", attended.shape)
 
         return self.output_projection(attended)
