@@ -20,5 +20,5 @@ class PETITEEnRoDataset(AnnotatedTextDataset):
 
 class PETITEEnJpDataset(AnnotatedTextDataset):
 	NAME="petite"
-	LANGUAGE_PAIR = ('en', 'jp')
+	LANGUAGE_PAIR = ('en', 'ja')
 	
