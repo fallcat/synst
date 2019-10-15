@@ -221,8 +221,9 @@ def add_new_transformer_args(parser):
         '--attn-weights',
         type=int,
         default=1,
-        choices=[0, 1],
-        help='Whether or not use weights in non-learned attention. 0 no weights, 1 with weights.'
+        choices=[0, 1, 2],
+        help='Whether or not use weights in non-learned attention. 0 no weights, 1 all with weights, '
+             '2 weight only for key and query but not value.'
     )
     group.add_argument(
         '--attn-score',
@@ -276,8 +277,9 @@ def add_new_transformer_args(parser):
         '--dec-attn-weights',
         type=int,
         default=1,
-        choices=[0, 1],
-        help='Whether or not use weights in non-learned attention. 0 no weights, 1 with weights.'
+        choices=[0, 1, 2],
+        help='Whether or not use weights in non-learned attention. 0 no weights, 1 all with weights, '
+             '2 weight only for key and query but not value.'
     )
     group.add_argument(
         '--dec-attn-score',
@@ -333,8 +335,9 @@ def add_new_transformer_args(parser):
         '--enc-dec-attn-weights',
         type=int,
         default=1,
-        choices=[0, 1],
-        help='Whether or not use weights in non-learned attention. 0 no weights, 1 with weights.'
+        choices=[0, 1, 2],
+        help='Whether or not use weights in non-learned attention. 0 no weights, 1 all with weights, '
+             '2 weight only for key and query but not value.'
     )
 
     group.add_argument(

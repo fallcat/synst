@@ -50,13 +50,16 @@ class NewAttention(nn.Module):
             self.attn_score_project_out_weights = nn.Parameter(torch.Tensor(embed_dim, self.projection_dim))
 
         # Combine projections for multiple heads into a single linear layer for efficiency
-        if attn_config['attn_weights']:
+        self.attn_linear_transform = attn_config['attn_weights']
+        self.input_weights = None
+        if self.attn_linear_transform:
             if 'learned' in self.attn_type or 'learned' == self.attn_type:
-                self.input_weights = nn.Parameter(torch.Tensor(3 * embed_dim, embed_dim))
+                if self.attn_linear_transform == 1:
+                    self.input_weights = nn.Parameter(torch.Tensor(3 * embed_dim, embed_dim))
+                elif self.attn_linear_transform == 2:
+                    self.input_weights = nn.Parameter(torch.Tensor(2 * embed_dim, embed_dim))
             else:
                 self.input_weights = nn.Parameter(torch.Tensor(embed_dim, embed_dim))
-        else:
-            self.input_weights = None
         self.output_projection = nn.Linear(embed_dim, embed_dim, bias=False)
         self.reset_parameters()
 
@@ -71,6 +74,9 @@ class NewAttention(nn.Module):
         nn.init.xavier_uniform_(self.output_projection.weight, gain)
         if self.attn_concat_weights is not None:
             nn.init.xavier_uniform_(self.attn_concat_weights, gain)
+        if self.attn_score:
+            nn.init.xavier_uniform_(self.attn_score_project_in_weights, gain)
+            nn.init.xavier_uniform_(self.attn_score_project_out_weights, gain)
 
     def project(self, inputs, index=0, chunks=1):
         ''' Produce a linear projection using the weights '''
@@ -414,7 +420,7 @@ class NewAttention(nn.Module):
         batch_size = values.shape[0]
 
         if 'learned' in self.attn_type or 'learned' == self.attn_type:
-            if self.input_weights is not None:
+            if self.attn_linear_transform == 1:
                 if same_tensor(values, keys, queries):
                     values, keys, queries = self.project(values, chunks=3)
                 elif same_tensor(values, keys):
@@ -424,6 +430,21 @@ class NewAttention(nn.Module):
                     values, = self.project(values, 0)
                     keys, = self.project(keys, 1)
                     queries, = self.project(queries, 2)
+            elif self.attn_linear_transform == 2:
+                if same_tensor(keys, queries):
+                    keys, queries = self.project(queries, chunks=2)
+                else:
+                    keys, = self.project(keys, 0)
+                    queries, = self.project(queries, 1)
+                values = values.view(batch_size,
+                                     -1,
+                                     self.num_heads,
+                                     self.projection_dim
+                                     ).transpose(2, 1).contiguous().view(
+                    batch_size * self.num_heads,
+                    -1,
+                    self.projection_dim
+                )
             else:
                 inputs = []
                 for inp in [values, keys, queries]:
@@ -438,7 +459,7 @@ class NewAttention(nn.Module):
                     ))
                 values, keys, queries = inputs
         else:
-            if self.input_weights is not None:
+            if self.attn_linear_transform:
                 values = F.linear(values, self.input_weights)
             values = values.view(
                 batch_size,

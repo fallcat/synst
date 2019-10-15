@@ -285,7 +285,7 @@ class NewTransformer(nn.Module):
                            'attn_displacement': config.dec_attn_displacement,
                            'num_layers': config.num_layers,
                            'num_heads': config.num_heads,
-                           'attn_concat': config.attn_concat,
+                           'attn_concat': config.dec_attn_concat,
                            'which_attn': 'decoder',
                            'attn_weights': config.dec_attn_weights,
                            'attn_score': config.dec_attn_score}
