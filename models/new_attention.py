@@ -143,7 +143,6 @@ class NewAttention(nn.Module):
                 print("len_attn_config_i", len_attn_config_i)
                 print("self.num_heads", self.num_heads)
                 print("len_attn_config_i < self.num_heads", len_attn_config_i < self.num_heads)
-                print("len_attn_config_i % self.num_heads == 0", len_attn_config_i % self.num_heads == 0)
                 if len_attn_config_i == 1:
                     attn_configs.append(attn_config_i[0])
                 elif len_attn_config_i == self.num_heads:
@@ -158,11 +157,11 @@ class NewAttention(nn.Module):
                         attn_configs.append(attn_config_i[layer_i * self.num_heads])
                     else:
                         attn_configs.append(attn_config_i[layer_i * self.num_heads:(layer_i + 1) * self.num_heads])
-                elif len_attn_config_i < self.num_heads and len_attn_config_i % self.num_heads == 0:
+                elif len_attn_config_i < self.num_heads and self.num_heads % len_attn_config_i == 0:
                     attn_configs.append(attn_config_i * self.num_heads // len_attn_config_i)
-                elif self.num_layers % len_attn_config_i == 0 and \
+                elif len_attn_config_i % self.num_layers == 0 and \
                         len_attn_config_i < self.num_heads * self.num_layers and \
-                        (len_attn_config_i // self.num_layers) % self.num_heads == 0:
+                        self.num_heads % (len_attn_config_i // self.num_layers) == 0:
                     num_each_head = len_attn_config_i // self.num_layers
                     repeat_each_head = self.num_heads // num_each_head
                     attn_configs.append(attn_config_i[layer_i * num_each_head:(layer_i + 1) * num_each_head] *
