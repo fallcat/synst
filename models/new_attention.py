@@ -348,7 +348,7 @@ class NewAttention(nn.Module):
                             if decoder_position == -1:
                                 indices_q = torch.arange(queries_shape[1]).view(-1, 1).to(dtype=torch.float32)
                             else:
-                                indices_q = torch.full((queries_shape[1]), decoder_position).view(-1, 1).to(dtype=torch.float32)
+                                indices_q = torch.full((queries_shape[1], 1), decoder_position).to(dtype=torch.float32)
                             print("time 1", time.time() - start)
 
                             start = time.time()
