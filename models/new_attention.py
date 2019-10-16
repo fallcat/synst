@@ -138,21 +138,31 @@ class NewAttention(nn.Module):
         attn_configs_names = ['attn_type', 'attn_position', 'attn_param', 'attn_displacement']
 
         for i, attn_config_i in enumerate([self.attn_type, self.attn_position, self.attn_param, self.attn_displacement]):
+            len_attn_config_i = len(attn_config_i)
             if type(attn_config_i) is list:
-                if len(attn_config_i) == 1:
+                if len_attn_config_i == 1:
                     attn_configs.append(attn_config_i[0])
-                elif len(attn_config_i) == self.num_heads:
+                elif len_attn_config_i == self.num_heads:
                     if len(set(attn_config_i)) == 1:
                         attn_configs.append(attn_config_i[0])
                     else:
                         attn_configs.append(attn_config_i)
-                elif len(attn_config_i) == self.num_layers:
+                elif len_attn_config_i == self.num_layers:
                     attn_configs.append(attn_config_i[layer_i])
-                elif len(attn_config_i) == self.num_heads * self.num_layers:
+                elif len_attn_config_i == self.num_heads * self.num_layers:
                     if len(set(attn_config_i[layer_i * self.num_heads:(layer_i + 1) * self.num_heads])) == 1:
                         attn_configs.append(attn_config_i[layer_i * self.num_heads])
                     else:
                         attn_configs.append(attn_config_i[layer_i * self.num_heads:(layer_i + 1) * self.num_heads])
+                elif len_attn_config_i < self.num_heads and len_attn_config_i % self.num_heads == 0:
+                    attn_configs.append(attn_config_i * self.num_heads // len_attn_config_i)
+                elif self.num_layers % len_attn_config_i == 0 and \
+                        len_attn_config_i < self.num_heads * self.num_layers and \
+                        (len_attn_config_i // self.num_layers) % self.num_heads == 0:
+                    num_each_head = len_attn_config_i // self.num_layers
+                    repeat_each_head = self.num_heads // num_each_head
+                    attn_configs.append(attn_config_i[layer_i * num_each_head:(layer_i + 1) * num_each_head] *
+                                        repeat_each_head)
                 else:
                     raise Exception("The number of {} is {}, but it has to be either number of heads {}, "
                                     "number of layers {}, or the product of them {}.".format(attn_configs_names[i],
