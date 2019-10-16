@@ -342,7 +342,7 @@ class NewAttention(nn.Module):
                             or (queries_shape[1] > self.attn_weights[attn_type[i]][attn_position[i]].shape[0]
                                 or values_shape[1] > self.attn_weights[attn_type[i]][attn_position[i]].shape[1])) \
                             or decoder_position != -1 \
-                            or attn_position[i] in ['last', 'middle']:
+                            or attn_position[i] in ['last', 'middle', 'bin']:
 
                         indices_v = torch.arange(values_shape[1]).view(1, -1).to(dtype=torch.float32)
 
