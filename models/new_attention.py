@@ -266,7 +266,7 @@ class NewAttention(nn.Module):
                         else:
                             indices_q = torch.full((queries_shape[1], 1),
                                                    decoder_position * self.word_count_ratio).to(dtype=torch.float32)
-
+                        print("attn_position", attn_position)
                         if attn_position == 'left':
                             indices_q = indices_q - attn_displacement
                         elif attn_position == 'right':
@@ -362,7 +362,7 @@ class NewAttention(nn.Module):
                                 indices_q[:] = 0
                             elif attn_position[i] == 'middle':
                                 indices_q[:] = (indices_v.size()[1] + 1) / 2 - 1
-                            elif attn_position == 'bin':
+                            elif attn_position[i] == 'bin':
                                 indices_q[:] = -0.5 + values_shape * (attn_displacement - 0.5) / self.attn_bins
 
                             distance_diff = indices_v - indices_q
@@ -418,7 +418,7 @@ class NewAttention(nn.Module):
         # print("values shape", values.shape)
         # torch.set_printoptions(profile="full")
         if self.which_attn == 'source':
-            print("attn_weights", attn_weights[:self.num_heads])
+            print("attn_weights", attn_weights[:self.num_headsg])
             print("attn_weights shape", attn_weights.shape)
         # print("attended", attended)
         # print("attended shape", attended.shape)
