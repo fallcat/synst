@@ -158,7 +158,7 @@ class NewAttention(nn.Module):
                     else:
                         attn_configs.append(attn_config_i[layer_i * self.num_heads:(layer_i + 1) * self.num_heads])
                 elif len_attn_config_i < self.num_heads and self.num_heads % len_attn_config_i == 0:
-                    attn_configs.append(attn_config_i * self.num_heads // len_attn_config_i)
+                    attn_configs.append(attn_config_i * (self.num_heads // len_attn_config_i))
                 elif len_attn_config_i % self.num_layers == 0 and \
                         len_attn_config_i < self.num_heads * self.num_layers and \
                         self.num_heads % (len_attn_config_i // self.num_layers) == 0:
