@@ -208,6 +208,7 @@ def add_new_transformer_args(parser):
         default=1,
         help='Only works when corresponding attn-position is left or right.'
              'The number of steps to take to that direction.'
+             'When attn-position is bin, this number has to be between 1 and number of attn-bins'
     )
     group.add_argument(
         '--attn-concat',
@@ -271,6 +272,7 @@ def add_new_transformer_args(parser):
         default=1,
         help='Only works when corresponding attn-position is left or right.'
              'The number of steps to take to that direction.'
+             'When attn-position is bin, this number has to be between 1 and number of attn-bins'
     )
     group.add_argument(
         '--dec-attn-concat',
@@ -334,6 +336,7 @@ def add_new_transformer_args(parser):
         default=1,
         help='Only works when corresponding attn-position is left or right.'
              'The number of steps to take to that direction.'
+             'When attn-position is bin, this number has to be between 1 and number of attn-bins'
     )
 
     group.add_argument(
