@@ -276,7 +276,7 @@ class NewAttention(nn.Module):
                         elif attn_position == 'middle':
                             indices_q[:] = (indices_v.size()[1] + 1) / 2 - 1
                         elif attn_position == 'bin':
-                            indices_q[:] = -0.5 + values_shape * (attn_displacement - 0.5) / self.attn_bins
+                            indices_q[:] = -0.5 + values_shape[1] * (attn_displacement - 0.5) / self.attn_bins
 
                         distance_diff = indices_v - indices_q
 
@@ -363,7 +363,7 @@ class NewAttention(nn.Module):
                             elif attn_position[i] == 'middle':
                                 indices_q[:] = (indices_v.size()[1] + 1) / 2 - 1
                             elif attn_position[i] == 'bin':
-                                indices_q[:] = -0.5 + values_shape * (attn_displacement[i] - 0.5) / self.attn_bins
+                                indices_q[:] = -0.5 + values_shape[1] * (attn_displacement[i] - 0.5) / self.attn_bins
 
                             distance_diff = indices_v - indices_q
 
