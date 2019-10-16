@@ -344,10 +344,15 @@ class NewAttention(nn.Module):
                         indices_v = torch.arange(values_shape[1]).view(1, -1).to(dtype=torch.float32)
 
                         if attn_position[i] != 'last':
+                            start = time.time()
                             indices_q = torch.arange(queries_shape[1]).view(-1, 1).to(dtype=torch.float32)
+                            print("time 1", time.time() - start)
+
+                            start = time.time()
 
                             if decoder_position > -1:
                                 indices_q[:] = decoder_position
+                            print("time 2", time.time() - start)
 
                             indices_q = indices_q * self.word_count_ratio
 
