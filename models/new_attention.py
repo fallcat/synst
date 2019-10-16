@@ -350,7 +350,7 @@ class NewAttention(nn.Module):
                                                          ).view(-1, 1).to(dtype=torch.float32) * self.word_count_ratio
                             else:
                                 indices_q = torch.full((queries_shape[1], 1),
-                                                       decoder_position).to(dtype=torch.float32) * self.word_count_ratio
+                                                       decoder_position * self.word_count_ratio).to(dtype=torch.float32)
                             print("time 1", time.time() - start)
 
                             start = time.time()
