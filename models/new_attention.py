@@ -365,7 +365,7 @@ class NewAttention(nn.Module):
                             elif attn_position[i] == 'bin':
                                 indices_q[:] = -0.5 + values_shape[1] * (attn_displacement[i] - 0.5) / self.attn_bins
                                 print("attn_displacement[i]", attn_displacement[i])
-                                print("attn_displacement", attn_displacement)
+                            print("attn_displacement", attn_displacement)
 
                             distance_diff = indices_v - indices_q
 
