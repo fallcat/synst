@@ -259,12 +259,12 @@ class NewAttention(nn.Module):
                     indices_v = torch.arange(values_shape[1]).view(1, -1).to(dtype=torch.float32)
 
                     if attn_position != 'last':
-                        indices_q = torch.arange(queries_shape[1]).view(-1, 1).to(dtype=torch.float32)
-
-                        if decoder_position > -1:
-                            indices_q[:] = decoder_position
-
-                        indices_q = indices_q * self.word_count_ratio
+                        if decoder_position == -1:
+                            indices_q = torch.arange(queries_shape[1]
+                                                     ).view(-1, 1).to(dtype=torch.float32) * self.word_count_ratio
+                        else:
+                            indices_q = torch.full((queries_shape[1], 1),
+                                                   decoder_position * self.word_count_ratio).to(dtype=torch.float32)
 
                         if attn_position == 'left':
                             indices_q = indices_q - attn_displacement
@@ -344,16 +344,12 @@ class NewAttention(nn.Module):
                         indices_v = torch.arange(values_shape[1]).view(1, -1).to(dtype=torch.float32)
 
                         if attn_position[i] != 'last':
-                            start = time.time()
                             if decoder_position == -1:
                                 indices_q = torch.arange(queries_shape[1]
                                                          ).view(-1, 1).to(dtype=torch.float32) * self.word_count_ratio
                             else:
                                 indices_q = torch.full((queries_shape[1], 1),
                                                        decoder_position * self.word_count_ratio).to(dtype=torch.float32)
-                            print("time 1", time.time() - start)
-
-                            start = time.time()
 
                             if attn_position[i] == 'left':
                                 indices_q = indices_q - attn_displacement[i]
@@ -363,8 +359,6 @@ class NewAttention(nn.Module):
                                 indices_q[:] = 0
                             elif attn_position[i] == 'middle':
                                 indices_q[:] = (indices_v.size()[1] + 1) / 2 - 1
-
-                            print("time 2", time.time() - start)
 
                             distance_diff = indices_v - indices_q
 
