@@ -189,7 +189,7 @@ def add_new_transformer_args(parser):
         type=str,
         nargs='+',
         default='center',
-        choices=['center', 'left', 'right', 'first', 'last', 'middle'],
+        choices=['center', 'left', 'right', 'first', 'last', 'middle', 'bin'],
         help='Where to put the attention. Center is centered at the word. Middle is the middle of sentence'
     )
     group.add_argument(
@@ -233,6 +233,13 @@ def add_new_transformer_args(parser):
         help='Whether or not use query to score the different heads. 0 do not score, 1 do score.'
     )
     group.add_argument(
+        '--attn-bins',
+        type=int,
+        default=2,
+        help='Number of bins to look at in total'
+    )
+
+    group.add_argument(
         '--dec-attn-type',
         type=str,
         nargs='+',
@@ -245,7 +252,7 @@ def add_new_transformer_args(parser):
         type=str,
         nargs='+',
         default='center',
-        choices=['center', 'left', 'right', 'first', 'last', 'middle'],
+        choices=['center', 'left', 'right', 'first', 'last', 'middle', 'bin'],
         help='Where to put the attention. Center is centered at the word. Middle is the middle of sentence'
     )
     group.add_argument(
@@ -289,6 +296,13 @@ def add_new_transformer_args(parser):
         help='Whether or not use query to score the different heads. 0 do not score, 1 do score.'
     )
     group.add_argument(
+        '--dec-attn-bins',
+        type=int,
+        default=2,
+        help='Number of bins to look at in total'
+    )
+
+    group.add_argument(
         '--enc-dec-attn-type',
         type=str,
         nargs='+',
@@ -301,7 +315,7 @@ def add_new_transformer_args(parser):
         type=str,
         nargs='+',
         default='center',
-        choices=['center', 'left', 'right', 'first', 'last', 'middle'],
+        choices=['center', 'left', 'right', 'first', 'last', 'middle', 'bin'],
         help='Where to put the attention. Center is centered at the word. Middle is the middle of sentence'
     )
     group.add_argument(
@@ -346,6 +360,12 @@ def add_new_transformer_args(parser):
         default=0,
         choices=[0, 1],
         help='Whether or not use query to score the different heads. 0 do not score, 1 do score.'
+    )
+    group.add_argument(
+        '--enc-dec-attn-bins',
+        type=int,
+        default=2,
+        help='Number of bins to look at in total'
     )
 
     return group
