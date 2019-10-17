@@ -352,9 +352,6 @@ class NewAttention(nn.Module):
                         if attn_position[i] != 'last':
                             if attn_position[i] == 'bin':
                                 bin_center = -0.5 + values_shape[1] * (attn_displacement[i] - 0.5) / self.attn_bins
-                                print("attn_displacement[i]", attn_displacement[i])
-                                print("attn_displacement", attn_displacement)
-                                print("bin_center", bin_center)
                                 indices_q = torch.full((queries_shape[1], 1),
                                                        bin_center).to(dtype=torch.float32)
                             elif attn_position[i] == 'first':
@@ -427,9 +424,9 @@ class NewAttention(nn.Module):
         # print("values", values)
         # print("values shape", values.shape)
         # torch.set_printoptions(profile="full")
-        if self.which_attn == 'source':
-            print("attn_weights", attn_weights[:self.num_heads])
-            print("attn_weights shape", attn_weights.shape)
+        # if self.which_attn == 'source':
+        #     print("attn_weights", attn_weights[:self.num_heads])
+        #     print("attn_weights shape", attn_weights.shape)
         # print("attended", attended)
         # print("attended shape", attended.shape)
 
