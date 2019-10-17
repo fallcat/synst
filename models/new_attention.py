@@ -181,8 +181,6 @@ class NewAttention(nn.Module):
 
         attn_type, attn_position, attn_param, attn_displacement = self.attn_configs[layer_i]
 
-        print("attn_param", attn_param)
-
         if attn_type == 'learned':
             logits = self.scale * torch.bmm(queries, keys.transpose(2, 1))
             if mask is not None:
@@ -307,8 +305,6 @@ class NewAttention(nn.Module):
                                 .expand(batch_size, self.num_heads).contiguous().view(-1, 1, 1)
                         else:
                             attn_param_curr = attn_param
-                        print("attn_param_curr",attn_param_curr.shape)
-                        print("distance_diff", distance_diff.shape)
                         distance_diff = torch.abs(distance_diff)
                         distance_diff[distance_diff <= attn_param_curr] = 0
                         distance_diff[distance_diff > attn_param_curr] = 1
@@ -443,9 +439,9 @@ class NewAttention(nn.Module):
         # print("values", values)
         # print("values shape", values.shape)
         # torch.set_printoptions(profile="full")
-        if self.which_attn == 'source':
-            print("attn_weights", attn_weights[:self.num_heads])
-            print("attn_weights shape", attn_weights.shape)
+        # if self.which_attn == 'source':
+        #     print("attn_weights", attn_weights[:self.num_heads])
+        #     print("attn_weights shape", attn_weights.shape)
         # print("attended", attended)
         # print("attended shape", attended.shape)
 
