@@ -236,7 +236,7 @@ class NewAttention(nn.Module):
 
             learned_count = 0
 
-        if not {'last', 'bin'}.isdisjoint(attn_position):
+        if not {'last', 'bin'}.isdisjoint(attn_position) or attn_position in ['last', 'bin']:
             if key_mask is not None:
                 key_mask_shape = key_mask.shape
                 last_indices = torch.tensor([key_mask_shape[1] - a[::-1].index(0)
