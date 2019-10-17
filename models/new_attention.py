@@ -259,12 +259,12 @@ class NewAttention(nn.Module):
 
                     indices_v = torch.arange(values_shape[1]).view(1, -1).to(dtype=torch.float32)
 
-                    if attn_position != 'last':
-                        if attn_position == 'bin':
-                            bin_center = -0.5 + values_shape[1] * (attn_displacement - 0.5) / self.attn_bins
-                            indices_q = torch.full((queries_shape[1], 1),
-                                                   bin_center).to(dtype=torch.float32)
-                        elif attn_position == 'first':
+                    if attn_position not in ['last', 'bin']:
+                        # if attn_position == 'bin':
+                        #     bin_center = -0.5 + values_shape[1] * (attn_displacement - 0.5) / self.attn_bins
+                        #     indices_q = torch.full((queries_shape[1], 1),
+                        #                            bin_center).to(dtype=torch.float32)
+                        if attn_position == 'first':
                             indices_q = torch.full((queries_shape[1], 1),
                                                    0).to(dtype=torch.float32)
                         elif decoder_position == -1:
@@ -288,6 +288,9 @@ class NewAttention(nn.Module):
                     # If the attention is looking at the last indices, need to take masks into consideration
                     else:
                         indices_q = last_indices
+                        if attn_position == 'bin':
+                            ratio = (attn_displacement - 0.5) / self.attn_bins
+                            indices_q = -0.5 + indices_q * ratio
                         distance_diff = (indices_v - indices_q).unsqueeze(1).unsqueeze(2)
                         distance_diff = distance_diff.expand(batch_size, self.num_heads, queries_shape[1], values_shape[1]).contiguous()
                         distance_diff = distance_diff.view(values_shape[0], queries_shape[1], values_shape[1])
@@ -349,12 +352,12 @@ class NewAttention(nn.Module):
 
                         indices_v = torch.arange(values_shape[1]).view(1, -1).to(dtype=torch.float32)
 
-                        if attn_position[i] != 'last':
-                            if attn_position[i] == 'bin':
-                                bin_center = -0.5 + values_shape[1] * (attn_displacement[i] - 0.5) / self.attn_bins
-                                indices_q = torch.full((queries_shape[1], 1),
-                                                       bin_center).to(dtype=torch.float32)
-                            elif attn_position[i] == 'first':
+                        if attn_position[i] not in ['last', 'bin']:
+                            # if attn_position[i] == 'bin':
+                            #     bin_center = -0.5 + values_shape[1] * (attn_displacement[i] - 0.5) / self.attn_bins
+                            #     indices_q = torch.full((queries_shape[1], 1),
+                            #                            bin_center).to(dtype=torch.float32)
+                            if attn_position[i] == 'first':
                                 indices_q = torch.full((queries_shape[1], 1),
                                                        0).to(dtype=torch.float32)
                             elif decoder_position == -1:
@@ -381,6 +384,9 @@ class NewAttention(nn.Module):
                         # If the attention is looking at the last indices, need to take masks into consideration
                         else:
                             indices_q = last_indices
+                            if attn_position[i] == 'bin':
+                                ratio = (attn_displacement[i] - 0.5) / self.attn_bins
+                                indices_q = -0.5 + indices_q * ratio
                             distance_diff = (indices_v - indices_q).unsqueeze(1)
                             distance_diff = distance_diff.expand(batch_size, queries_shape[1],
                                                                  values_shape[1]).contiguous()
@@ -424,9 +430,9 @@ class NewAttention(nn.Module):
         # print("values", values)
         # print("values shape", values.shape)
         # torch.set_printoptions(profile="full")
-        # if self.which_attn == 'source':
-        #     print("attn_weights", attn_weights[:self.num_heads])
-        #     print("attn_weights shape", attn_weights.shape)
+        if self.which_attn == 'source':
+            print("attn_weights", attn_weights[:self.num_heads])
+            print("attn_weights shape", attn_weights.shape)
         # print("attended", attended)
         # print("attended shape", attended.shape)
 
