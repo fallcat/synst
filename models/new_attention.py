@@ -181,6 +181,8 @@ class NewAttention(nn.Module):
 
         attn_type, attn_position, attn_param, attn_displacement = self.attn_configs[layer_i]
 
+        print("attn_param", attn_param)
+
         if attn_type == 'learned':
             logits = self.scale * torch.bmm(queries, keys.transpose(2, 1))
             if mask is not None:
