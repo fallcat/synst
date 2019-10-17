@@ -303,10 +303,12 @@ class NewAttention(nn.Module):
                         logits = (1 / (std * math.sqrt(2 * math.pi)) * torch.exp(- 1 / 2 * (distance_diff / std) ** 2))
                     else:
                         if attn_param < 0 and attn_position == 'bin':
-                            attn_param = 0.5 / self.attn_bins
+                            attn_param_curr = 0.5 * last_indices / self.attn_bins
+                        else:
+                            attn_param_curr = attn_param
                         distance_diff = torch.abs(distance_diff)
-                        distance_diff[distance_diff <= attn_param] = 0
-                        distance_diff[distance_diff > attn_param] = 1
+                        distance_diff[distance_diff <= attn_param_curr] = 0
+                        distance_diff[distance_diff > attn_param_curr] = 1
                         logits = 1 - distance_diff
                         logits = logits / torch.sum(logits, dim=-1, keepdim=True)
 
@@ -401,10 +403,12 @@ class NewAttention(nn.Module):
                             logits = (1 / (std * math.sqrt(2 * math.pi)) * torch.exp(- 1 / 2 * (distance_diff / std) ** 2))
                         else:
                             if attn_param[i] < 0 and attn_position[i] == 'bin':
-                                attn_param[i] = 0.5 / self.attn_bins
+                                attn_param_curr = 0.5 * last_indices / self.attn_bins
+                            else:
+                                attn_param_curr = attn_param[i]
                             distance_diff = torch.abs(distance_diff)
-                            distance_diff[distance_diff <= attn_param[i]] = 0
-                            distance_diff[distance_diff > attn_param[i]] = 1
+                            distance_diff[distance_diff <= attn_param_curr] = 0
+                            distance_diff[distance_diff > attn_param_curr] = 1
                             logits = 1 - distance_diff
                             logits = logits / torch.sum(logits, dim=-1, keepdim=True)
                             # logits = F.softmax(logits, dim=-1)
