@@ -406,6 +406,8 @@ class NewAttention(nn.Module):
                                 attn_param_curr = 0.5 * last_indices / self.attn_bins
                             else:
                                 attn_param_curr = attn_param[i]
+                            print("distance_diff", distance_diff.shape)
+                            print("attn_param_curr", attn_param_curr.shape)
                             distance_diff = torch.abs(distance_diff)
                             distance_diff[distance_diff <= attn_param_curr] = 0
                             distance_diff[distance_diff > attn_param_curr] = 1
