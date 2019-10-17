@@ -352,6 +352,9 @@ class NewAttention(nn.Module):
                         if attn_position[i] != 'last':
                             if attn_position == 'bin':
                                 bin_center = -0.5 + values_shape[1] * (attn_displacement[i] - 0.5) / self.attn_bins
+                                print("attn_displacement[i]", attn_displacement[i])
+                                print("attn_displacement", attn_displacement)
+                                print("bin_center", bin_center)
                                 indices_q = torch.full((queries_shape[1], 1),
                                                        bin_center).to(dtype=torch.float32)
                             elif attn_position == 'first':
