@@ -84,7 +84,7 @@ class Evaluator(object):
         with torch.no_grad():
             self.model.eval()
             _, nll = self.model(batch)
-            pdb.set_trace()
+            #pdb.set_trace()
             # nn.DataParallel wants to gather rather than doing a reduce_add, so the output here
             # will be a tensor of values that must be summed
             nll = nll.sum()
