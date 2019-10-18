@@ -97,7 +97,7 @@ class Evaluator(object):
     def evaluate_epoch(self, epoch, experiment, verbose=0):
         ''' Evaluate a single epoch '''
         neg_log_likelihood = metrics.Metric('nll', metrics.format_float)
-        pdb.set_trace()
+        #pdb.set_trace()
         def get_description():
             mode_name = 'Test' if self.dataset.split == 'test' else 'Validate'
             description = f'{mode_name} #{epoch}'
