@@ -110,7 +110,7 @@ class TransformerEncoderLayer(nn.Module):
 
 class TransformerDecoderLayer(nn.Module):
     ''' Implements a single decoder layer in a transformer decoder stack '''
-    def __init__(self, dec_attn_config, enc_dec_attn_config, num_heads, dim, hidden_dim, causal=True, span=1, dropout_p=0.1):
+    def __init__(self, dec_attn_config, enc_dec_attn_config, num_heads, dim, hidden_dim, layer_i, causal=True, span=1, dropout_p=0.1):
         ''' Initialize the transformer layer '''
         super(TransformerDecoderLayer, self).__init__()
 
@@ -128,16 +128,21 @@ class TransformerDecoderLayer(nn.Module):
             dim, dropout_p
         )
 
-        self.source_attention = TransformerSublayer(
-            NewAttention(enc_dec_attn_config, dim, num_heads),
-            dim, dropout_p
-        )
+        if enc_dec_attn_config['enc_dec_attn_layer'][layer_i] == 1:
+
+            self.source_attention = TransformerSublayer(
+                NewAttention(enc_dec_attn_config, dim, num_heads),
+                dim, dropout_p
+            )
+
+        self.enc_dec_attn_config = enc_dec_attn_config
 
     def reset_parameters(self):
         ''' Reset the parameters of the module '''
         self.ffn.reset_parameters()
         self.self_attention.reset_parameters()
-        self.source_attention.reset_parameters()
+        if hasattr(self, 'source_attention'):
+            self.source_attention.reset_parameters()
 
     def forward(self, inputs, sources, layer_i, word_embedding): # pylint:disable=arguments-differ
         ''' The forward pass '''
@@ -179,7 +184,7 @@ class TransformerDecoderLayer(nn.Module):
 
         # print("decoder source attention")
 
-        if kwargs['enc_dec_attn_layer'][layer_i] == 1:
+        if self.enc_dec_attn_config['enc_dec_attn_layer'][layer_i] == 1:
             state = self.source_attention(
                 state, # residual
                 source, source, state, **kwargs # passed to multiheaded attention
@@ -308,8 +313,8 @@ class NewTransformer(nn.Module):
                                }
         args = [dec_attn_config, enc_dec_attn_config, config.num_heads, config.embedding_size, config.hidden_dim]
         return nn.ModuleList([
-            TransformerDecoderLayer(*args, **kwargs)
-            for _ in range(config.num_layers)
+            TransformerDecoderLayer(*args, layer_i, **kwargs)
+            for layer_i in range(config.num_layers)
         ])
 
     @property
