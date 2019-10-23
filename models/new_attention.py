@@ -176,12 +176,14 @@ class NewAttention(nn.Module):
         # print("values_shape", values_shape)
         # print("self.word_count_ratio", self.word_count_ratio)
 
+
         # By this point the values, keys, and queries all have B * H as their first dimension
         batch_size = queries_shape[0] // self.num_heads
 
         attn_type, attn_position, attn_param, attn_displacement = self.attn_configs[layer_i]
 
         if attn_type == 'learned':
+            time1 = time.time()
             logits = self.scale * torch.bmm(queries, keys.transpose(2, 1))
             if mask is not None:
                 logits += mask
@@ -199,6 +201,8 @@ class NewAttention(nn.Module):
 
             batch_size = queries_shape[0] // self.num_heads
 
+            print("time for learned:", time.time() - time1)
+
             return attended.view(
                         batch_size,
                         self.num_heads,
@@ -211,6 +215,7 @@ class NewAttention(nn.Module):
                     )
 
         elif 'learned' in attn_type:
+            time1 = time.time()
             learned_idx = np.where(np.array(attn_type) == 'learned')[0]
             len_learned_idex = len(learned_idx)
             queries_ = self.project_learned(queries, learned_idx)
@@ -233,16 +238,20 @@ class NewAttention(nn.Module):
                                                       logits_shape_[-1])
 
             learned_count = 0
+            print("time for partially learned:", time.time() - time1)
 
         if not {'last', 'bin'}.isdisjoint(attn_position) or attn_position in ['last', 'bin']:
+            time2 = time.time()
             if key_mask is not None:
                 key_mask_shape = key_mask.shape
                 last_indices = torch.tensor([key_mask_shape[1] - a[::-1].index(0)
                                              for a in key_mask.cpu().numpy().tolist()], dtype=torch.float32).view(-1, 1)
             else:
                 last_indices = torch.tensor([values_shape[1]] * queries_shape[0], dtype=torch.float32).view(-1, 1)
+            print("calculate last_indices", time.time() - time2)
 
         if type(attn_type) is not list and type(attn_position) is not list:
+            time3 = time.time()
             if attn_type == 'whole':
                 logits = torch.full((queries_shape[1], values_shape[1]), 1 / values_shape[1]).to(dtype=torch.float32)
             else:
@@ -258,6 +267,9 @@ class NewAttention(nn.Module):
                         or attn_position in ['last', 'middle', 'bin']:
 
                     indices_v = torch.arange(values_shape[1]).view(1, -1).to(dtype=torch.float32)
+
+                    print("time3", time.time()-time3)
+                    time4 = time.time()
 
                     if attn_position not in ['last', 'bin']:
                         # if attn_position == 'bin':
@@ -295,10 +307,14 @@ class NewAttention(nn.Module):
                         distance_diff = distance_diff.expand(batch_size, self.num_heads, queries_shape[1], values_shape[1]).contiguous()
                         distance_diff = distance_diff.view(values_shape[0], queries_shape[1], values_shape[1])
 
+                    print("distance_diff time", time.time()-time4)
+
+                    time5 = time.time()
                     if attn_type == 'normal':
                         std = attn_param
 
                         logits = (1 / (std * math.sqrt(2 * math.pi)) * torch.exp(- 1 / 2 * (distance_diff / std) ** 2))
+                        print("time logits normal", time.time() - time5)
                     else:
                         if attn_param < 0 and attn_position == 'bin':
                             attn_param_curr = (0.5 * last_indices / self.attn_bins)\
@@ -312,16 +328,19 @@ class NewAttention(nn.Module):
                         logits_sum = torch.sum(logits, dim=-1, keepdim=True)
                         logits_sum[logits_sum == 0] = 1
                         logits = logits / logits_sum
+                        print("time logits uniform", time.time() - time5)
 
                     self.attn_weights[attn_type][attn_position] = logits[0]
                 else:
                     logits = self.attn_weights[attn_type][attn_position][:queries_shape[1], :values_shape[1]]
                     logits = logits.expand(values_shape[0], logits.shape[0], logits.shape[1])
+                    print("retrieving weights", time.time() - time3)
 
             attn_weights = logits.type_as(values)
 
         # If one of the attention parameters is list (different in different heads), then make all of them lists
         else:
+            time3 = time.time()
             attn_config = []
             for attn_config_i in [attn_type, attn_position, attn_param, attn_displacement]:
                 if type(attn_config_i) is not list:
@@ -358,6 +377,8 @@ class NewAttention(nn.Module):
                             or attn_position[i] in ['last', 'middle', 'bin']:
 
                         indices_v = torch.arange(values_shape[1]).view(1, -1).to(dtype=torch.float32)
+                        print("time3", time.time() - time3)
+                        time4 = time.time()
 
                         if attn_position[i] not in ['last', 'bin']:
                             # if attn_position[i] == 'bin':
@@ -398,10 +419,14 @@ class NewAttention(nn.Module):
                             distance_diff = distance_diff.expand(batch_size, queries_shape[1],
                                                                  values_shape[1]).contiguous()
 
+                        print("distance_diff time", time.time() - time4)
+                        time5 = time.time()
+
                         if attn_type[i] == 'normal':
                             std = attn_param[i]
 
                             logits = (1 / (std * math.sqrt(2 * math.pi)) * torch.exp(- 1 / 2 * (distance_diff / std) ** 2))
+                            print("time logits normal", time.time() - time5)
                         else:
                             if attn_param[i] < 0 and attn_position[i] == 'bin':
                                 attn_param_curr = (0.5 * last_indices / self.attn_bins).unsqueeze(-1)
@@ -414,11 +439,13 @@ class NewAttention(nn.Module):
                             logits_sum = torch.sum(logits, dim=-1, keepdim=True)
                             logits_sum[logits_sum == 0] = 1
                             logits = logits / logits_sum
+                            print("time logits uniform", time.time() - time5)
                             # logits = F.softmax(logits, dim=-1)
                         self.attn_weights[attn_type[i]][attn_position[i]] = logits[0]
                     else:
                         logits = self.attn_weights[attn_type[i]][attn_position[i]][:queries_shape[1], :values_shape[1]]
                         logits = logits.expand(int(values_shape[0] / self.num_heads), logits.shape[0], logits.shape[1])
+                        print("retrieving weights", time.time() - time3)
                     logits = logits.type_as(values)
                 logits_list.append(logits)
             attn_weights = torch.stack(logits_list, dim=1)
