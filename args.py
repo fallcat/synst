@@ -181,7 +181,7 @@ def add_new_transformer_args(parser):
         type=str,
         nargs='+',
         default='normal',
-        choices=['normal', 'uniform', 'whole', 'no', 'learned'],
+        choices=['normal', 'uniform', 'no', 'learned'],
         help='What type of attention we are using for the rules'
     )
     group.add_argument(
@@ -245,7 +245,7 @@ def add_new_transformer_args(parser):
         type=str,
         nargs='+',
         default='learned',
-        choices=['normal', 'uniform', 'whole', 'no', 'learned'],
+        choices=['normal', 'uniform', 'no', 'learned'],
         help='What type of attention we are using for the rules'
     )
     group.add_argument(
@@ -309,7 +309,7 @@ def add_new_transformer_args(parser):
         type=str,
         nargs='+',
         default='learned',
-        choices=['normal', 'uniform', 'whole', 'no', 'learned'],
+        choices=['normal', 'uniform', 'no', 'learned'],
         help='What type of attention we are using for the rules'
     )
     group.add_argument(
