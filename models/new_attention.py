@@ -290,7 +290,7 @@ class NewAttention(nn.Module):
                         indices_q = last_indices
                         if attn_position == 'bin':
                             ratio = (attn_displacement - 0.5) / self.attn_bins
-                            indices_q = torch.round(-0.5 + indices_q * ratio)
+                            indices_q = -0.5 + indices_q * ratio
                         distance_diff = (indices_v - indices_q).unsqueeze(1).unsqueeze(2)
                         distance_diff = distance_diff.expand(batch_size, self.num_heads, queries_shape[1], values_shape[1]).contiguous()
                         distance_diff = distance_diff.view(values_shape[0], queries_shape[1], values_shape[1])
@@ -309,7 +309,9 @@ class NewAttention(nn.Module):
                         distance_diff[distance_diff <= attn_param_curr] = 0
                         distance_diff[distance_diff > attn_param_curr] = 1
                         logits = 1 - distance_diff
-                        logits = logits / torch.sum(logits, dim=-1, keepdim=True)
+                        logits_sum = torch.sum(logits, dim=-1, keepdim=True)
+                        logits_sum[logits_sum == 0] = 1
+                        logits = logits / logits_sum
 
                     self.attn_weights[attn_type][attn_position] = logits[0]
                 else:
@@ -391,7 +393,7 @@ class NewAttention(nn.Module):
                             indices_q = last_indices
                             if attn_position[i] == 'bin':
                                 ratio = (attn_displacement[i] - 0.5) / self.attn_bins
-                                indices_q = torch.round(-0.5 + indices_q * ratio)
+                                indices_q = -0.5 + indices_q * ratio
                             distance_diff = (indices_v - indices_q).unsqueeze(1)
                             distance_diff = distance_diff.expand(batch_size, queries_shape[1],
                                                                  values_shape[1]).contiguous()
@@ -409,7 +411,9 @@ class NewAttention(nn.Module):
                             distance_diff[distance_diff <= attn_param_curr] = 0
                             distance_diff[distance_diff > attn_param_curr] = 1
                             logits = 1 - distance_diff
-                            logits = logits / torch.sum(logits, dim=-1, keepdim=True)
+                            logits_sum = torch.sum(logits, dim=-1, keepdim=True)
+                            logits_sum[logits_sum == 0] = 1
+                            logits = logits / logits_sum
                             # logits = F.softmax(logits, dim=-1)
                         self.attn_weights[attn_type[i]][attn_position[i]] = logits[0]
                     else:
