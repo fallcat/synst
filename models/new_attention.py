@@ -290,7 +290,7 @@ class NewAttention(nn.Module):
                         indices_q = last_indices
                         if attn_position == 'bin':
                             ratio = (attn_displacement - 0.5) / self.attn_bins
-                            indices_q = -0.5 + indices_q * ratio
+                            indices_q = torch.round(-0.5 + indices_q * ratio)
                         distance_diff = (indices_v - indices_q).unsqueeze(1).unsqueeze(2)
                         distance_diff = distance_diff.expand(batch_size, self.num_heads, queries_shape[1], values_shape[1]).contiguous()
                         distance_diff = distance_diff.view(values_shape[0], queries_shape[1], values_shape[1])
@@ -391,7 +391,7 @@ class NewAttention(nn.Module):
                             indices_q = last_indices
                             if attn_position[i] == 'bin':
                                 ratio = (attn_displacement[i] - 0.5) / self.attn_bins
-                                indices_q = -0.5 + indices_q * ratio
+                                indices_q = torch.round(-0.5 + indices_q * ratio)
                             distance_diff = (indices_v - indices_q).unsqueeze(1)
                             distance_diff = distance_diff.expand(batch_size, queries_shape[1],
                                                                  values_shape[1]).contiguous()
