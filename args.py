@@ -370,6 +370,14 @@ def add_new_transformer_args(parser):
         default=2,
         help='Number of bins to look at in total'
     )
+    group.add_argument(
+        '--enc-dec-attn-layer',
+        type=int,
+        nargs='+',
+        default=1,
+        choices=[0, 1],
+        help="Determine the presence of encoder-decoder (source) attention after the decoder self-attention layer. Length of list should be equal to the number of layers. "
+    )
 
     return group
 
@@ -477,13 +485,13 @@ def add_data_args(parser):
     group.add_argument(
         '--max-input-length',
         type=int,
-        default=500,
+        default=0,
         help='Maximum input tokens per example'
     )
     group.add_argument(
         '--max-target-length',
         type=int,
-        default=500,
+        default=0,
         help='Maximum target tokens per example'
     )
     group.add_argument(
@@ -1204,7 +1212,7 @@ Commit your changes first, then try again.''')
 
     args.experiment = experiment_type(
         *experiment_args,
-        project_name='transformer-attn',
+        project_name='probe-transformer',
         workspace='umass-nlp',
         disabled=not args.track,
         auto_metric_logging=False,

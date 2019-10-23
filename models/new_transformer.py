@@ -3,7 +3,7 @@ A module which implements the basic Transformer
 '''
 import uuid
 import threading
-import pdb
+
 import torch
 from torch import nn
 
@@ -179,10 +179,11 @@ class TransformerDecoderLayer(nn.Module):
 
         # print("decoder source attention")
 
-        state = self.source_attention(
-            state, # residual
-            source, source, state, **kwargs # passed to multiheaded attention
-        )
+        if kwargs['enc_dec_attn_layer'][layer_i] == 1:
+            state = self.source_attention(
+                state, # residual
+                source, source, state, **kwargs # passed to multiheaded attention
+            )
 
         state = self.ffn(
             state, # residual
@@ -302,7 +303,9 @@ class NewTransformer(nn.Module):
                                'which_attn': 'source',
                                'attn_weights': config.enc_dec_attn_weights,
                                'attn_score': config.enc_dec_attn_score,
-                               'attn_bins': config.enc_dec_attn_bins}
+                               'attn_bins': config.enc_dec_attn_bins,
+                               'enc_dec_attn_layer': config.enc_dec_attn_layer
+                               }
         args = [dec_attn_config, enc_dec_attn_config, config.num_heads, config.embedding_size, config.hidden_dim]
         return nn.ModuleList([
             TransformerDecoderLayer(*args, **kwargs)
@@ -336,7 +339,6 @@ class NewTransformer(nn.Module):
 
     def forward(self, batch): # pylint:disable=arguments-differ
         ''' A batch of inputs and targets '''
-        #pdb.set_trace()
         decoded = self.decode(
             self.encode(batch['inputs']),
             right_shift(right_shift(batch['targets']), shift=self.span - 1, fill=self.sos_idx),
