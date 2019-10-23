@@ -118,6 +118,8 @@ class TransformerDecoderLayer(nn.Module):
         self.causal = causal
         self.uuid = uuid.uuid4()
 
+        self.enc_dec_attn_config = enc_dec_attn_config
+
         self.ffn = TransformerSublayer(
             TransformerFFN(dim, hidden_dim),
             dim, dropout_p
@@ -128,14 +130,17 @@ class TransformerDecoderLayer(nn.Module):
             dim, dropout_p
         )
 
-        if enc_dec_attn_config['enc_dec_attn_layer'][layer_i] == 1:
+        if self.enc_dec_attn_config['enc_dec_attn_layer'][layer_i] == 1:
+
+            src_num_heads = self.enc_dec_attn_config['enc_dec_attn_num_heads'][layer_i]
+            assert src_num_heads != 0
 
             self.source_attention = TransformerSublayer(
-                NewAttention(enc_dec_attn_config, dim, num_heads),
+                NewAttention(enc_dec_attn_config, dim, src_num_heads),
                 dim, dropout_p
             )
 
-        self.enc_dec_attn_config = enc_dec_attn_config
+            print('layer %i num of src heads %i' % (layer_i, src_num_heads))
 
     def reset_parameters(self):
         ''' Reset the parameters of the module '''
@@ -309,7 +314,8 @@ class NewTransformer(nn.Module):
                                'attn_weights': config.enc_dec_attn_weights,
                                'attn_score': config.enc_dec_attn_score,
                                'attn_bins': config.enc_dec_attn_bins,
-                               'enc_dec_attn_layer': config.enc_dec_attn_layer
+                               'enc_dec_attn_layer': config.enc_dec_attn_layer,
+                               'enc_dec_attn_num_heads': config.enc_dec_attn_num_heads
                                }
         args = [dec_attn_config, enc_dec_attn_config, config.num_heads, config.embedding_size, config.hidden_dim]
         return nn.ModuleList([

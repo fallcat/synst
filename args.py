@@ -370,6 +370,7 @@ def add_new_transformer_args(parser):
         default=2,
         help='Number of bins to look at in total'
     )
+
     group.add_argument(
         '--enc-dec-attn-layer',
         type=int,
@@ -377,6 +378,14 @@ def add_new_transformer_args(parser):
         default=1,
         choices=[0, 1],
         help="Determine the presence of encoder-decoder (source) attention after the decoder self-attention layer. Length of list should be equal to the number of layers. "
+    )
+
+    group.add_argument(
+        '--enc-dec-attn-num-heads',
+        type=int,
+        nargs='+',
+        default=4,
+        help="number of heads for enc-dec-attn at each layer; length of list should be equal to the number of layers. if a layer does not have source attention, it should be 0."
     )
 
     return group
