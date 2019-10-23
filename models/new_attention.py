@@ -264,7 +264,7 @@ class NewAttention(nn.Module):
                         or (queries_shape[1] > self.attn_weights[attn_type][attn_position].shape[0]
                             or values_shape[1] > self.attn_weights[attn_type][attn_position].shape[1])) \
                         or decoder_position != -1 \
-                        or attn_position in ['last', 'middle', 'bin']:
+                        or attn_position in ['last', 'bin']:
 
                     indices_v = torch.arange(values_shape[1]).view(1, -1).to(dtype=torch.float32)
 
@@ -290,8 +290,6 @@ class NewAttention(nn.Module):
                             indices_q = indices_q - attn_displacement
                         elif attn_position == 'right':
                             indices_q = indices_q + attn_displacement
-                        elif attn_position == 'middle':
-                            indices_q[:] = (indices_v.size()[1] + 1) / 2 - 1
 
                         distance_diff = indices_v - indices_q
 
@@ -374,7 +372,7 @@ class NewAttention(nn.Module):
                             or (queries_shape[1] > self.attn_weights[attn_type[i]][attn_position[i]].shape[0]
                                 or values_shape[1] > self.attn_weights[attn_type[i]][attn_position[i]].shape[1])) \
                             or decoder_position != -1 \
-                            or attn_position[i] in ['last', 'middle', 'bin']:
+                            or attn_position[i] in ['last', 'bin']:
 
                         indices_v = torch.arange(values_shape[1]).view(1, -1).to(dtype=torch.float32)
                         print("time3", time.time() - time3)
@@ -400,8 +398,6 @@ class NewAttention(nn.Module):
                                 indices_q = indices_q - attn_displacement[i]
                             elif attn_position[i] == 'right':
                                 indices_q = indices_q + attn_displacement[i]
-                            elif attn_position[i] == 'middle':
-                                indices_q[:] = (indices_v.size()[1] + 1) / 2 - 1
 
                             distance_diff = indices_v - indices_q
 

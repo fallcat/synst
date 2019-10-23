@@ -189,8 +189,8 @@ def add_new_transformer_args(parser):
         type=str,
         nargs='+',
         default='center',
-        choices=['center', 'left', 'right', 'first', 'last', 'middle', 'bin'],
-        help='Where to put the attention. Center is centered at the word. Middle is the middle of sentence'
+        choices=['center', 'left', 'right', 'first', 'last', 'bin'],
+        help='Where to put the attention. Center is centered at the word.'
     )
     group.add_argument(
         '--attn-param',
@@ -253,8 +253,8 @@ def add_new_transformer_args(parser):
         type=str,
         nargs='+',
         default='center',
-        choices=['center', 'left', 'right', 'first', 'last', 'middle', 'bin'],
-        help='Where to put the attention. Center is centered at the word. Middle is the middle of sentence'
+        choices=['center', 'left', 'right', 'first', 'last', 'bin'],
+        help='Where to put the attention. Center is centered at the word.'
     )
     group.add_argument(
         '--dec-attn-param',
@@ -317,8 +317,8 @@ def add_new_transformer_args(parser):
         type=str,
         nargs='+',
         default='center',
-        choices=['center', 'left', 'right', 'first', 'last', 'middle', 'bin'],
-        help='Where to put the attention. Center is centered at the word. Middle is the middle of sentence'
+        choices=['center', 'left', 'right', 'first', 'last', 'bin'],
+        help='Where to put the attention. Center is centered at the word.'
     )
     group.add_argument(
         '--enc-dec-attn-param',
