@@ -361,7 +361,7 @@ class NewAttention(nn.Module):
                         self.attn_weights[attn_type][attn_position] = {}
                     if values_shape[1] not in self.attn_weights[attn_type][attn_position]:
                         if attn_position == 'last':
-                            self.attn_weights[attn_type][attn_position][values_shape[1]] = logits[]
+                            self.attn_weights[attn_type][attn_position][values_shape[1]] = logits[0]
                 else:
                     self.attn_weights[attn_type][attn_position] = logits[0]
             else:
