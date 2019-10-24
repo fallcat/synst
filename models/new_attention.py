@@ -252,8 +252,40 @@ class NewAttention(nn.Module):
 
         if type(attn_type) is not list and type(attn_position) is not list:
             time3 = time.time()
+            need_recompute = False
             if attn_type not in self.attn_weights:
                 self.attn_weights[attn_type] = {}
+            if attn_position not in self.attn_weights[attn_type]:
+                self.attn_weights[attn_type][attn_position] = {}
+            if attn_position in ['center', 'first']:
+                if attn_param not in self.attn_weights[attn_type][attn_position] \
+                        or (queries_shape[1] > self.attn_weights[attn_type][attn_position][attn_param].shape[0]
+                            or values_shape[1] > self.attn_weights[attn_type][attn_position][attn_param].shape[1]):
+                    need_recompute = True
+            elif attn_position in ['left', 'right']:
+                if attn_param not in self.attn_weights[attn_type][attn_position]:
+                    self.attn_weights[attn_type][attn_position][attn_param] = {}
+                    need_recompute = True
+                elif attn_displacement not in self.attn_weights[attn_type][attn_position][attn_param] \
+                        or (queries_shape[1] > self.attn_weights[attn_type][attn_position][attn_param][attn_displacement].shape[0]
+                            or values_shape[1] > self.attn_weights[attn_type][attn_position][attn_param][attn_displacement].shape[1]):
+                    need_recompute = True
+            else:  # attn_position in ['last', 'bin']
+                if attn_param not in self.attn_weights[attn_type][attn_position]:
+                    self.attn_weights[attn_type][attn_position][attn_param] = {}
+                    need_recompute = True
+                last_indices_set = set(last_indices.cpu().numpy())
+                new_last_indices_set = last_indices_set - last_indices_set.intersection(
+                    self.attn_weights[attn_type][attn_position][attn_param])
+                if len(new_last_indices_set) > 0:
+                    need_recompute = True
+                    if attn_position == 'bin':
+                        for last_index in new_last_indices_set:
+                            self.attn_weights[attn_type][attn_position][attn_param][last_index] = {}
+
+            # if need_recompute:
+
+
             # If the attention weight matrix is not stored, need to create new.
             # At inference time, always create new for decoder attentions.
             # If attention position is last or middle, always recalculate because the stored is wrong.
@@ -324,8 +356,14 @@ class NewAttention(nn.Module):
                     logits_sum[logits_sum == 0] = 1
                     logits = logits / logits_sum
                     print("time logits uniform", time.time() - time5)
-
-                self.attn_weights[attn_type][attn_position] = logits[0]
+                if attn_position in ['last', 'bin']:
+                    if attn_position not in self.attn_weights[attn_type]:
+                        self.attn_weights[attn_type][attn_position] = {}
+                    if values_shape[1] not in self.attn_weights[attn_type][attn_position]:
+                        if attn_position == 'last':
+                            self.attn_weights[attn_type][attn_position][values_shape[1]] = logits[]
+                else:
+                    self.attn_weights[attn_type][attn_position] = logits[0]
             else:
                 logits = self.attn_weights[attn_type][attn_position][:queries_shape[1], :values_shape[1]]
                 logits = logits.expand(values_shape[0], logits.shape[0], logits.shape[1])
@@ -478,6 +516,7 @@ class NewAttention(nn.Module):
                 original_targets=None, word_embedding=None):
         ''' Forward pass of the attention '''
         batch_size = values.shape[0]
+        print("key_mask", key_mask)
 
         if 'learned' in self.attn_type or 'learned' == self.attn_type:
             if self.attn_linear_transform == 1:
