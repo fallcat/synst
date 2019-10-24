@@ -246,7 +246,7 @@ class NewAttention(nn.Module):
                 key_mask_shape = key_mask.shape
                 # last_indices = torch.tensor([key_mask_shape[1] - a[::-1].index(0)
                 #                              for a in key_mask.cpu().numpy().tolist()], dtype=torch.float32).view(-1, 1)
-                last_indices = (key_mask == 0).sum(dim=1).cpu()
+                last_indices = (key_mask == 0).sum(dim=1).cpu().view(-1, 1)
             else:
                 last_indices = torch.tensor([values_shape[1]] * queries_shape[0], dtype=torch.float32).view(-1, 1)
             print("calculate last_indices", time.time() - time2)
@@ -440,6 +440,8 @@ class NewAttention(nn.Module):
                             if attn_position[i] == 'bin':
                                 ratio = (attn_displacement[i] - 0.5) / self.attn_bins
                                 indices_q = -0.5 + indices_q * ratio
+                            print("indices_v", indices_v.shape)
+                            print("indices_q", indices_q.shape)
                             distance_diff = (indices_v - indices_q).unsqueeze(1)
                             distance_diff = distance_diff.expand(batch_size, queries_shape[1],
                                                                  values_shape[1]).contiguous()
