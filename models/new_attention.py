@@ -244,8 +244,9 @@ class NewAttention(nn.Module):
             time2 = time.time()
             if key_mask is not None:
                 key_mask_shape = key_mask.shape
-                last_indices = torch.tensor([key_mask_shape[1] - a[::-1].index(0)
-                                             for a in key_mask.cpu().numpy().tolist()], dtype=torch.float32).view(-1, 1)
+                # last_indices = torch.tensor([key_mask_shape[1] - a[::-1].index(0)
+                #                              for a in key_mask.cpu().numpy().tolist()], dtype=torch.float32).view(-1, 1)
+                last_indices = (key_mask == 0).sum(dim=1).cpu()
             else:
                 last_indices = torch.tensor([values_shape[1]] * queries_shape[0], dtype=torch.float32).view(-1, 1)
             print("calculate last_indices", time.time() - time2)
@@ -516,7 +517,7 @@ class NewAttention(nn.Module):
                 original_targets=None, word_embedding=None):
         ''' Forward pass of the attention '''
         batch_size = values.shape[0]
-        print("key_mask", key_mask)
+        # print("key_mask", key_mask)
 
         if 'learned' in self.attn_type or 'learned' == self.attn_type:
             if self.attn_linear_transform == 1:
