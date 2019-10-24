@@ -254,35 +254,35 @@ class NewAttention(nn.Module):
         if type(attn_type) is not list and type(attn_position) is not list:
             time3 = time.time()
             need_recompute = False
-            if attn_type not in self.attn_weights:
-                self.attn_weights[attn_type] = {}
-            if attn_position not in self.attn_weights[attn_type]:
-                self.attn_weights[attn_type][attn_position] = {}
-            if attn_position in ['center', 'first']:
-                if attn_param not in self.attn_weights[attn_type][attn_position] \
-                        or (queries_shape[1] > self.attn_weights[attn_type][attn_position][attn_param].shape[0]
-                            or values_shape[1] > self.attn_weights[attn_type][attn_position][attn_param].shape[1]):
-                    need_recompute = True
-            elif attn_position in ['left', 'right']:
-                if attn_param not in self.attn_weights[attn_type][attn_position]:
-                    self.attn_weights[attn_type][attn_position][attn_param] = {}
-                    need_recompute = True
-                elif attn_displacement not in self.attn_weights[attn_type][attn_position][attn_param] \
-                        or (queries_shape[1] > self.attn_weights[attn_type][attn_position][attn_param][attn_displacement].shape[0]
-                            or values_shape[1] > self.attn_weights[attn_type][attn_position][attn_param][attn_displacement].shape[1]):
-                    need_recompute = True
-            else:  # attn_position in ['last', 'bin']
-                if attn_param not in self.attn_weights[attn_type][attn_position]:
-                    self.attn_weights[attn_type][attn_position][attn_param] = {}
-                    need_recompute = True
-                last_indices_set = set(last_indices.cpu().numpy())
-                new_last_indices_set = last_indices_set - last_indices_set.intersection(
-                    self.attn_weights[attn_type][attn_position][attn_param])
-                if len(new_last_indices_set) > 0:
-                    need_recompute = True
-                    if attn_position == 'bin':
-                        for last_index in new_last_indices_set:
-                            self.attn_weights[attn_type][attn_position][attn_param][last_index] = {}
+            # if attn_type not in self.attn_weights:
+            #     self.attn_weights[attn_type] = {}
+            # if attn_position not in self.attn_weights[attn_type]:
+            #     self.attn_weights[attn_type][attn_position] = {}
+            # if attn_position in ['center', 'first']:
+            #     if attn_param not in self.attn_weights[attn_type][attn_position] \
+            #             or (queries_shape[1] > self.attn_weights[attn_type][attn_position][attn_param].shape[0]
+            #                 or values_shape[1] > self.attn_weights[attn_type][attn_position][attn_param].shape[1]):
+            #         need_recompute = True
+            # elif attn_position in ['left', 'right']:
+            #     if attn_param not in self.attn_weights[attn_type][attn_position]:
+            #         self.attn_weights[attn_type][attn_position][attn_param] = {}
+            #         need_recompute = True
+            #     elif attn_displacement not in self.attn_weights[attn_type][attn_position][attn_param] \
+            #             or (queries_shape[1] > self.attn_weights[attn_type][attn_position][attn_param][attn_displacement].shape[0]
+            #                 or values_shape[1] > self.attn_weights[attn_type][attn_position][attn_param][attn_displacement].shape[1]):
+            #         need_recompute = True
+            # else:  # attn_position in ['last', 'bin']
+            #     if attn_param not in self.attn_weights[attn_type][attn_position]:
+            #         self.attn_weights[attn_type][attn_position][attn_param] = {}
+            #         need_recompute = True
+            #     last_indices_set = set(last_indices.cpu().numpy())
+            #     new_last_indices_set = last_indices_set - last_indices_set.intersection(
+            #         self.attn_weights[attn_type][attn_position][attn_param])
+            #     if len(new_last_indices_set) > 0:
+            #         need_recompute = True
+            #         if attn_position == 'bin':
+            #             for last_index in new_last_indices_set:
+            #                 self.attn_weights[attn_type][attn_position][attn_param][last_index] = {}
 
             # if need_recompute:
 
