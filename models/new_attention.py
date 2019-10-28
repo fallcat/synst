@@ -265,7 +265,7 @@ class NewAttention(nn.Module):
                     need_recompute = True
             elif attn_position == 'first':
                 if attn_param not in self.attn_weights[attn_type][attn_position] \
-                        or values_shape[1] > self.attn_weights[attn_type][attn_position][attn_param]:
+                        or values_shape[1] > self.attn_weights[attn_type][attn_position][attn_param].shape[1]:
                     need_recompute = True
             else:
                 if attn_param not in self.attn_weights[attn_type][attn_position]:
