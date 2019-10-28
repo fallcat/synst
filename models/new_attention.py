@@ -381,7 +381,7 @@ class NewAttention(nn.Module):
                                    queries_shape[1],
                                    values_shape[1])
             if self.which_attn == 'source':
-                print("logits again", logits)
+                # print("logits again", logits)
                 print("need compute", need_recompute, "time", time.time() - time3)
             #
             # # If the attention weight matrix is not stored, need to create new.
