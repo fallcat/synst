@@ -243,16 +243,16 @@ class NewAttention(nn.Module):
         if not {'last', 'bin'}.isdisjoint(attn_position) or attn_position in ['last', 'bin']:
             time2 = time.time()
             if key_mask is not None:
-                print("key_mask is not none")
+                # print("key_mask is not none")
                 key_mask_shape = key_mask.shape
                 # last_indices = torch.tensor([key_mask_shape[1] - a[::-1].index(0)
                 #                              for a in key_mask.cpu().numpy().tolist()], dtype=torch.float32).view(-1, 1)
                 last_indices = ((key_mask == 0).sum(dim=1) - 1).cpu().numpy().tolist()
-                print("last_indices", last_indices)
+                # print("last_indices", last_indices)
             else:
-                print("key_mask is none")
+                # print("key_mask is none")
                 last_indices = [values_shape[1] - 1] * queries_shape[0]  # torch.tensor([values_shape[1]] * queries_shape[0], dtype=torch.float32).view(-1, 1)
-                print("last_indices", last_indices)
+                # print("last_indices", last_indices)
             print("calculate last_indices", time.time() - time2)
 
         if type(attn_type) is not list and type(attn_position) is not list and type(attn_param) is not list and type(attn_displacement) is not list:
@@ -295,6 +295,9 @@ class NewAttention(nn.Module):
                     if len(new_last_indices_set) > 0:
                         need_recompute = True
 
+            print("conditions", time.time() - time3)
+            time4 = time.time()
+
             if need_recompute:
                 indices_v = torch.arange(values_shape[1]).view(1, -1).to(dtype=torch.float32)
 
@@ -328,6 +331,9 @@ class NewAttention(nn.Module):
                         indices_q = -0.5 + indices_q * ratio
                     distance_diff = (indices_v - indices_q).unsqueeze(1).unsqueeze(2)
 
+                print("diff", time.time() - time4)
+                time5 = time.time()
+
                 if attn_type == 'normal':
                     std = attn_param
                     logits = (1 / (std * math.sqrt(2 * math.pi)) * torch.exp(- 1 / 2 * (distance_diff / std) ** 2))
@@ -346,6 +352,9 @@ class NewAttention(nn.Module):
                     logits_sum[logits_sum == 0] = 1
                     logits = logits / logits_sum
 
+                print("normal or uniform", time.time() - time5)
+                time6 = time.time()
+
                 if attn_position in ['center', 'first']:
                     self.attn_weights[attn_type][attn_position][attn_param] = logits
                 elif attn_position in ['left', 'right']:
@@ -355,6 +364,13 @@ class NewAttention(nn.Module):
                 else:
                     self.attn_weights[attn_type][attn_position][attn_param][attn_displacement].update(
                         {new_last_indices_list[i]: row[0][:, :new_last_indices_list[i] + 1] for i, row in enumerate(logits)})
+
+                print("store", time.time() - time6)
+
+
+            time7 = time.time()
+
+
 
             if attn_position == 'center':
                 logits = self.attn_weights[attn_type][attn_position][attn_param][:queries_shape[1], :values_shape[1]].unsqueeze(0).unsqueeze(0)
@@ -381,7 +397,7 @@ class NewAttention(nn.Module):
                                    queries_shape[1],
                                    values_shape[1])
             if self.which_attn == 'source':
-                # print("logits again", logits)
+                print("retrieve", time.time() - time7)
                 print("need compute", need_recompute, "time", time.time() - time3)
             #
             # # If the attention weight matrix is not stored, need to create new.
