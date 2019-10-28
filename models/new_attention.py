@@ -377,6 +377,7 @@ class NewAttention(nn.Module):
                 .contiguous().view(-1,
                                    queries_shape[1],
                                    values_shape[1])
+            print("logits again", logits)
             print("need compute", need_recompute, "time", time.time() - time3)
             #
             # # If the attention weight matrix is not stored, need to create new.
@@ -463,6 +464,7 @@ class NewAttention(nn.Module):
             #     print("retrieving weights", time.time() - time3)
 
             attn_weights = logits.type_as(values)
+            print("attn_weights", attn_weights)
 
         # If one of the attention parameters is list (different in different heads), then make all of them lists
         else:
