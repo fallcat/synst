@@ -368,8 +368,9 @@ class NewAttention(nn.Module):
                 logits = torch.stack([torch.cat((self.attn_weights[attn_type][attn_position][attn_param][n],
                                                  torch.zeros(values_shape[1] - n).view(1, -1)), dim=1)
                                       for n in last_indices]).unsqueeze(1)
-                print("logits", logits)
-                print("self.attn_weights[attn_type][attn_position][attn_param]", self.attn_weights[attn_type][attn_position][attn_param])
+                if self.which_attn == 'source':
+                    print("logits", logits)
+                    print("self.attn_weights[attn_type][attn_position][attn_param]", self.attn_weights[attn_type][attn_position][attn_param])
             else:
                 logits = torch.stack([self.attn_weights[attn_type][attn_position][attn_param][attn_displacement][n] for n in last_indices]).unsqueeze(1)
 
@@ -377,8 +378,9 @@ class NewAttention(nn.Module):
                 .contiguous().view(-1,
                                    queries_shape[1],
                                    values_shape[1])
-            print("logits again", logits)
-            print("need compute", need_recompute, "time", time.time() - time3)
+            if self.which_attn == 'source':
+                print("logits again", logits)
+                print("need compute", need_recompute, "time", time.time() - time3)
             #
             # # If the attention weight matrix is not stored, need to create new.
             # # At inference time, always create new for decoder attentions.
