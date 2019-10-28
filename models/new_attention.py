@@ -346,10 +346,10 @@ class NewAttention(nn.Module):
                 elif attn_position in ['left', 'right']:
                     self.attn_weights[attn_type][attn_position][attn_param][attn_displacement] = logits
                 elif attn_position == 'last':
-                    self.attn_weights[attn_type][attn_position][attn_param].update({new_last_indices_list[i]:row for i, row in logits})
+                    self.attn_weights[attn_type][attn_position][attn_param].update({new_last_indices_list[i]:row for i, row in enumerate(logits)})
                 else:
                     self.attn_weights[attn_type][attn_position][attn_param][attn_displacement].update(
-                        {new_last_indices_list[i]: row for i, row in logits})
+                        {new_last_indices_list[i]: row for i, row in enumerate(logits)})
 
             if attn_position == 'center':
                 logits = self.attn_weights[attn_type][attn_position][attn_param][:queries_shape[1], :values_shape[1]].unsqueeze(0)
@@ -358,9 +358,9 @@ class NewAttention(nn.Module):
             elif attn_position in ['left', 'right']:
                 logits = self.attn_weights[attn_type][attn_position][attn_param][attn_displacement][:queries_shape[1], :values_shape[1]].unsqueeze(0)
             elif attn_position == 'last':
-                logits = torch.stack([last_indices[n] for n in self.attn_weights[attn_type][attn_position][attn_param]]).unsqueeze(1)
+                logits = torch.stack([self.attn_weights[attn_type][attn_position][attn_param][n] for n in last_indices]).unsqueeze(1)
             else:
-                logits = torch.stack([last_indices[n] for n in self.attn_weights[attn_type][attn_position][attn_param][attn_displacement]]).unsqueeze(1)
+                logits = torch.stack([self.attn_weights[attn_type][attn_position][attn_param][attn_displacement][n] for n in last_indices]).unsqueeze(1)
 
             logits = logits.expand(values_shape[0], queries_shape[1], values_shape[1])
             print("need compute", need_recompute, "time", time.time() - time3)
