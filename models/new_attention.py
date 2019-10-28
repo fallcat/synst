@@ -258,10 +258,14 @@ class NewAttention(nn.Module):
                 self.attn_weights[attn_type] = {}
             if attn_position not in self.attn_weights[attn_type]:
                 self.attn_weights[attn_type][attn_position] = {}
-            if attn_position in ['center', 'first']:
+            if attn_position == 'center'
                 if attn_param not in self.attn_weights[attn_type][attn_position] \
                         or (queries_shape[1] > self.attn_weights[attn_type][attn_position][attn_param].shape[0]
                             or values_shape[1] > self.attn_weights[attn_type][attn_position][attn_param].shape[1]):
+                    need_recompute = True
+            elif attn_position == 'first':
+                if attn_param not in self.attn_weights[attn_type][attn_position] \
+                        or values_shape[1] > self.attn_weights[attn_type][attn_position][attn_param]:
                     need_recompute = True
             else:
                 if attn_param not in self.attn_weights[attn_type][attn_position]:
@@ -296,8 +300,7 @@ class NewAttention(nn.Module):
                     #     indices_q = torch.full((queries_shape[1], 1),
                     #                            bin_center).to(dtype=torch.float32)
                     if attn_position == 'first':
-                        indices_q = torch.full((queries_shape[1], 1),
-                                               0).to(dtype=torch.float32)
+                        indices_q = torch.tensor(0.0, dtype=torch.float32)# torch.full((queries_shape[1], 1), 0).to(dtype=torch.float32)
                     elif decoder_position == -1:
                         indices_q = torch.arange(queries_shape[1]
                                                  ).view(-1, 1).to(dtype=torch.float32) * self.word_count_ratio
@@ -348,8 +351,10 @@ class NewAttention(nn.Module):
                     self.attn_weights[attn_type][attn_position][attn_param][attn_displacement].update(
                         {new_last_indices_list[i]: row for i, row in logits})
 
-            if attn_position in ['center', 'first']:
+            if attn_position == 'center':
                 logits = self.attn_weights[attn_type][attn_position][attn_param][:queries_shape[1], :values_shape[1]].unsqueeze(0)
+            elif attn_position == 'first':
+                logits = self.attn_weights[attn_type][attn_position][attn_param][:values_shape[1]].unsqueeze(0).unsqueeze(0)
             elif attn_position in ['left', 'right']:
                 logits = self.attn_weights[attn_type][attn_position][attn_param][attn_displacement][:queries_shape[1], :values_shape[1]].unsqueeze(0)
             elif attn_position == 'last':
