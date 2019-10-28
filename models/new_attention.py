@@ -346,10 +346,10 @@ class NewAttention(nn.Module):
                 elif attn_position in ['left', 'right']:
                     self.attn_weights[attn_type][attn_position][attn_param][attn_displacement] = logits
                 elif attn_position == 'last':
-                    self.attn_weights[attn_type][attn_position][attn_param].update({new_last_indices_list[i]:row[0] for i, row in enumerate(logits)})
+                    self.attn_weights[attn_type][attn_position][attn_param].update({new_last_indices_list[i]:row[0][:, new_last_indices_list[i]] for i, row in enumerate(logits)})
                 else:
                     self.attn_weights[attn_type][attn_position][attn_param][attn_displacement].update(
-                        {new_last_indices_list[i]: row[0] for i, row in enumerate(logits)})
+                        {new_last_indices_list[i]: row[0][:, new_last_indices_list[i]] for i, row in enumerate(logits)})
 
             if attn_position == 'center':
                 logits = self.attn_weights[attn_type][attn_position][attn_param][:queries_shape[1], :values_shape[1]].unsqueeze(0).unsqueeze(0)
