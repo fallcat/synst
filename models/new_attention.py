@@ -518,7 +518,7 @@ class NewAttention(nn.Module):
                             or attn_position[i] in ['last', 'bin']:
 
                         indices_v = torch.arange(values_shape[1]).view(1, -1).to(dtype=torch.float32)
-                        print("time3", time.time() - time3)
+                        # print("time3", time.time() - time3)
                         time4 = time.time()
 
                         if attn_position[i] not in ['last', 'bin']:
@@ -558,7 +558,7 @@ class NewAttention(nn.Module):
                             distance_diff = distance_diff.expand(batch_size, queries_shape[1],
                                                                  values_shape[1]).contiguous()
 
-                        print("distance_diff time", time.time() - time4)
+                        # print("distance_diff time", time.time() - time4)
                         time5 = time.time()
 
                         if attn_type[i] == 'normal':
@@ -578,13 +578,13 @@ class NewAttention(nn.Module):
                             logits_sum = torch.sum(logits, dim=-1, keepdim=True)
                             logits_sum[logits_sum == 0] = 1
                             logits = logits / logits_sum
-                            print("time logits uniform", time.time() - time5)
+                            # print("time logits uniform", time.time() - time5)
                             # logits = F.softmax(logits, dim=-1)
                         self.attn_weights[attn_type[i]][attn_position[i]] = logits[0]
                     else:
                         logits = self.attn_weights[attn_type[i]][attn_position[i]][:queries_shape[1], :values_shape[1]]
                         logits = logits.expand(int(values_shape[0] / self.num_heads), logits.shape[0], logits.shape[1])
-                        print("retrieving weights", time.time() - time3)
+                        # print("retrieving weights", time.time() - time3)
                     logits = logits.type_as(values)
                 logits_list.append(logits)
             attn_weights = torch.stack(logits_list, dim=1)
