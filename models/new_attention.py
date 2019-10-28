@@ -336,8 +336,8 @@ class NewAttention(nn.Module):
                         attn_param_curr = (0.5 * torch.tensor(new_last_indices_list, dtype=torch.float32) / self.attn_bins).view(-1, 1, 1, 1)
                     else:
                         attn_param_curr = attn_param
-                    print("distance_diff", distance_diff.shape)
-                    print("attn_param_curr", attn_param_curr.shape)
+                    # print("distance_diff", distance_diff.shape)
+                    # print("attn_param_curr", attn_param_curr.shape)
                     distance_diff = torch.abs(distance_diff)
                     distance_diff[distance_diff <= attn_param_curr] = 0
                     distance_diff[distance_diff > attn_param_curr] = 1
@@ -369,9 +369,9 @@ class NewAttention(nn.Module):
                 logits = torch.stack([torch.cat((self.attn_weights[attn_type][attn_position][attn_param][n],
                                                  torch.zeros(values_shape[1] - n - 1).view(1, -1)), dim=1)
                                       for n in last_indices]).unsqueeze(1)
-                if self.which_attn == 'source':
-                    print("logits", logits)
-                    print("self.attn_weights[attn_type][attn_position][attn_param]", self.attn_weights[attn_type][attn_position][attn_param])
+                # if self.which_attn == 'source':
+                #     print("logits", logits)
+                #     print("self.attn_weights[attn_type][attn_position][attn_param]", self.attn_weights[attn_type][attn_position][attn_param])
             else:
                 logits = torch.stack([torch.cat((self.attn_weights[attn_type][attn_position][attn_param][attn_displacement][n],
                                                  torch.zeros(values_shape[1] - n - 1).view(1, -1)), dim=1) for n in last_indices]).unsqueeze(1)
@@ -468,7 +468,7 @@ class NewAttention(nn.Module):
             #     print("retrieving weights", time.time() - time3)
 
             attn_weights = logits.type_as(values)
-            print("attn_weights 1", attn_weights)
+            # print("attn_weights 1", attn_weights)
 
         # If one of the attention parameters is list (different in different heads), then make all of them lists
         else:
@@ -593,9 +593,9 @@ class NewAttention(nn.Module):
         # print("values", values)
         # print("values shape", values.shape)
         # torch.set_printoptions(profile="full")
-        if self.which_attn == 'source':
-            print("attn_weights", attn_weights)
-            print("attn_weights shape", attn_weights.shape)
+        # if self.which_attn == 'source':
+        #     print("attn_weights", attn_weights)
+        #     print("attn_weights shape", attn_weights.shape)
         # print("attended", attended)
         # print("attended shape", attended.shape)
 
