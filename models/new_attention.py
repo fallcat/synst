@@ -247,7 +247,7 @@ class NewAttention(nn.Module):
                 key_mask_shape = key_mask.shape
                 # last_indices = torch.tensor([key_mask_shape[1] - a[::-1].index(0)
                 #                              for a in key_mask.cpu().numpy().tolist()], dtype=torch.float32).view(-1, 1)
-                last_indices = (key_mask == 0).sum(dim=1).cpu().numpy().tolist()
+                last_indices = ((key_mask == 0).sum(dim=1) - 1).cpu().numpy().tolist()
                 print("last_indices", last_indices)
             else:
                 print("key_mask is none")
@@ -466,7 +466,7 @@ class NewAttention(nn.Module):
             #     print("retrieving weights", time.time() - time3)
 
             attn_weights = logits.type_as(values)
-            print("attn_weights", attn_weights)
+            print("attn_weights 1", attn_weights)
 
         # If one of the attention parameters is list (different in different heads), then make all of them lists
         else:
@@ -592,7 +592,7 @@ class NewAttention(nn.Module):
         # print("values shape", values.shape)
         # torch.set_printoptions(profile="full")
         if self.which_attn == 'source':
-            print("attn_weights", attn_weights[:self.num_heads])
+            print("attn_weights", attn_weights)
             print("attn_weights shape", attn_weights.shape)
         # print("attended", attended)
         # print("attended shape", attended.shape)
