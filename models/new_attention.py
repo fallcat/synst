@@ -354,7 +354,7 @@ class NewAttention(nn.Module):
             if attn_position == 'center':
                 logits = self.attn_weights[attn_type][attn_position][attn_param][:queries_shape[1], :values_shape[1]].unsqueeze(0)
             elif attn_position == 'first':
-                logits = self.attn_weights[attn_type][attn_position][attn_param][, :values_shape[1]].unsqueeze(0)
+                logits = self.attn_weights[attn_type][attn_position][attn_param][:, :values_shape[1]].unsqueeze(0)
             elif attn_position in ['left', 'right']:
                 logits = self.attn_weights[attn_type][attn_position][attn_param][attn_displacement][:queries_shape[1], :values_shape[1]].unsqueeze(0)
             elif attn_position == 'last':
