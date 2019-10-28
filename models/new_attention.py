@@ -258,7 +258,7 @@ class NewAttention(nn.Module):
                 self.attn_weights[attn_type] = {}
             if attn_position not in self.attn_weights[attn_type]:
                 self.attn_weights[attn_type][attn_position] = {}
-            if attn_position == 'center'
+            if attn_position == 'center':
                 if attn_param not in self.attn_weights[attn_type][attn_position] \
                         or (queries_shape[1] > self.attn_weights[attn_type][attn_position][attn_param].shape[0]
                             or values_shape[1] > self.attn_weights[attn_type][attn_position][attn_param].shape[1]):
