@@ -359,7 +359,9 @@ class NewAttention(nn.Module):
                 logits = self.attn_weights[attn_type][attn_position][attn_param][attn_displacement][:queries_shape[1], :values_shape[1]].unsqueeze(0).unsqueeze(0)
             elif attn_position == 'last':
                 print("last", [self.attn_weights[attn_type][attn_position][attn_param][n] for n in last_indices])
-                logits = torch.nn.utils.rnn.pad_sequence([self.attn_weights[attn_type][attn_position][attn_param][n] for n in last_indices], batch_first=True).unsqueeze(1)
+                logits = torch.stack([torch.cat((self.attn_weights[attn_type][attn_position][attn_param][n],
+                                                 torch.zeros(values_shape[1] - n).view(1, -1)), dim=1)
+                                      for n in last_indices]).unsqueeze(1)
             else:
                 logits = torch.stack([self.attn_weights[attn_type][attn_position][attn_param][attn_displacement][n] for n in last_indices]).unsqueeze(1)
 
