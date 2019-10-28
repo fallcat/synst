@@ -352,17 +352,19 @@ class NewAttention(nn.Module):
                         {new_last_indices_list[i]: row for i, row in enumerate(logits)})
 
             if attn_position == 'center':
-                logits = self.attn_weights[attn_type][attn_position][attn_param][:queries_shape[1], :values_shape[1]].unsqueeze(0)
+                logits = self.attn_weights[attn_type][attn_position][attn_param][:queries_shape[1], :values_shape[1]].unsqueeze(0).unsqueeze(0)
             elif attn_position == 'first':
-                logits = self.attn_weights[attn_type][attn_position][attn_param][:, :values_shape[1]].unsqueeze(0)
+                logits = self.attn_weights[attn_type][attn_position][attn_param][:, :values_shape[1]].unsqueeze(0).unsqueeze(0)
             elif attn_position in ['left', 'right']:
-                logits = self.attn_weights[attn_type][attn_position][attn_param][attn_displacement][:queries_shape[1], :values_shape[1]].unsqueeze(0)
+                logits = self.attn_weights[attn_type][attn_position][attn_param][attn_displacement][:queries_shape[1], :values_shape[1]].unsqueeze(0).unsqueeze(0)
             elif attn_position == 'last':
                 logits = torch.stack([self.attn_weights[attn_type][attn_position][attn_param][n] for n in last_indices]).unsqueeze(1)
             else:
-                logits = torch.stack([self.attn_weights[attn_type][attn_position][attn_param][attn_displacement][n] for n in last_indices]).unsqueeze(1)
+                logits = torch.stack([self.attn_weights[attn_type][attn_position][attn_param][attn_displacement][n] for n in last_indices]).unsqueeze(1).unsqueeze(1)
 
-            logits = logits.expand(values_shape[0], queries_shape[1], values_shape[1])
+            logits = logits.expand(batch_size, self.num_heads, queries_shape[1], values_shape[1]).view(-1,
+                                                                                                       queries_shape[1],
+                                                                                                       values_shape[1])
             print("need compute", need_recompute, "time", time.time() - time3)
             #
             # # If the attention weight matrix is not stored, need to create new.
