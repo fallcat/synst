@@ -333,10 +333,11 @@ class NewAttention(nn.Module):
                     logits = (1 / (std * math.sqrt(2 * math.pi)) * torch.exp(- 1 / 2 * (distance_diff / std) ** 2))
                 else:
                     if attn_param < 0 and attn_position == 'bin':
-                        attn_param_curr = (0.5 * torch.tensor(new_last_indices_list, dtype=torch.float32) / self.attn_bins)\
-                            .expand(batch_size, self.num_heads).contiguous().view(-1, 1, 1)
+                        attn_param_curr = (0.5 * torch.tensor(new_last_indices_list, dtype=torch.float32) / self.attn_bins)
                     else:
                         attn_param_curr = attn_param
+                    print("distance_diff", distance_diff.shape)
+                    print("attn_param_curr", attn_param_curr.shape)
                     distance_diff = torch.abs(distance_diff)
                     distance_diff[distance_diff <= attn_param_curr] = 0
                     distance_diff[distance_diff > attn_param_curr] = 1
