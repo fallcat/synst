@@ -389,6 +389,16 @@ class NewAttention(nn.Module):
                 #     print("logits", logits)
                 #     print("self.attn_weights[attn_type][attn_position][attn_param]", self.attn_weights[attn_type][attn_position][attn_param])
             else:
+                time71 = time.time()
+                list1 = [self.attn_weights[attn_type][attn_position][attn_param][attn_displacement][n] for n in last_indices]
+                print("time71", time.time() - time71)
+                time72 = time.time()
+                list2 = [torch.cat((self.attn_weights[attn_type][attn_position][attn_param][attn_displacement][n],
+                                                 torch.zeros(values_shape[1] - n - 1).view(1, -1)), dim=1) for n in last_indices]
+                print("time72", time.time() - time72)
+                time73 = time.time()
+                logits = torch.stack(list2).unsqueeze(1)
+                print("time73", time.time() - time73)
                 logits = torch.stack([torch.cat((self.attn_weights[attn_type][attn_position][attn_param][attn_displacement][n],
                                                  torch.zeros(values_shape[1] - n - 1).view(1, -1)), dim=1) for n in last_indices]).unsqueeze(1)
 
