@@ -404,6 +404,8 @@ class NewAttention(nn.Module):
                 time74 = time.time()
                 logits = torch.zeros((queries_shape[1], values_shape[1]), dtype=torch.float32)
                 for i, n in enumerate(last_indices):
+                    print("logits", logits.shape)
+                    print("n", n)
                     logits[i, :n+1] = self.attn_weights[attn_type][attn_position][attn_param][attn_displacement][n]
                 print("time74", time.time() - time74)
                 time75 = time.time()
