@@ -389,16 +389,16 @@ class NewAttention(nn.Module):
 
 
             if attn_position == 'center':
-                logits = self.attn_weights[attn_type][attn_position][attn_param][:queries_shape[1], :values_shape[1]]
+                logits = self.attn_weights[attn_type][attn_position][attn_param][:queries_shape[1], :values_shape[1]].unsqueeze(0).unsqueeze(0)
             elif attn_position == 'first':
-                logits = self.attn_weights[attn_type][attn_position][attn_param][:, :values_shape[1]]
+                logits = self.attn_weights[attn_type][attn_position][attn_param][:, :values_shape[1]].unsqueeze(0).unsqueeze(0)
             elif attn_position in ['left', 'right']:
-                logits = self.attn_weights[attn_type][attn_position][attn_param][attn_displacement][:queries_shape[1], :values_shape[1]]
+                logits = self.attn_weights[attn_type][attn_position][attn_param][attn_displacement][:queries_shape[1], :values_shape[1]].unsqueeze(0).unsqueeze(0)
             elif attn_position == 'last':
                 # print("last", [torch.cat((self.attn_weights[attn_type][attn_position][attn_param][n],
                 #                                  torch.zeros(values_shape[1] - n).view(1, -1)), dim=1)
                 #                       for n in last_indices])
-                logits = torch.index_select(self.attn_weights[attn_type][attn_position][attn_param], 0, last_indices)[:, :values_shape[1]]
+                logits = torch.index_select(self.attn_weights[attn_type][attn_position][attn_param], 0, last_indices)[:, :values_shape[1]].unsqueeze(1).unsqueeze(1)
                 # logits = torch.stack([torch.cat((self.attn_weights[attn_type][attn_position][attn_param][n],
                 #                                  torch.zeros(values_shape[1] - n - 1).view(1, -1)), dim=1)
                 #                       for n in last_indices]).unsqueeze(1)
@@ -407,7 +407,7 @@ class NewAttention(nn.Module):
                 #     print("self.attn_weights[attn_type][attn_position][attn_param]", self.attn_weights[attn_type][attn_position][attn_param])
             else:
                 time71 = time.time()
-                logits = torch.index_select(self.attn_weights[attn_type][attn_position][attn_param][attn_displacement], 0, last_indices)[:, :values_shape[1]]
+                logits = torch.index_select(self.attn_weights[attn_type][attn_position][attn_param][attn_displacement], 0, last_indices)[:, :values_shape[1]].unsqueeze(1).unsqueeze(1)
                 # time71 = time.time()
                 # list1 = [self.attn_weights[attn_type][attn_position][attn_param][attn_displacement][n] for n in last_indices]
                 print("time71", time.time() - time71)
