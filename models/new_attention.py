@@ -343,7 +343,7 @@ class NewAttention(nn.Module):
                     if attn_position == 'bin':
                         ratio = (attn_displacement - 0.5) / self.attn_bins
                         indices_q = -0.5 + indices_q * ratio
-                    distance_diff = (indices_v - indices_q).unsqueeze(1).unsqueeze(2)
+                    distance_diff = (indices_v - indices_q)
 
                 print("diff", time.time() - time4)
                 time5 = time.time()
@@ -353,7 +353,7 @@ class NewAttention(nn.Module):
                     logits = (1 / (std * math.sqrt(2 * math.pi)) * torch.exp(- 1 / 2 * (distance_diff / std) ** 2))
                 else:
                     if attn_param < 0 and attn_position == 'bin':
-                        attn_param_curr = (0.5 * old_indices_q / self.attn_bins).view(-1, 1, 1, 1)
+                        attn_param_curr = (0.5 * old_indices_q / self.attn_bins).view(-1, 1)
                     else:
                         attn_param_curr = attn_param
                     # print("distance_diff", distance_diff.shape)
@@ -389,16 +389,16 @@ class NewAttention(nn.Module):
 
 
             if attn_position == 'center':
-                logits = self.attn_weights[attn_type][attn_position][attn_param][:queries_shape[1], :values_shape[1]].unsqueeze(0).unsqueeze(0)
+                logits = self.attn_weights[attn_type][attn_position][attn_param][:queries_shape[1], :values_shape[1]]
             elif attn_position == 'first':
-                logits = self.attn_weights[attn_type][attn_position][attn_param][:, :values_shape[1]].unsqueeze(0).unsqueeze(0)
+                logits = self.attn_weights[attn_type][attn_position][attn_param][:, :values_shape[1]]
             elif attn_position in ['left', 'right']:
-                logits = self.attn_weights[attn_type][attn_position][attn_param][attn_displacement][:queries_shape[1], :values_shape[1]].unsqueeze(0).unsqueeze(0)
+                logits = self.attn_weights[attn_type][attn_position][attn_param][attn_displacement][:queries_shape[1], :values_shape[1]]
             elif attn_position == 'last':
                 # print("last", [torch.cat((self.attn_weights[attn_type][attn_position][attn_param][n],
                 #                                  torch.zeros(values_shape[1] - n).view(1, -1)), dim=1)
                 #                       for n in last_indices])
-                logits = torch.index_select(self.attn_weights[attn_type][attn_position][attn_param], 0, last_indices)
+                logits = torch.index_select(self.attn_weights[attn_type][attn_position][attn_param], 0, last_indices)[:, :values_shape[1]]
                 # logits = torch.stack([torch.cat((self.attn_weights[attn_type][attn_position][attn_param][n],
                 #                                  torch.zeros(values_shape[1] - n - 1).view(1, -1)), dim=1)
                 #                       for n in last_indices]).unsqueeze(1)
@@ -407,7 +407,7 @@ class NewAttention(nn.Module):
                 #     print("self.attn_weights[attn_type][attn_position][attn_param]", self.attn_weights[attn_type][attn_position][attn_param])
             else:
                 time71 = time.time()
-                logits = torch.index_select(self.attn_weights[attn_type][attn_position][attn_param][attn_displacement], 0, last_indices)
+                logits = torch.index_select(self.attn_weights[attn_type][attn_position][attn_param][attn_displacement], 0, last_indices)[:, :values_shape[1]]
                 # time71 = time.time()
                 # list1 = [self.attn_weights[attn_type][attn_position][attn_param][attn_displacement][n] for n in last_indices]
                 print("time71", time.time() - time71)
