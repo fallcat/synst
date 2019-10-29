@@ -9,7 +9,7 @@ from torch import nn
 from torch.nn import functional as F
 from models.attention import MultiHeadedAttention
 
-from utils import same_tensor
+from utils import same_tensor, pad_unsorted_sequence
 
 
 class NewAttention(nn.Module):
@@ -412,6 +412,11 @@ class NewAttention(nn.Module):
                 logits = torch.stack([torch.cat((self.attn_weights[attn_type][attn_position][attn_param][attn_displacement][n],
                                                  torch.zeros(values_shape[1] - n - 1).view(1, -1)), dim=1) for n in last_indices]).unsqueeze(1)
                 print("time75", time.time() - time75)
+                time76 = time.time()
+                attns = [self.attn_weights[attn_type][attn_position][attn_param][attn_displacement][n] for n in
+                         last_indices]
+                logits = pad_unsorted_sequence(attns, values_shape[1])
+                print("time65", time.time() - time76)
 
             logits = logits.expand(batch_size, self.num_heads, queries_shape[1], values_shape[1])\
                 .contiguous().view(-1,
