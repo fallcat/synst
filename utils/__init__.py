@@ -285,7 +285,7 @@ def pad_unsorted_sequence(sequences, max_len, padding_value=0):
 
     out_tensor = sequences[0].data.new(*out_dims).fill_(padding_value)
     for i, tensor in enumerate(sequences):
-        length = tensor.size(0)
+        length = tensor.size(1)
         # use index notation to prevent duplicate references to the tensor
         print("out_tensor", out_tensor.shape)
         print("tensor", tensor.shape)
