@@ -247,11 +247,11 @@ class NewAttention(nn.Module):
                 key_mask_shape = key_mask.shape
                 # last_indices = torch.tensor([key_mask_shape[1] - a[::-1].index(0)
                 #                              for a in key_mask.cpu().numpy().tolist()], dtype=torch.float32).view(-1, 1)
-                last_indices = ((key_mask == 0).sum(dim=1) - 1).cpu().numpy().tolist()
+                last_indices = ((key_mask == 0).sum(dim=1) - 1).cpu().view(-1)   # .tolist()
                 # print("last_indices", last_indices)
             else:
                 # print("key_mask is none")
-                last_indices = [values_shape[1] - 1] * queries_shape[0]  # torch.tensor([values_shape[1]] * queries_shape[0], dtype=torch.float32).view(-1, 1)
+                last_indices = torch.tensor([values_shape[1] - 1] * queries_shape[0], dtype=torch.float32).view(-1)
                 # print("last_indices", last_indices)
             print("calculate last_indices", time.time() - time2)
 
@@ -272,28 +272,40 @@ class NewAttention(nn.Module):
                         or values_shape[1] > self.attn_weights[attn_type][attn_position][attn_param].shape[1]:
                     need_recompute = True
             else:
-                if attn_param not in self.attn_weights[attn_type][attn_position]:
-                    self.attn_weights[attn_type][attn_position][attn_param] = {}
-                    need_recompute = True
                 if attn_position in ['left', 'right']:
+                    if attn_param not in self.attn_weights[attn_type][attn_position]:
+                        self.attn_weights[attn_type][attn_position][attn_param] = {}
+                        need_recompute = True
                     if attn_displacement not in self.attn_weights[attn_type][attn_position][attn_param] \
                             or (queries_shape[1] > self.attn_weights[attn_type][attn_position][attn_param][attn_displacement].shape[0]
                                 or values_shape[1] > self.attn_weights[attn_type][attn_position][attn_param][attn_displacement].shape[1]):
                         need_recompute = True
                 else:  # attn_position in ['last', 'bin']
-                    last_indices_set = set(last_indices)
+                    # last_indices_set = set(last_indices)
+                    max_last_index = max(last_indices).cpu().item()
                     if attn_position == 'last':
-                        new_last_indices_set = last_indices_set - last_indices_set.intersection(
-                            self.attn_weights[attn_type][attn_position][attn_param])
+                        if attn_param not in self.attn_weights[attn_type][attn_position] \
+                                or max_last_index + 1 > self.attn_weights[attn_type][attn_position][attn_param].shape[0]:
+                            need_recompute = True
                     else:
-                        if attn_displacement not in self.attn_weights[attn_type][attn_position][attn_param]:
-                            self.attn_weights[attn_type][attn_position][attn_param][attn_displacement] = {}
-                            new_last_indices_set = last_indices_set
-                        else:
-                            new_last_indices_set = last_indices_set - last_indices_set.intersection(
-                                self.attn_weights[attn_type][attn_position][attn_param][attn_displacement])
-                    if len(new_last_indices_set) > 0:
-                        need_recompute = True
+                        if attn_param not in self.attn_weights[attn_type][attn_position]:
+                            self.attn_weights[attn_type][attn_position][attn_param] = {}
+                            need_recompute = True
+                        elif max_last_index + 1 > self.attn_weights[attn_type][attn_position][attn_param][attn_displacement].shape[0]:
+                            need_recompute = True
+
+                    # if attn_position == 'last':
+                    #     new_last_indices_set = last_indices_set - last_indices_set.intersection(
+                    #         self.attn_weights[attn_type][attn_position][attn_param])
+                    # else:
+                    #     if attn_displacement not in self.attn_weights[attn_type][attn_position][attn_param]:
+                    #         self.attn_weights[attn_type][attn_position][attn_param][attn_displacement] = {}
+                    #         new_last_indices_set = last_indices_set
+                    #     else:
+                    #         new_last_indices_set = last_indices_set - last_indices_set.intersection(
+                    #             self.attn_weights[attn_type][attn_position][attn_param][attn_displacement])
+                    # if len(new_last_indices_set) > 0:
+                    #     need_recompute = True
 
             print("conditions", time.time() - time3)
             time4 = time.time()
@@ -324,8 +336,10 @@ class NewAttention(nn.Module):
 
                 # If the attention is looking at the last indices, need to take masks into consideration
                 else:
-                    new_last_indices_list = list(new_last_indices_set)
-                    indices_q = torch.tensor(new_last_indices_list).view(-1, 1).to(dtype=torch.float32)
+                    # new_last_indices_list = list(new_last_indices_set)
+                    # indices_q = torch.tensor(new_last_indices_list).view(-1, 1).to(dtype=torch.float32)
+                    indices_q = torch.arange(max_last_index + 1).view(-1, 1).to(dtype=torch.float32)
+                    old_indices_q = indices_q
                     if attn_position == 'bin':
                         ratio = (attn_displacement - 0.5) / self.attn_bins
                         indices_q = -0.5 + indices_q * ratio
@@ -339,7 +353,7 @@ class NewAttention(nn.Module):
                     logits = (1 / (std * math.sqrt(2 * math.pi)) * torch.exp(- 1 / 2 * (distance_diff / std) ** 2))
                 else:
                     if attn_param < 0 and attn_position == 'bin':
-                        attn_param_curr = (0.5 * torch.tensor(new_last_indices_list, dtype=torch.float32) / self.attn_bins).view(-1, 1, 1, 1)
+                        attn_param_curr = (0.5 * old_indices_q / self.attn_bins).view(-1, 1, 1, 1)
                     else:
                         attn_param_curr = attn_param
                     # print("distance_diff", distance_diff.shape)
@@ -360,10 +374,12 @@ class NewAttention(nn.Module):
                 elif attn_position in ['left', 'right']:
                     self.attn_weights[attn_type][attn_position][attn_param][attn_displacement] = logits
                 elif attn_position == 'last':
-                    self.attn_weights[attn_type][attn_position][attn_param].update({new_last_indices_list[i]:row[0][:, :new_last_indices_list[i] + 1] for i, row in enumerate(logits)})
+                    self.attn_weights[attn_type][attn_position][attn_param] = logits
+                    # self.attn_weights[attn_type][attn_position][attn_param].update({new_last_indices_list[i]:row[0][:, :new_last_indices_list[i] + 1] for i, row in enumerate(logits)})
                 else:
-                    self.attn_weights[attn_type][attn_position][attn_param][attn_displacement].update(
-                        {new_last_indices_list[i]: row[0][:, :new_last_indices_list[i] + 1] for i, row in enumerate(logits)})
+                    self.attn_weights[attn_type][attn_position][attn_param][attn_displacement] = logits
+                    # self.attn_weights[attn_type][attn_position][attn_param][attn_displacement].update(
+                    #     {new_last_indices_list[i]: row[0][:, :new_last_indices_list[i] + 1] for i, row in enumerate(logits)})
 
                 print("store", time.time() - time6)
 
@@ -382,41 +398,44 @@ class NewAttention(nn.Module):
                 # print("last", [torch.cat((self.attn_weights[attn_type][attn_position][attn_param][n],
                 #                                  torch.zeros(values_shape[1] - n).view(1, -1)), dim=1)
                 #                       for n in last_indices])
-                logits = torch.stack([torch.cat((self.attn_weights[attn_type][attn_position][attn_param][n],
-                                                 torch.zeros(values_shape[1] - n - 1).view(1, -1)), dim=1)
-                                      for n in last_indices]).unsqueeze(1)
+                logits = torch.index_select(self.attn_weights[attn_type][attn_position][attn_param], 0, last_indices)
+                # logits = torch.stack([torch.cat((self.attn_weights[attn_type][attn_position][attn_param][n],
+                #                                  torch.zeros(values_shape[1] - n - 1).view(1, -1)), dim=1)
+                #                       for n in last_indices]).unsqueeze(1)
                 # if self.which_attn == 'source':
                 #     print("logits", logits)
                 #     print("self.attn_weights[attn_type][attn_position][attn_param]", self.attn_weights[attn_type][attn_position][attn_param])
             else:
                 time71 = time.time()
-                list1 = [self.attn_weights[attn_type][attn_position][attn_param][attn_displacement][n] for n in last_indices]
+                logits = torch.index_select(self.attn_weights[attn_type][attn_position][attn_param][attn_displacement], 0, last_indices)
+                # time71 = time.time()
+                # list1 = [self.attn_weights[attn_type][attn_position][attn_param][attn_displacement][n] for n in last_indices]
                 print("time71", time.time() - time71)
-                time72 = time.time()
-                list2 = [torch.cat((self.attn_weights[attn_type][attn_position][attn_param][attn_displacement][n],
-                                                 torch.zeros(values_shape[1] - n - 1).view(1, -1)), dim=1) for n in last_indices]
-                print("time72", time.time() - time72)
-                time73 = time.time()
-                logits = torch.stack(list2).unsqueeze(1)
-
-                print("time73", time.time() - time73)
-
-                time74 = time.time()
-                logits = torch.zeros((batch_size, values_shape[1]), dtype=torch.float32)
-                for i, n in enumerate(last_indices):
-                    # print("logits", logits.shape)
-                    # print("n", n)
-                    logits[i, :n+1] = self.attn_weights[attn_type][attn_position][attn_param][attn_displacement][n]
-                print("time74", time.time() - time74)
-                time75 = time.time()
-                logits = torch.stack([torch.cat((self.attn_weights[attn_type][attn_position][attn_param][attn_displacement][n],
-                                                 torch.zeros(values_shape[1] - n - 1).view(1, -1)), dim=1) for n in last_indices]).unsqueeze(1)
-                print("time75", time.time() - time75)
-                time76 = time.time()
-                attns = [self.attn_weights[attn_type][attn_position][attn_param][attn_displacement][n] for n in
-                         last_indices]
-                logits = pad_unsorted_sequence(attns, values_shape[1]).unsqueeze(1).unsqueeze(1)
-                print("time76", time.time() - time76)
+                # time72 = time.time()
+                # list2 = [torch.cat((self.attn_weights[attn_type][attn_position][attn_param][attn_displacement][n],
+                #                                  torch.zeros(values_shape[1] - n - 1).view(1, -1)), dim=1) for n in last_indices]
+                # print("time72", time.time() - time72)
+                # time73 = time.time()
+                # logits = torch.stack(list2).unsqueeze(1)
+                #
+                # print("time73", time.time() - time73)
+                #
+                # time74 = time.time()
+                # logits = torch.zeros((batch_size, values_shape[1]), dtype=torch.float32)
+                # for i, n in enumerate(last_indices):
+                #     # print("logits", logits.shape)
+                #     # print("n", n)
+                #     logits[i, :n+1] = self.attn_weights[attn_type][attn_position][attn_param][attn_displacement][n]
+                # print("time74", time.time() - time74)
+                # time75 = time.time()
+                # logits = torch.stack([torch.cat((self.attn_weights[attn_type][attn_position][attn_param][attn_displacement][n],
+                #                                  torch.zeros(values_shape[1] - n - 1).view(1, -1)), dim=1) for n in last_indices]).unsqueeze(1)
+                # print("time75", time.time() - time75)
+                # time76 = time.time()
+                # attns = [self.attn_weights[attn_type][attn_position][attn_param][attn_displacement][n] for n in
+                #          last_indices]
+                # logits = pad_unsorted_sequence(attns, values_shape[1]).unsqueeze(1).unsqueeze(1)
+                # print("time76", time.time() - time76)
 
             logits = logits.expand(batch_size, self.num_heads, queries_shape[1], values_shape[1])\
                 .contiguous().view(-1,
