@@ -415,8 +415,8 @@ class NewAttention(nn.Module):
                 time76 = time.time()
                 attns = [self.attn_weights[attn_type][attn_position][attn_param][attn_displacement][n] for n in
                          last_indices]
-                logits = pad_unsorted_sequence(attns, values_shape[1])
-                print("time65", time.time() - time76)
+                logits = pad_unsorted_sequence(attns, values_shape[1]).unsqueeze(1).unsqueeze(1)
+                print("time76", time.time() - time76)
 
             logits = logits.expand(batch_size, self.num_heads, queries_shape[1], values_shape[1])\
                 .contiguous().view(-1,
