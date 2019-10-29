@@ -612,7 +612,7 @@ class NewAttention(nn.Module):
                             std = attn_param[i]
 
                             logits = (1 / (std * math.sqrt(2 * math.pi)) * torch.exp(- 1 / 2 * (distance_diff / std) ** 2))
-                            print("time logits normal", time.time() - time5)
+                            # print("time logits normal", time.time() - time5)
                         else:
                             if attn_param[i] < 0 and attn_position[i] == 'bin':
                                 attn_param_curr = (0.5 * last_indices / self.attn_bins).unsqueeze(-1)
