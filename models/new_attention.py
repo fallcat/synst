@@ -244,10 +244,6 @@ class NewAttention(nn.Module):
             time2 = time.time()
             if input_lens is not None:
                 last_indices = (input_lens - 1).cpu().view(-1)
-                last_indices2 = ((key_mask == 0).sum(dim=1) - 1).cpu().view(-1)
-                print("last_indices", last_indices)
-                print("last_indices2", last_indices2)
-                print("==", last_indices == last_indices2)
             elif key_mask is not None:
                 # print("key_mask is not none")
                 key_mask_shape = key_mask.shape
