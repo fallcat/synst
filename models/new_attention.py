@@ -398,9 +398,18 @@ class NewAttention(nn.Module):
                 print("time72", time.time() - time72)
                 time73 = time.time()
                 logits = torch.stack(list2).unsqueeze(1)
+
                 print("time73", time.time() - time73)
+
+                time74 = time.time()
+                logits = torch.zeros((queries_shape[1], values_shape[1]), dtype=torch.float32)
+                for i, n in enumerate(last_indices):
+                    logits[i, :n+1] = self.attn_weights[attn_type][attn_position][attn_param][attn_displacement][n]
+                print("time74", time.time() - time74)
+                time75 = time.time()
                 logits = torch.stack([torch.cat((self.attn_weights[attn_type][attn_position][attn_param][attn_displacement][n],
                                                  torch.zeros(values_shape[1] - n - 1).view(1, -1)), dim=1) for n in last_indices]).unsqueeze(1)
+                print("time75", time.time() - time75)
 
             logits = logits.expand(batch_size, self.num_heads, queries_shape[1], values_shape[1])\
                 .contiguous().view(-1,
