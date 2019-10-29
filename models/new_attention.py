@@ -159,7 +159,7 @@ class NewAttention(nn.Module):
                     attn_configs.append(attn_config_i)
             yield attn_configs
 
-    def attention(self, values, keys, queries, key_mask=None, mask=None, layer_i=0, decoder_position=-1):
+    def attention(self, values, keys, queries, key_mask=None, mask=None, layer_i=0, decoder_position=-1, input_lens=None):
         ''' Scaled dot product attention with optional masks '''
 
         # print("values", values.shape)
@@ -242,7 +242,9 @@ class NewAttention(nn.Module):
 
         if not {'last', 'bin'}.isdisjoint(attn_position) or attn_position in ['last', 'bin']:
             time2 = time.time()
-            if key_mask is not None:
+            if input_lens is not None:
+                last_indices = input_lens.view(-1)
+            elif key_mask is not None:
                 # print("key_mask is not none")
                 key_mask_shape = key_mask.shape
                 # last_indices = torch.tensor([key_mask_shape[1] - a[::-1].index(0)
@@ -672,7 +674,7 @@ class NewAttention(nn.Module):
         )
 
     def forward(self, values, keys, queries, # pylint:disable=arguments-differ
-                key_mask=None, attention_mask=None, num_queries=0, layer_i=0, decoder_position=-1, target_lens=None,
+                key_mask=None, attention_mask=None, num_queries=0, layer_i=0, decoder_position=-1, input_lens=None,
                 original_targets=None, word_embedding=None):
         ''' Forward pass of the attention '''
         batch_size = values.shape[0]
@@ -746,7 +748,8 @@ class NewAttention(nn.Module):
         if num_queries:
             queries = queries[:, -num_queries:]
 
-        attended = self.attention(values, keys, queries, key_mask, attention_mask, layer_i, decoder_position)
+        attended = self.attention(values, keys, queries, key_mask, attention_mask, layer_i, decoder_position,
+                                  input_lens)
 
         queries = queries.view(
             batch_size,

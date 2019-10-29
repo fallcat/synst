@@ -144,6 +144,7 @@ class TransformerDecoderLayer(nn.Module):
         mask = inputs['mask']
         state = inputs['state']
         cache = inputs.get('cache')
+        input_lens = inputs.get('input_lens')
 
         kwargs = {'layer_i': layer_i}
         decoder_position = state.shape[1] - 1
@@ -169,7 +170,7 @@ class TransformerDecoderLayer(nn.Module):
 
         source = sources['state']
         # print("source", source)
-        kwargs = {'key_mask': sources['mask'], 'layer_i': layer_i}
+        kwargs = {'key_mask': sources['mask'], 'layer_i': layer_i, 'input_lens': input_lens}
         if self.causal and cache is not None:
             kwargs['num_queries'] = self.span
             kwargs['decoder_position'] = decoder_position
@@ -339,6 +340,7 @@ class NewTransformer(nn.Module):
         decoded = self.decode(
             self.encode(batch['inputs']),
             right_shift(right_shift(batch['targets']), shift=self.span - 1, fill=self.sos_idx),
+            input_lens=batch['input_lens']
         )
 
         logits = decoded['logits']
@@ -361,7 +363,7 @@ class NewTransformer(nn.Module):
 
         return encoded
 
-    def decode(self, encoded, targets, decoders=None, embedding=None, cache=None, mask=None):
+    def decode(self, encoded, targets, decoders=None, embedding=None, cache=None, mask=None, input_lens=None):
         ''' Decode the encoded sequence to the targets '''
         if decoders is None:
             decoders = self.decoders
@@ -374,7 +376,8 @@ class NewTransformer(nn.Module):
         decoded = {
             'cache': cache,
             'state': word_embedding,
-            'mask': targets.eq(self.padding_idx) if mask is None else mask
+            'mask': targets.eq(self.padding_idx) if mask is None else mask,
+            'input_lens': input_lens
         }
         for i, decoder in enumerate(decoders):
             # print("i", i)
