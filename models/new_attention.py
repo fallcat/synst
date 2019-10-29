@@ -201,7 +201,7 @@ class NewAttention(nn.Module):
 
             batch_size = queries_shape[0] // self.num_heads
 
-            print("time for learned:", time.time() - time1)
+            # print("time for learned:", time.time() - time1)
 
             return attended.view(
                         batch_size,
@@ -238,7 +238,7 @@ class NewAttention(nn.Module):
                                                       logits_shape_[-1])
 
             learned_count = 0
-            print("time for partially learned:", time.time() - time1)
+            # print("time for partially learned:", time.time() - time1)
 
         if not {'last', 'bin'}.isdisjoint(attn_position) or attn_position in ['last', 'bin']:
             time2 = time.time()
@@ -255,7 +255,7 @@ class NewAttention(nn.Module):
                 # print("key_mask is none")
                 last_indices = torch.tensor([values_shape[1] - 1] * queries_shape[0], dtype=torch.float32).view(-1)
                 # print("last_indices", last_indices)
-            print("calculate last_indices", time.time() - time2)
+            # print("calculate last_indices", time.time() - time2)
 
         if type(attn_type) is not list and type(attn_position) is not list and type(attn_param) is not list and type(attn_displacement) is not list:
             time3 = time.time()
@@ -309,7 +309,7 @@ class NewAttention(nn.Module):
                     # if len(new_last_indices_set) > 0:
                     #     need_recompute = True
 
-            print("conditions", time.time() - time3)
+            # print("conditions", time.time() - time3)
             time4 = time.time()
 
             if need_recompute:
@@ -347,7 +347,7 @@ class NewAttention(nn.Module):
                         indices_q = -0.5 + indices_q * ratio
                     distance_diff = (indices_v - indices_q)
 
-                print("diff", time.time() - time4)
+                # print("diff", time.time() - time4)
                 time5 = time.time()
 
                 if attn_type == 'normal':
@@ -368,7 +368,7 @@ class NewAttention(nn.Module):
                     logits_sum[logits_sum == 0] = 1
                     logits = logits / logits_sum
 
-                print("normal or uniform", time.time() - time5)
+                # print("normal or uniform", time.time() - time5)
                 time6 = time.time()
 
                 if attn_position in ['center', 'first']:
@@ -383,7 +383,7 @@ class NewAttention(nn.Module):
                     # self.attn_weights[attn_type][attn_position][attn_param][attn_displacement].update(
                     #     {new_last_indices_list[i]: row[0][:, :new_last_indices_list[i] + 1] for i, row in enumerate(logits)})
 
-                print("store", time.time() - time6)
+                # print("store", time.time() - time6)
 
 
             time7 = time.time()
@@ -412,7 +412,7 @@ class NewAttention(nn.Module):
                 logits = torch.index_select(self.attn_weights[attn_type][attn_position][attn_param][attn_displacement], 0, last_indices)[:, :values_shape[1]].unsqueeze(1).unsqueeze(1)
                 # time71 = time.time()
                 # list1 = [self.attn_weights[attn_type][attn_position][attn_param][attn_displacement][n] for n in last_indices]
-                print("time71", time.time() - time71)
+                # print("time71", time.time() - time71)
                 # time72 = time.time()
                 # list2 = [torch.cat((self.attn_weights[attn_type][attn_position][attn_param][attn_displacement][n],
                 #                                  torch.zeros(values_shape[1] - n - 1).view(1, -1)), dim=1) for n in last_indices]
