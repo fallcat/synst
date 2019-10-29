@@ -402,7 +402,7 @@ class NewAttention(nn.Module):
                 print("time73", time.time() - time73)
 
                 time74 = time.time()
-                logits = torch.zeros((queries_shape[1], values_shape[1]), dtype=torch.float32)
+                logits = torch.zeros((batch_size, values_shape[1]), dtype=torch.float32)
                 for i, n in enumerate(last_indices):
                     print("logits", logits.shape)
                     print("n", n)
