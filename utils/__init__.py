@@ -281,7 +281,6 @@ def get_random_seed_fn(seed, cuda=True):
 
 def pad_unsorted_sequence(sequences, max_len, padding_value=0):
     ''' Allow pad unsorted sequence, but need to specify max_size'''
-    max_len = max([s.size(0) for s in sequences])
     out_dims = (len(sequences), max_len)
 
     out_tensor = sequences[0].data.new(*out_dims).fill_(padding_value)
