@@ -282,7 +282,7 @@ class NewAttention(nn.Module):
                         need_recompute = True
                 else:  # attn_position in ['last', 'bin']
                     # last_indices_set = set(last_indices)
-                    max_last_index = max(last_indices).cpu().item()
+                    max_last_index = last_indices[0].cpu().item()
                     if attn_position == 'last':
                         if attn_param not in self.attn_weights[attn_type][attn_position] \
                                 or max_last_index + 1 > self.attn_weights[attn_type][attn_position][attn_param].shape[0]:
