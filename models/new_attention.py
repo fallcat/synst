@@ -286,31 +286,19 @@ class NewAttention(nn.Module):
                     # last_indices_set = set(last_indices)
                     max_last_index = last_indices[0].cpu().item()
                     if attn_position == 'last':
-                        if decoder_position == -1:
-                            if attn_param not in self.attn_weights[attn_type][attn_position] \
-                                    or max_last_index + 1 > self.attn_weights[attn_type][attn_position][attn_param].shape[0]:
-                                need_recompute = True
-                        else:
-                            if attn_param not in self.attn_weights[attn_type][attn_position]:
-                                self.attn_weights[attn_type][attn_position][attn_param] = {}
-                                need_recompute = True
-                            elif values_shape[1] not in self.attn_weights[attn_type][attn_position][attn_param]:
-                                need_recompute = True
+                        if attn_param not in self.attn_weights[attn_type][attn_position] \
+                                or max_last_index + 1 > \
+                                self.attn_weights[attn_type][attn_position][attn_param].shape[0]:
+                            need_recompute = True
                     else:
                         if attn_param not in self.attn_weights[attn_type][attn_position]:
                             self.attn_weights[attn_type][attn_position][attn_param] = {}
                             need_recompute = True
-                        else:
-                            if decoder_position == -1:
-                                if attn_displacement not in self.attn_weights[attn_type][attn_position][attn_param] \
-                                        or max_last_index + 1 > self.attn_weights[attn_type][attn_position][attn_param][attn_displacement].shape[0]:
-                                    need_recompute = True
-                            else:
-                                if attn_displacement not in self.attn_weights[attn_type][attn_position][attn_param]:
-                                    self.attn_weights[attn_type][attn_position][attn_param][attn_displacement] = {}
-                                    need_recompute = True
-                                elif values_shape[1] not in self.attn_weights[attn_type][attn_position][attn_param][attn_displacement]:
-                                    need_recompute = True
+                        elif attn_displacement not in self.attn_weights[attn_type][attn_position][
+                            attn_param] or \
+                                max_last_index + 1 > self.attn_weights[attn_type][attn_position][attn_param][
+                            attn_displacement].shape[0]:
+                            need_recompute = True
 
             # print("conditions", time.time() - time3)
             time4 = time.time()
@@ -343,10 +331,7 @@ class NewAttention(nn.Module):
                 else:
                     # new_last_indices_list = list(new_last_indices_set)
                     # indices_q = torch.tensor(new_last_indices_list).view(-1, 1).to(dtype=torch.float32)
-                    if decoder_position == -1:
-                        indices_q = torch.arange(max_last_index + 1).view(-1, 1).type_as(values)
-                    else:
-                        indices_q = torch.tensor(max_last_index).view(-1, 1).type_as(values)
+                    indices_q = torch.arange(max_last_index + 1).view(-1, 1).type_as(values)
                     old_indices_q = indices_q
                     if attn_position == 'bin':
                         ratio = (attn_displacement - 0.5) / self.attn_bins
@@ -382,16 +367,11 @@ class NewAttention(nn.Module):
                 elif attn_position in ['left', 'right']:
                     self.attn_weights[attn_type][attn_position][attn_param][attn_displacement] = logits
                 elif attn_position == 'last':
-                    if decoder_position == -1:
-                        self.attn_weights[attn_type][attn_position][attn_param] = logits
-                    else:
-                        self.attn_weights[attn_type][attn_position][attn_param][max_last_index] = logits
+                    self.attn_weights[attn_type][attn_position][attn_param] = logits
                     # self.attn_weights[attn_type][attn_position][attn_param].update({new_last_indices_list[i]:row[0][:, :new_last_indices_list[i] + 1] for i, row in enumerate(logits)})
                 else:
-                    if decoder_position == -1:
-                        self.attn_weights[attn_type][attn_position][attn_param][attn_displacement] = logits
-                    else:
-                        self.attn_weights[attn_type][attn_position][attn_param][attn_displacement][max_last_index] = logits
+                    self.attn_weights[attn_type][attn_position][attn_param][attn_displacement] = logits
+
                     # self.attn_weights[attn_type][attn_position][attn_param][attn_displacement].update(
                     #     {new_last_indices_list[i]: row[0][:, :new_last_indices_list[i] + 1] for i, row in enumerate(logits)})
 
@@ -409,15 +389,15 @@ class NewAttention(nn.Module):
                 if decoder_position == -1:
                     logits = torch.index_select(self.attn_weights[attn_type][attn_position][attn_param], 0, last_indices)[:, :values_shape[1]].unsqueeze(1).unsqueeze(1)
                 else:
-                    logits = self.attn_weights[attn_type][attn_position][attn_param][max_last_index]
+                    logits = self.attn_weights[attn_type][attn_position][attn_param][max_last_index].view(1, 1, 1, -1)
             else:
                 time71 = time.time()
                 if decoder_position == -1:
                     logits = torch.index_select(self.attn_weights[attn_type][attn_position][attn_param][attn_displacement], 0, last_indices)[:, :values_shape[1]].unsqueeze(1).unsqueeze(1)
                 else:
-                    logits = self.attn_weights[attn_type][attn_position][attn_param][attn_displacement][max_last_index]
+                    logits = self.attn_weights[attn_type][attn_position][attn_param][attn_displacement][max_last_index].view(1, 1, 1, -1)
 
-            logits = logits.expand(batch_size, self.num_heads, queries_shape[1], values_shape[1])\
+            attn_weights = logits.expand(batch_size, self.num_heads, queries_shape[1], values_shape[1])\
                 .contiguous().view(-1,
                                    queries_shape[1],
                                    values_shape[1])
@@ -579,13 +559,25 @@ class NewAttention(nn.Module):
                         logits = self.attn_weights[attn_type[i]][attn_position[i]][attn_param[i]][attn_displacement[i]][
                                  :queries_shape[1], :values_shape[1]].unsqueeze(0).unsqueeze(0)
                     elif attn_position[i] == 'last':
-                        logits = torch.index_select(self.attn_weights[attn_type[i]][attn_position[i]][attn_param[i]], 0,
-                                                    last_indices)[:, :values_shape[1]].unsqueeze(1).unsqueeze(1)
+                        if decoder_position == -1:
+                            logits = torch.index_select(self.attn_weights[attn_type[i]][attn_position[i]][attn_param[i]], 0,
+                                                        last_indices)[:, :values_shape[1]].unsqueeze(1).unsqueeze(1)
+                        else:
+                            logits = torch.index_select(
+                                self.attn_weights[attn_type[i]][attn_position[i]][attn_param[i]], 0,
+                                last_indices)[max_last_index, :values_shape[1]].view(1, 1, 1, -1)
+
                     else:
                         # time71 = time.time()
-                        logits = torch.index_select(
-                            self.attn_weights[attn_type[i]][attn_position[i]][attn_param[i]][attn_displacement[i]], 0,
-                            last_indices)[:, :values_shape[1]].unsqueeze(1).unsqueeze(1)
+                        if decoder_position == -1:
+                            logits = torch.index_select(
+                                self.attn_weights[attn_type[i]][attn_position[i]][attn_param[i]][attn_displacement[i]], 0,
+                                last_indices)[:, :values_shape[1]].unsqueeze(1).unsqueeze(1)
+                        else:
+                            logits = torch.index_select(
+                                self.attn_weights[attn_type[i]][attn_position[i]][attn_param[i]][attn_displacement[i]],
+                                0,
+                                last_indices)[max_last_index, :values_shape[1]].unsqueeze(1).unsqueeze(1)
 
                     logits = logits.expand(batch_size, 1, queries_shape[1], values_shape[1])  # .type_as(values)
                 logits_list.append(logits)
