@@ -574,8 +574,8 @@ class NewAttention(nn.Module):
                             if attn_position[i] == 'first':
                                 logits = retrieve_dict[:, :values_shape[1]].view(1, 1, 1, -1)
                             else:
-                                print("attn_position[i]", attn_position[i])
-                                print("retrieve_dict", retrieve_dict)
+                                # print("attn_position[i]", attn_position[i])
+                                # print("retrieve_dict", retrieve_dict)
                                 logits = retrieve_dict[decoder_position, :values_shape[1]].view(1, 1, 1, -1)
                     else:
                         if decoder_position == -1:
