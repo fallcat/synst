@@ -293,7 +293,8 @@ class NewAttention(nn.Module):
                         if attn_param not in self.attn_weights[attn_type][attn_position]:
                             self.attn_weights[attn_type][attn_position][attn_param] = {}
                             need_recompute = True
-                        elif max_last_index + 1 > self.attn_weights[attn_type][attn_position][attn_param][attn_displacement].shape[0]:
+                        elif attn_displacement not in self.attn_weights[attn_type][attn_position][attn_param] \
+                                or max_last_index + 1 > self.attn_weights[attn_type][attn_position][attn_param][attn_displacement].shape[0]:
                             need_recompute = True
 
             # print("conditions", time.time() - time3)
@@ -456,8 +457,8 @@ class NewAttention(nn.Module):
                                 if attn_param[i] not in self.attn_weights[attn_type[i]][attn_position[i]]:
                                     self.attn_weights[attn_type[i]][attn_position[i]][attn_param[i]] = {}
                                     need_recompute = True
-                                elif max_last_index + 1 > self.attn_weights[attn_type[i]][attn_position[i]][attn_param[i]][
-                                    attn_displacement[i]].shape[0]:
+                                elif attn_displacement[i] not in self.attn_weights[attn_type[i]][attn_position[i]][attn_param[i]] or \
+                                        max_last_index + 1 > self.attn_weights[attn_type[i]][attn_position[i]][attn_param[i]][attn_displacement[i]].shape[0]:
                                     need_recompute = True
 
                     # print("conditions", time.time() - time3)
