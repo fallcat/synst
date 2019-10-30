@@ -197,7 +197,7 @@ class TransformerDecoderLayer(nn.Module):
 
         # print("decoder source attention")
 
-        if self.enc_dec_attn_config['enc_dec_attn_layer'][layer_i] == 1:
+        if hasattr(self, 'source_attention'):
             state = self.source_attention(
                 state, # residual
                 source, source, state, **kwargs # passed to multiheaded attention
