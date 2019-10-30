@@ -267,6 +267,7 @@ class NewAttention(nn.Module):
             if attn_position == 'center':
                 if attn_param not in self.attn_weights[attn_type][attn_position] \
                         or (queries_shape[1] > self.attn_weights[attn_type][attn_position][attn_param].shape[0]
+                            or decoder_position + 1 > self.attn_weights[attn_type][attn_position][attn_param].shape[0]
                             or values_shape[1] > self.attn_weights[attn_type][attn_position][attn_param].shape[1]):
                     need_recompute = True
             elif attn_position == 'first':
@@ -280,6 +281,7 @@ class NewAttention(nn.Module):
                         need_recompute = True
                     if attn_displacement not in self.attn_weights[attn_type][attn_position][attn_param] \
                             or (queries_shape[1] > self.attn_weights[attn_type][attn_position][attn_param][attn_displacement].shape[0]
+                                or decoder_position + 1 > self.attn_weights[attn_type][attn_position][attn_param][attn_displacement].shape[0]
                                 or values_shape[1] > self.attn_weights[attn_type][attn_position][attn_param][attn_displacement].shape[1]):
                         need_recompute = True
                 else:  # attn_position in ['last', 'bin']
@@ -442,6 +444,7 @@ class NewAttention(nn.Module):
                     if attn_position[i] == 'center':
                         if attn_param[i] not in self.attn_weights[attn_type[i]][attn_position[i]] \
                                 or (queries_shape[1] > self.attn_weights[attn_type[i]][attn_position[i]][attn_param[i]].shape[0]
+                                    or decoder_position + 1 > self.attn_weights[attn_type][attn_position][attn_param].shape[0]
                                     or values_shape[1] > self.attn_weights[attn_type[i]][attn_position[i]][attn_param[i]].shape[
                                         1]):
                             need_recompute = True
@@ -455,8 +458,8 @@ class NewAttention(nn.Module):
                                 self.attn_weights[attn_type[i]][attn_position[i]][attn_param[i]] = {}
                                 need_recompute = True
                             if attn_displacement[i] not in self.attn_weights[attn_type[i]][attn_position[i]][attn_param[i]] \
-                                    or (queries_shape[1] > self.attn_weights[attn_type[i]][attn_position[i]][attn_param[i]][
-                                attn_displacement[i]].shape[0]
+                                    or (queries_shape[1] > self.attn_weights[attn_type[i]][attn_position[i]][attn_param[i]][attn_displacement[i]].shape[0]
+                                        or decoder_position + 1 > self.attn_weights[attn_type][attn_position][attn_param][attn_displacement].shape[0]
                                         or values_shape[1] > self.attn_weights[attn_type[i]][attn_position[i]][attn_param[i]][
                                             attn_displacement[i]].shape[1]):
                                 need_recompute = True
