@@ -313,12 +313,12 @@ class NewAttention(nn.Module):
                     #                            bin_center).to(dtype=torch.float32)
                     if attn_position == 'first':
                         indices_q = torch.tensor(0.0).type_as(values) # torch.full((queries_shape[1], 1), 0).to(dtype=torch.float32)
-                    elif decoder_position == -1:
+                    else:  # if decoder_position == -1:
                         indices_q = torch.arange(queries_shape[1]
                                                  ).view(-1, 1).type_as(values) * self.word_count_ratio
-                    else:
-                        indices_q = torch.full((queries_shape[1], 1),
-                                               decoder_position * self.word_count_ratio).type_as(values)
+                    # else:
+                    #     indices_q = torch.full((queries_shape[1], 1),
+                    #                            decoder_position * self.word_count_ratio).type_as(values)
                     # print("attn_position", attn_position)
                     if attn_position == 'left':
                         indices_q = indices_q - attn_displacement
@@ -388,7 +388,10 @@ class NewAttention(nn.Module):
                 if decoder_position == -1:
                     logits = retrieve_dict[:queries_shape[1], :values_shape[1]].unsqueeze(0).unsqueeze(0)
                 else:
-                    logits = retrieve_dict[decoder_position, :values_shape[1]].view(1, 1, 1, -1)
+                    if attn_position == 'first':
+                        logits = retrieve_dict[:, :values_shape[1]].view(1, 1, 1, -1)
+                    else:
+                        logits = retrieve_dict[decoder_position, :values_shape[1]].view(1, 1, 1, -1)
             else:
                 if decoder_position == -1:
                     logits = torch.index_select(retrieve_dict, 0, last_indices)[:, :values_shape[1]].unsqueeze(
@@ -483,12 +486,12 @@ class NewAttention(nn.Module):
                             #                            bin_center).to(dtype=torch.float32)
                             if attn_position[i] == 'first':
                                 indices_q = torch.tensor(0.0).type_as(values) # torch.full((queries_shape[1], 1), 0).to(dtype=torch.float32)
-                            elif decoder_position == -1:
+                            else:  # if decoder_position == -1:
                                 indices_q = torch.arange(queries_shape[1]
                                                          ).view(-1, 1).type_as(values) * self.word_count_ratio
-                            else:
-                                indices_q = torch.full((queries_shape[1], 1),
-                                                       decoder_position * self.word_count_ratio).type_as(values)
+                            # else:
+                            #     indices_q = torch.full((queries_shape[1], 1),
+                            #                            decoder_position * self.word_count_ratio).type_as(values)
                             # print("attn_position[i]", attn_position[i])
                             if attn_position[i] == 'left':
                                 indices_q = indices_q - attn_displacement[i]
@@ -559,7 +562,10 @@ class NewAttention(nn.Module):
                         if decoder_position == -1:
                             logits = retrieve_dict[:queries_shape[1], :values_shape[1]].unsqueeze(0).unsqueeze(0)
                         else:
-                            logits = retrieve_dict[decoder_position, :values_shape[1]].view(1, 1, 1, -1)
+                            if attn_position[i] == 'first':
+                                logits = retrieve_dict[:, :values_shape[1]].view(1, 1, 1, -1)
+                            else:
+                                logits = retrieve_dict[decoder_position, :values_shape[1]].view(1, 1, 1, -1)
                     else:
                         if decoder_position == -1:
                             logits = torch.index_select(retrieve_dict, 0, last_indices)[:, :values_shape[1]].unsqueeze(1).unsqueeze(1)
