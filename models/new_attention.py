@@ -648,7 +648,7 @@ class NewAttention(nn.Module):
             print("attn_weights", attn_weights.shape)
             attn_weights = attn_weights.view(values_shape[0],
                                              queries_shape[1],
-                                             queries_shape[2])
+                                             values_shape[1])
         if mask is not None:
             new_mask = mask.clone()
             new_mask[new_mask == 0] = 1
