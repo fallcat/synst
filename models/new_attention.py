@@ -620,7 +620,7 @@ class NewAttention(nn.Module):
                         # print("time logits normal", time.time() - time5)
                     else:
                         if attn_param[i] < 0 and attn_position[i] == 'bin':
-                            attn_param_curr = (0.5 * last_indices / self.attn_bins).unsqueeze(-1)
+                            attn_param_curr = (0.5 * last_indices / self.attn_bins).unsqueeze(-1).to(dtype=torch.float32)
                         else:
                             attn_param_curr = attn_param[i]
                         distance_diff = torch.abs(distance_diff)
