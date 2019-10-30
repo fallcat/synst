@@ -365,12 +365,12 @@ class NewAttention(nn.Module):
                 # print("normal or uniform", time.time() - time5)
                 time6 = time.time()
 
-                if attn_position in ['center', 'first']:
+                if attn_position in ['center', 'first', 'last']:
                     self.attn_weights[attn_type][attn_position][attn_param] = logits
-                elif attn_position in ['left', 'right']:
-                    self.attn_weights[attn_type][attn_position][attn_param][attn_displacement] = logits
-                elif attn_position == 'last':
-                    self.attn_weights[attn_type][attn_position][attn_param] = logits
+                # elif attn_position in ['left', 'right']:
+                #     self.attn_weights[attn_type][attn_position][attn_param][attn_displacement] = logits
+                # elif attn_position == 'last':
+                #     self.attn_weights[attn_type][attn_position][attn_param] = logits
                     # self.attn_weights[attn_type][attn_position][attn_param].update({new_last_indices_list[i]:row[0][:, :new_last_indices_list[i] + 1] for i, row in enumerate(logits)})
                 else:
                     self.attn_weights[attn_type][attn_position][attn_param][attn_displacement] = logits
@@ -479,12 +479,6 @@ class NewAttention(nn.Module):
                     # print("conditions", time.time() - time3)
                     # time4 = time.time()
 
-                    if attn_position[i] in ['center', 'first', 'last']:
-                        operating_dict = self.attn_weights[attn_type[i]][attn_position[i]][attn_param[i]]
-                    else:
-                        operating_dict = self.attn_weights[attn_type[i]][attn_position[i]][attn_param[i]][
-                            attn_displacement[i]]
-
                     if need_recompute:
                         indices_v = torch.arange(values_shape[1]).view(1, -1).type_as(values)
 
@@ -548,17 +542,15 @@ class NewAttention(nn.Module):
                         # print("normal or uniform", time.time() - time5)
                         # time6 = time.time()
 
-                        operating_dict = logits
-
-                        # if attn_position[i] in ['center', 'first']:
-                        #     self.attn_weights[attn_type[i]][attn_position[i]][attn_param[i]] = logits
+                        if attn_position[i] in ['center', 'first', 'last']:
+                            self.attn_weights[attn_type[i]][attn_position[i]][attn_param[i]] = logits
                         # elif attn_position[i] in ['left', 'right']:
                         #     self.attn_weights[attn_type[i]][attn_position[i]][attn_param[i]][attn_displacement[i]] = logits
                         # elif attn_position[i] == 'last':
                         #     self.attn_weights[attn_type[i]][attn_position[i]][attn_param[i]] = logits
                         #     # self.attn_weights[attn_type[i]][attn_position[i]][attn_param[i]].update({new_last_indices_list[i]:row[0][:, :new_last_indices_list[i] + 1] for i, row in enumerate(logits)})
-                        # else:
-                        #     self.attn_weights[attn_type[i]][attn_position[i]][attn_param[i]][attn_displacement[i]] = logits
+                        else:
+                            self.attn_weights[attn_type[i]][attn_position[i]][attn_param[i]][attn_displacement[i]] = logits
                             # self.attn_weights[attn_type[i]][attn_position[i]][attn_param[i]][attn_displacement[i]].update(
                             #     {new_last_indices_list[i]: row[0][:, :new_last_indices_list[i] + 1] for i, row in enumerate(logits)})
 
@@ -566,21 +558,27 @@ class NewAttention(nn.Module):
 
                     # time7 = time.time()
 
+                    if attn_position[i] in ['center', 'first', 'last']:
+                        retrieve_dict = self.attn_weights[attn_type[i]][attn_position[i]][attn_param[i]]
+                    else:
+                        retrieve_dict = self.attn_weights[attn_type[i]][attn_position[i]][attn_param[i]][
+                            attn_displacement[i]]
+
                     if attn_position[i] in ['center', 'first', 'left', 'right']:
                         if decoder_position == -1:
-                            logits = operating_dict[:queries_shape[1], :values_shape[1]].unsqueeze(0).unsqueeze(0)
+                            logits = retrieve_dict[:queries_shape[1], :values_shape[1]].unsqueeze(0).unsqueeze(0)
                         else:
                             if attn_position[i] == 'first':
-                                logits = operating_dict[:, :values_shape[1]].view(1, 1, 1, -1)
+                                logits = retrieve_dict[:, :values_shape[1]].view(1, 1, 1, -1)
                             else:
                                 print("attn_position[i]", attn_position[i])
-                                print("operating_dict", operating_dict)
-                                logits = operating_dict[decoder_position, :values_shape[1]].view(1, 1, 1, -1)
+                                print("retrieve_dict", retrieve_dict)
+                                logits = retrieve_dict[decoder_position, :values_shape[1]].view(1, 1, 1, -1)
                     else:
                         if decoder_position == -1:
-                            logits = torch.index_select(operating_dict, 0, last_indices)[:, :values_shape[1]].unsqueeze(1).unsqueeze(1)
+                            logits = torch.index_select(retrieve_dict, 0, last_indices)[:, :values_shape[1]].unsqueeze(1).unsqueeze(1)
                         else:
-                            logits = torch.index_select(operating_dict, 0, last_indices)[max_last_index, :values_shape[1]].view(1, 1, 1, -1)
+                            logits = torch.index_select(retrieve_dict, 0, last_indices)[max_last_index, :values_shape[1]].view(1, 1, 1, -1)
 
                     logits = logits.expand(batch_size, 1, queries_shape[1], values_shape[1])  # .type_as(values)
                 logits_list.append(logits)
