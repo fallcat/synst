@@ -286,16 +286,31 @@ class NewAttention(nn.Module):
                     # last_indices_set = set(last_indices)
                     max_last_index = last_indices[0].cpu().item()
                     if attn_position == 'last':
-                        if attn_param not in self.attn_weights[attn_type][attn_position] \
-                                or max_last_index + 1 > self.attn_weights[attn_type][attn_position][attn_param].shape[0]:
-                            need_recompute = True
+                        if decoder_position == -1:
+                            if attn_param not in self.attn_weights[attn_type][attn_position] \
+                                    or max_last_index + 1 > self.attn_weights[attn_type][attn_position][attn_param].shape[0]:
+                                need_recompute = True
+                        else:
+                            if attn_param not in self.attn_weights[attn_type][attn_position]:
+                                self.attn_weights[attn_type][attn_position][attn_param] = {}
+                                need_recompute = True
+                            elif values_shape[1] not in self.attn_weights[attn_type][attn_position][attn_param]:
+                                need_recompute = True
                     else:
                         if attn_param not in self.attn_weights[attn_type][attn_position]:
                             self.attn_weights[attn_type][attn_position][attn_param] = {}
                             need_recompute = True
-                        elif attn_displacement not in self.attn_weights[attn_type][attn_position][attn_param] \
-                                or max_last_index + 1 > self.attn_weights[attn_type][attn_position][attn_param][attn_displacement].shape[0]:
-                            need_recompute = True
+                        else:
+                            if decoder_position == -1:
+                                if attn_displacement not in self.attn_weights[attn_type][attn_position][attn_param] \
+                                        or max_last_index + 1 > self.attn_weights[attn_type][attn_position][attn_param][attn_displacement].shape[0]:
+                                    need_recompute = True
+                            else:
+                                if attn_displacement not in self.attn_weights[attn_type][attn_position][attn_param]:
+                                    self.attn_weights[attn_type][attn_position][attn_param][attn_displacement] = {}
+                                    need_recompute = True
+                                elif values_shape[1] not in self.attn_weights[attn_type][attn_position][attn_param][attn_displacement]:
+                                    need_recompute = True
 
             # print("conditions", time.time() - time3)
             time4 = time.time()
