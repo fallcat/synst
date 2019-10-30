@@ -313,8 +313,11 @@ class NewAttention(nn.Module):
                     #                            bin_center).to(dtype=torch.float32)
                     if attn_position == 'first':
                         indices_q = torch.tensor(0.0).type_as(values) # torch.full((queries_shape[1], 1), 0).to(dtype=torch.float32)
-                    else:  # if decoder_position == -1:
+                    elif decoder_position == -1:
                         indices_q = torch.arange(queries_shape[1]
+                                                 ).view(-1, 1).type_as(values) * self.word_count_ratio
+                    else:
+                        indices_q = torch.arange(decoder_position + 1
                                                  ).view(-1, 1).type_as(values) * self.word_count_ratio
                     # else:
                     #     indices_q = torch.full((queries_shape[1], 1),
@@ -486,8 +489,11 @@ class NewAttention(nn.Module):
                             #                            bin_center).to(dtype=torch.float32)
                             if attn_position[i] == 'first':
                                 indices_q = torch.tensor(0.0).type_as(values) # torch.full((queries_shape[1], 1), 0).to(dtype=torch.float32)
-                            else:  # if decoder_position == -1:
+                            elif decoder_position == -1:
                                 indices_q = torch.arange(queries_shape[1]
+                                                         ).view(-1, 1).type_as(values) * self.word_count_ratio
+                            else:
+                                indices_q = torch.arange(decoder_position + 1
                                                          ).view(-1, 1).type_as(values) * self.word_count_ratio
                             # else:
                             #     indices_q = torch.full((queries_shape[1], 1),
