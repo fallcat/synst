@@ -558,7 +558,7 @@ class NewAttention(nn.Module):
                             self.attn_weights[attn_type[i]][attn_position[i]][attn_param[i]][attn_displacement[i]], 0,
                             last_indices)[:, :values_shape[1]].unsqueeze(1).unsqueeze(1)
 
-                    logits = logits.expand(batch_size, 1, queries_shape[1], values_shape[1])
+                    logits = logits.expand(batch_size, 1, queries_shape[1], values_shape[1]).type_as(values)
                 logits_list.append(logits)
             #
             #     if self.which_attn == 'source':
