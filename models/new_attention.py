@@ -644,6 +644,7 @@ class NewAttention(nn.Module):
             if self.which_attn == 'source':
                 print("final time", time.time() - time3)
             attn_weights = torch.stack(logits_list, dim=1)
+            print("attn_weights", attn_weights.shape)
             attn_weights = attn_weights.view(values_shape[0],
                                              attn_weights.shape[2],
                                              attn_weights.shape[3])
