@@ -343,7 +343,10 @@ class NewAttention(nn.Module):
                 else:
                     # new_last_indices_list = list(new_last_indices_set)
                     # indices_q = torch.tensor(new_last_indices_list).view(-1, 1).to(dtype=torch.float32)
-                    indices_q = torch.arange(max_last_index + 1).view(-1, 1).to(dtype=torch.float32)
+                    if decoder_position == -1:
+                        indices_q = torch.arange(max_last_index + 1).view(-1, 1).to(dtype=torch.float32)
+                    else:
+                        indices_q = torch.tensor(max_last_index).view(-1, 1).to(dtype=torch.float32)
                     old_indices_q = indices_q
                     if attn_position == 'bin':
                         ratio = (attn_displacement - 0.5) / self.attn_bins
@@ -379,10 +382,16 @@ class NewAttention(nn.Module):
                 elif attn_position in ['left', 'right']:
                     self.attn_weights[attn_type][attn_position][attn_param][attn_displacement] = logits
                 elif attn_position == 'last':
-                    self.attn_weights[attn_type][attn_position][attn_param] = logits
+                    if decoder_position == -1:
+                        self.attn_weights[attn_type][attn_position][attn_param] = logits
+                    else:
+                        self.attn_weights[attn_type][attn_position][attn_param][max_last_index] = logits
                     # self.attn_weights[attn_type][attn_position][attn_param].update({new_last_indices_list[i]:row[0][:, :new_last_indices_list[i] + 1] for i, row in enumerate(logits)})
                 else:
-                    self.attn_weights[attn_type][attn_position][attn_param][attn_displacement] = logits
+                    if decoder_position == -1:
+                        self.attn_weights[attn_type][attn_position][attn_param][attn_displacement] = logits
+                    else:
+                        self.attn_weights[attn_type][attn_position][attn_param][attn_displacement][max_last_index] = logits
                     # self.attn_weights[attn_type][attn_position][attn_param][attn_displacement].update(
                     #     {new_last_indices_list[i]: row[0][:, :new_last_indices_list[i] + 1] for i, row in enumerate(logits)})
 
@@ -397,19 +406,24 @@ class NewAttention(nn.Module):
             elif attn_position in ['left', 'right']:
                 logits = self.attn_weights[attn_type][attn_position][attn_param][attn_displacement][:queries_shape[1], :values_shape[1]].unsqueeze(0).unsqueeze(0)
             elif attn_position == 'last':
-                logits = torch.index_select(self.attn_weights[attn_type][attn_position][attn_param], 0, last_indices)[:, :values_shape[1]].unsqueeze(1).unsqueeze(1)
+                if decoder_position == -1:
+                    logits = torch.index_select(self.attn_weights[attn_type][attn_position][attn_param], 0, last_indices)[:, :values_shape[1]].unsqueeze(1).unsqueeze(1)
+                else:
+                    logits = self.attn_weights[attn_type][attn_position][attn_param][max_last_index]
             else:
                 time71 = time.time()
-                logits = torch.index_select(self.attn_weights[attn_type][attn_position][attn_param][attn_displacement], 0, last_indices)[:, :values_shape[1]].unsqueeze(1).unsqueeze(1)
-
+                if decoder_position == -1:
+                    logits = torch.index_select(self.attn_weights[attn_type][attn_position][attn_param][attn_displacement], 0, last_indices)[:, :values_shape[1]].unsqueeze(1).unsqueeze(1)
+                else:
+                    logits = self.attn_weights[attn_type][attn_position][attn_param][attn_displacement][max_last_index]
 
             logits = logits.expand(batch_size, self.num_heads, queries_shape[1], values_shape[1])\
                 .contiguous().view(-1,
                                    queries_shape[1],
                                    values_shape[1])
-            if self.which_attn == 'source':
-                print("retrieve", time.time() - time7)
-                print("need compute", need_recompute, "time", time.time() - time3)
+            # if self.which_attn == 'source':
+            #     print("retrieve", time.time() - time7)
+            #     print("need compute", need_recompute, "time", time.time() - time3)
 
             attn_weights = logits.type_as(values)
             # print("attn_weights 1", attn_weights)
