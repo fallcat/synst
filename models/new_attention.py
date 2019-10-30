@@ -638,6 +638,11 @@ class NewAttention(nn.Module):
                     #     # print("retrieving weights", time.time() - time3)
                     # logits = logits.type_as(values)
                 logits_list.append(logits)
+
+                if self.which_attn == 'source':
+                    print("time in loop", time.time() - time3)
+            if self.which_attn == 'source':
+                print("final time", time.time() - time3)
             attn_weights = torch.stack(logits_list, dim=1)
             attn_weights = attn_weights.view(values_shape[0],
                                              attn_weights.shape[2],
@@ -660,9 +665,9 @@ class NewAttention(nn.Module):
         # print("values", values)
         # print("values shape", values.shape)
         # torch.set_printoptions(profile="full")
-        # if self.which_attn == 'source':
-        #     print("attn_weights", attn_weights)
-        #     print("attn_weights shape", attn_weights.shape)
+        if self.which_attn == 'source':
+            print("attn_weights", attn_weights)
+            print("attn_weights shape", attn_weights.shape)
         # print("attended", attended)
         # print("attended shape", attended.shape)
 
