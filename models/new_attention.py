@@ -637,7 +637,7 @@ class NewAttention(nn.Module):
                     #     logits = self.attn_weights[attn_type[i]][attn_position[i]][:queries_shape[1], :values_shape[1]]
                     #     logits = logits.expand(int(values_shape[0] / self.num_heads), logits.shape[0], logits.shape[1])
                     #     # print("retrieving weights", time.time() - time3)
-                    # logits = logits.type_as(values)
+                    logits = logits.type_as(values)
                 logits_list.append(logits)
 
                 if self.which_attn == 'source':
