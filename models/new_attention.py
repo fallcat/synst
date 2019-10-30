@@ -667,9 +667,9 @@ class NewAttention(nn.Module):
         # print("values", values)
         # print("values shape", values.shape)
         # torch.set_printoptions(profile="full")
-        if self.which_attn == 'source':
-            print("attn_weights", attn_weights)
-            print("attn_weights shape", attn_weights.shape)
+        # if self.which_attn == 'source':
+        #     print("attn_weights", attn_weights)
+        #     print("attn_weights shape", attn_weights.shape)
         # print("attended", attended)
         # print("attended shape", attended.shape)
 
