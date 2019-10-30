@@ -249,11 +249,11 @@ class NewAttention(nn.Module):
                 key_mask_shape = key_mask.shape
                 # last_indices = torch.tensor([key_mask_shape[1] - a[::-1].index(0)
                 #                              for a in key_mask.cpu().numpy().tolist()], dtype=torch.float32).view(-1, 1)
-                last_indices = ((key_mask == 0).sum(dim=1) - 1).cpu().view(-1)   # .tolist()
+                last_indices = ((key_mask == 0).sum(dim=1) - 1).view(-1)   # .tolist()
                 # print("last_indices", last_indices)
             else:
                 # print("key_mask is none")
-                last_indices = torch.tensor([values_shape[1] - 1] * queries_shape[0], dtype=torch.float32).view(-1)
+                last_indices = torch.tensor([values_shape[1] - 1] * queries_shape[0]).view(-1).type_as(values)
                 # print("last_indices", last_indices)
             # print("calculate last_indices", time.time() - time2)
 
@@ -316,7 +316,7 @@ class NewAttention(nn.Module):
             time4 = time.time()
 
             if need_recompute:
-                indices_v = torch.arange(values_shape[1]).view(1, -1).to(dtype=torch.float32)
+                indices_v = torch.arange(values_shape[1]).view(1, -1).type_as(values)
 
                 if attn_position not in ['last', 'bin']:
                     # if attn_position == 'bin':
@@ -324,13 +324,13 @@ class NewAttention(nn.Module):
                     #     indices_q = torch.full((queries_shape[1], 1),
                     #                            bin_center).to(dtype=torch.float32)
                     if attn_position == 'first':
-                        indices_q = torch.tensor(0.0, dtype=torch.float32)# torch.full((queries_shape[1], 1), 0).to(dtype=torch.float32)
+                        indices_q = torch.tensor(0.0).type_as(values) # torch.full((queries_shape[1], 1), 0).to(dtype=torch.float32)
                     elif decoder_position == -1:
                         indices_q = torch.arange(queries_shape[1]
-                                                 ).view(-1, 1).to(dtype=torch.float32) * self.word_count_ratio
+                                                 ).view(-1, 1).type_as(values) * self.word_count_ratio
                     else:
                         indices_q = torch.full((queries_shape[1], 1),
-                                               decoder_position * self.word_count_ratio).to(dtype=torch.float32)
+                                               decoder_position * self.word_count_ratio).type_as(values)
                     # print("attn_position", attn_position)
                     if attn_position == 'left':
                         indices_q = indices_q - attn_displacement
@@ -344,9 +344,9 @@ class NewAttention(nn.Module):
                     # new_last_indices_list = list(new_last_indices_set)
                     # indices_q = torch.tensor(new_last_indices_list).view(-1, 1).to(dtype=torch.float32)
                     if decoder_position == -1:
-                        indices_q = torch.arange(max_last_index + 1).view(-1, 1).to(dtype=torch.float32)
+                        indices_q = torch.arange(max_last_index + 1).view(-1, 1).type_as(values)
                     else:
-                        indices_q = torch.tensor(max_last_index).view(-1, 1).to(dtype=torch.float32)
+                        indices_q = torch.tensor(max_last_index).view(-1, 1).type_as(values)
                     old_indices_q = indices_q
                     if attn_position == 'bin':
                         ratio = (attn_displacement - 0.5) / self.attn_bins
@@ -425,7 +425,7 @@ class NewAttention(nn.Module):
             #     print("retrieve", time.time() - time7)
             #     print("need compute", need_recompute, "time", time.time() - time3)
 
-            attn_weights = logits.type_as(values)
+            # attn_weights = logits.type_as(values)
             # print("attn_weights 1", attn_weights)
 
         # If one of the attention parameters is list (different in different heads), then make all of them lists
@@ -494,7 +494,7 @@ class NewAttention(nn.Module):
                     # time4 = time.time()
 
                     if need_recompute:
-                        indices_v = torch.arange(values_shape[1]).view(1, -1).to(dtype=torch.float32)
+                        indices_v = torch.arange(values_shape[1]).view(1, -1).type_as(values)
 
                         if attn_position[i] not in ['last', 'bin']:
                             # if attn_position[i] == 'bin':
@@ -502,14 +502,13 @@ class NewAttention(nn.Module):
                             #     indices_q = torch.full((queries_shape[1], 1),
                             #                            bin_center).to(dtype=torch.float32)
                             if attn_position[i] == 'first':
-                                indices_q = torch.tensor(0.0,
-                                                         dtype=torch.float32)  # torch.full((queries_shape[1], 1), 0).to(dtype=torch.float32)
+                                indices_q = torch.tensor(0.0).type_as(values) # torch.full((queries_shape[1], 1), 0).to(dtype=torch.float32)
                             elif decoder_position == -1:
                                 indices_q = torch.arange(queries_shape[1]
-                                                         ).view(-1, 1).to(dtype=torch.float32) * self.word_count_ratio
+                                                         ).view(-1, 1).type_as(values) * self.word_count_ratio
                             else:
                                 indices_q = torch.full((queries_shape[1], 1),
-                                                       decoder_position * self.word_count_ratio).to(dtype=torch.float32)
+                                                       decoder_position * self.word_count_ratio).type_as(values)
                             # print("attn_position[i]", attn_position[i])
                             if attn_position[i] == 'left':
                                 indices_q = indices_q - attn_displacement[i]
@@ -522,7 +521,7 @@ class NewAttention(nn.Module):
                         else:
                             # new_last_indices_list = list(new_last_indices_set)
                             # indices_q = torch.tensor(new_last_indices_list).view(-1, 1).to(dtype=torch.float32)
-                            indices_q = torch.arange(max_last_index + 1).view(-1, 1).to(dtype=torch.float32)
+                            indices_q = torch.arange(max_last_index + 1).view(-1, 1).type_as(values)
                             old_indices_q = indices_q
                             if attn_position[i] == 'bin':
                                 ratio = (attn_displacement[i] - 0.5) / self.attn_bins
@@ -588,7 +587,7 @@ class NewAttention(nn.Module):
                             self.attn_weights[attn_type[i]][attn_position[i]][attn_param[i]][attn_displacement[i]], 0,
                             last_indices)[:, :values_shape[1]].unsqueeze(1).unsqueeze(1)
 
-                    logits = logits.expand(batch_size, 1, queries_shape[1], values_shape[1]).type_as(values)
+                    logits = logits.expand(batch_size, 1, queries_shape[1], values_shape[1])  # .type_as(values)
                 logits_list.append(logits)
             #
             #     if self.which_attn == 'source':
