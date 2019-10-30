@@ -379,23 +379,23 @@ class NewAttention(nn.Module):
 
             time7 = time.time()
 
-            if attn_position == 'center':
-                logits = self.attn_weights[attn_type][attn_position][attn_param][:queries_shape[1], :values_shape[1]].unsqueeze(0).unsqueeze(0)
-            elif attn_position == 'first':
-                logits = self.attn_weights[attn_type][attn_position][attn_param][:, :values_shape[1]].unsqueeze(0).unsqueeze(0)
-            elif attn_position in ['left', 'right']:
-                logits = self.attn_weights[attn_type][attn_position][attn_param][attn_displacement][:queries_shape[1], :values_shape[1]].unsqueeze(0).unsqueeze(0)
-            elif attn_position == 'last':
-                if decoder_position == -1:
-                    logits = torch.index_select(self.attn_weights[attn_type][attn_position][attn_param], 0, last_indices)[:, :values_shape[1]].unsqueeze(1).unsqueeze(1)
-                else:
-                    logits = self.attn_weights[attn_type][attn_position][attn_param][max_last_index].view(1, 1, 1, -1)
+            if attn_position in ['center', 'first', 'last']:
+                retrieve_dict = self.attn_weights[attn_type][attn_position][attn_param]
             else:
-                time71 = time.time()
+                retrieve_dict = self.attn_weights[attn_type][attn_position][attn_param][attn_displacement]
+
+            if attn_position in ['center', 'first', 'left', 'right']:
                 if decoder_position == -1:
-                    logits = torch.index_select(self.attn_weights[attn_type][attn_position][attn_param][attn_displacement], 0, last_indices)[:, :values_shape[1]].unsqueeze(1).unsqueeze(1)
+                    logits = retrieve_dict[:queries_shape[1], :values_shape[1]].unsqueeze(0).unsqueeze(0)
                 else:
-                    logits = self.attn_weights[attn_type][attn_position][attn_param][attn_displacement][max_last_index].view(1, 1, 1, -1)
+                    logits = retrieve_dict[decoder_position, :values_shape[1]].view(1, 1, 1, -1)
+            else:
+                if decoder_position == -1:
+                    logits = torch.index_select(retrieve_dict, 0, last_indices)[:, :values_shape[1]].unsqueeze(
+                        1).unsqueeze(1)
+                else:
+                    logits = torch.index_select(retrieve_dict, 0, last_indices)[max_last_index, :values_shape[1]].view(
+                        1, 1, 1, -1)
 
             attn_weights = logits.expand(batch_size, self.num_heads, queries_shape[1], values_shape[1])\
                 .contiguous().view(-1,
@@ -549,35 +549,22 @@ class NewAttention(nn.Module):
 
                     # time7 = time.time()
 
-                    if attn_position[i] == 'center':
-                        logits = self.attn_weights[attn_type[i]][attn_position[i]][attn_param[i]][:queries_shape[1],
-                                 :values_shape[1]].unsqueeze(0).unsqueeze(0)
-                    elif attn_position[i] == 'first':
-                        logits = self.attn_weights[attn_type[i]][attn_position[i]][attn_param[i]][:, :values_shape[1]].unsqueeze(
-                            0).unsqueeze(0)
-                    elif attn_position[i] in ['left', 'right']:
-                        logits = self.attn_weights[attn_type[i]][attn_position[i]][attn_param[i]][attn_displacement[i]][
-                                 :queries_shape[1], :values_shape[1]].unsqueeze(0).unsqueeze(0)
-                    elif attn_position[i] == 'last':
-                        if decoder_position == -1:
-                            logits = torch.index_select(self.attn_weights[attn_type[i]][attn_position[i]][attn_param[i]], 0,
-                                                        last_indices)[:, :values_shape[1]].unsqueeze(1).unsqueeze(1)
-                        else:
-                            logits = torch.index_select(
-                                self.attn_weights[attn_type[i]][attn_position[i]][attn_param[i]], 0,
-                                last_indices)[max_last_index, :values_shape[1]].view(1, 1, 1, -1)
-
+                    if attn_position[i] in ['center', 'first', 'last']:
+                        retrieve_dict = self.attn_weights[attn_type[i]][attn_position[i]][attn_param[i]]
                     else:
-                        # time71 = time.time()
+                        retrieve_dict = self.attn_weights[attn_type[i]][attn_position[i]][attn_param[i]][
+                            attn_displacement[i]]
+
+                    if attn_position[i] in ['center', 'first', 'left', 'right']:
                         if decoder_position == -1:
-                            logits = torch.index_select(
-                                self.attn_weights[attn_type[i]][attn_position[i]][attn_param[i]][attn_displacement[i]], 0,
-                                last_indices)[:, :values_shape[1]].unsqueeze(1).unsqueeze(1)
+                            logits = retrieve_dict[:queries_shape[1], :values_shape[1]].unsqueeze(0).unsqueeze(0)
                         else:
-                            logits = torch.index_select(
-                                self.attn_weights[attn_type[i]][attn_position[i]][attn_param[i]][attn_displacement[i]],
-                                0,
-                                last_indices)[max_last_index, :values_shape[1]].unsqueeze(1).unsqueeze(1)
+                            logits = retrieve_dict[decoder_position, :values_shape[1]].view(1, 1, 1, -1)
+                    else:
+                        if decoder_position == -1:
+                            logits = torch.index_select(retrieve_dict, 0, last_indices)[:, :values_shape[1]].unsqueeze(1).unsqueeze(1)
+                        else:
+                            logits = torch.index_select(retrieve_dict, 0, last_indices)[max_last_index, :values_shape[1]].view(1, 1, 1, -1)
 
                     logits = logits.expand(batch_size, 1, queries_shape[1], values_shape[1])  # .type_as(values)
                 logits_list.append(logits)
