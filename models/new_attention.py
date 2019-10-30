@@ -558,7 +558,7 @@ class NewAttention(nn.Module):
                             last_indices)[:, :values_shape[1]].unsqueeze(1).unsqueeze(1)
 
                     logits = logits.expand(batch_size, 1, queries_shape[1], values_shape[1])
-                    print("logits", logits.shape)
+                    # print("logits", logits.shape)
 
                     # If the attention weight matrix is not stored, need to create new.
                     # At inference time, always create new for decoder attentions.
