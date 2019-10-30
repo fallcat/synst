@@ -602,7 +602,7 @@ class NewAttention(nn.Module):
                     # If the attention is looking at the last indices, need to take masks into consideration
                     else:
                         last_indices = last_indices.view(-1, 1)
-                        indices_q = last_indices
+                        indices_q = last_indices.to(dtype=torch.float32)
                         if attn_position[i] == 'bin':
                             ratio = (attn_displacement[i] - 0.5) / self.attn_bins
                             indices_q = -0.5 + indices_q * ratio
