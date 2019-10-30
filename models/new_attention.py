@@ -632,7 +632,7 @@ class NewAttention(nn.Module):
                         logits = logits / logits_sum
                         # print("time logits uniform", time.time() - time5)
                         # logits = F.softmax(logits, dim=-1)
-                    self.attn_weights[attn_type[i]][attn_position[i]] = logits[0]
+                    # self.attn_weights[attn_type[i]][attn_position[i]] = logits[0]
 
                         # print("retrieving weights", time.time() - time3)
                     logits = logits.type_as(values)
