@@ -582,12 +582,12 @@ class NewAttention(nn.Module):
                                 logits = retrieve_dict[decoder_position, :values_shape[1]].view(1, 1, 1, -1)
                     else:
                         if decoder_position == -1:
-                            logits = torch.index_select(retrieve_dict, 0, last_indices)[:, :values_shape[1]].unsqueeze(1).unsqueeze(1)
+                            logits = torch.index_select(retrieve_dict, 0, last_indices.view(-1))[:, :values_shape[1]].unsqueeze(1).unsqueeze(1)
                         else:
                             print("before retrieve")
                             print("last_indices", last_indices)
                             print("retrieve_dict", retrieve_dict)
-                            logits = torch.index_select(retrieve_dict, 0, last_indices)[max_last_index, :values_shape[1]].view(1, 1, 1, -1)
+                            logits = torch.index_select(retrieve_dict, 0, last_indices.view(-1))[max_last_index, :values_shape[1]].view(1, 1, 1, -1)
 
                     logits = logits.expand(batch_size, 1, queries_shape[1], values_shape[1])  # .type_as(values)
                 logits_list.append(logits)
