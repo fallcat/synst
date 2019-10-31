@@ -466,6 +466,7 @@ class NewAttention(nn.Module):
                         else:  # attn_position[i] in ['last', 'bin']
                             # last_indices_set = set(last_indices)
                             max_last_index = last_indices[0].cpu().item()
+                            print("max_last_index", max_last_index)
                             if attn_position[i] == 'last':
                                 if attn_param[i] not in self.attn_weights[attn_type[i]][attn_position[i]] \
                                         or max_last_index + 1 > \
@@ -514,6 +515,8 @@ class NewAttention(nn.Module):
                             # new_last_indices_list = list(new_last_indices_set)
                             # indices_q = torch.tensor(new_last_indices_list).view(-1, 1).to(dtype=torch.float32)
                             indices_q = torch.arange(max_last_index + 1).view(-1, 1).type_as(values)
+                            print("indices_q", indices_q)
+                            print("last_indices", last_indices)
                             old_indices_q = indices_q
                             if attn_position[i] == 'bin':
                                 ratio = (attn_displacement[i] - 0.5) / self.attn_bins
@@ -581,6 +584,9 @@ class NewAttention(nn.Module):
                         if decoder_position == -1:
                             logits = torch.index_select(retrieve_dict, 0, last_indices)[:, :values_shape[1]].unsqueeze(1).unsqueeze(1)
                         else:
+                            print("before retrieve")
+                            print("last_indices", last_indices)
+                            print("retrieve_dict", retrieve_dict)
                             logits = torch.index_select(retrieve_dict, 0, last_indices)[max_last_index, :values_shape[1]].view(1, 1, 1, -1)
 
                     logits = logits.expand(batch_size, 1, queries_shape[1], values_shape[1])  # .type_as(values)
