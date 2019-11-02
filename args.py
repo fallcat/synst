@@ -12,7 +12,7 @@ import torch
 
 from data import DATASETS
 from models import MODELS
-from actions import Trainer, Evaluator, Translator, Pass, Prober, ProbeTrainer, ProbeEvaluator, ProbeNewTranslator
+from actions import Trainer, Evaluator, Translator, Pass, Prober, ProbeTrainer, ProbeEvaluator, ProbeNewTranslator, ProbeStatsGetter
 from utils import get_version_string, get_random_seed_fn
 
 
@@ -929,6 +929,13 @@ def add_translate_args(parser):
         help='How many times to run translation to gauge the translation speed'
     )
 
+    group.add_argument(
+        '--stats-directory',
+        type=str,
+        default='/tmp/synst/stats',
+        help='Where to store stats'
+    )
+
     group.set_defaults(gold_p=0)
     group.set_defaults(dropout_p=0)
 
@@ -1161,6 +1168,15 @@ def parse_args(argv=None):
         shuffle=False
     )
 
+    probe_attn_stats_parser = subparsers.add_parser('probe_attn_stats', help='Probe attention stats')
+    groups['probe_attn_stats'] = add_translate_args(probe_attn_stats_parser)
+    probe_attn_stats_parser.set_defaults(
+        action=ProbeStatsGetter,
+        action_type='probe_attn_stats',
+        action_config=groups['probe_attn_stats'],
+        shuffle=False
+    )
+
     probe_parser = subparsers.add_parser('probe', help='Probe a model')
     groups['probe'] = add_probe_args(probe_parser)
     probe_parser.set_defaults(
@@ -1221,7 +1237,7 @@ Commit your changes first, then try again.''')
 
     args.experiment = experiment_type(
         *experiment_args,
-        project_name='transformer-attn',
+        project_name='probe-transformer',
         workspace='umass-nlp',
         disabled=not args.track,
         auto_metric_logging=False,

@@ -8,6 +8,7 @@ from actions.probe import Prober
 from actions.probe_train import ProbeTrainer
 from actions.probe_evaluate import ProbeEvaluator
 from actions.probe_new_translate import ProbeNewTranslator
+from actions.probe_attn_stats import ProbeStatsGetter
 
 class Pass(object):
     ''' Action that does nothing... '''
@@ -18,3 +19,4 @@ class Pass(object):
     def __call__(self, *args, **kwargs):
         ''' Do nothing '''
         pass
+

@@ -7,10 +7,10 @@ import threading
 import torch
 from torch import nn
 
-from models.new_attention import ProbeNewAttention
+from models.probe_new_attention import ProbeNewAttention
 from models.attention import MultiHeadedAttention
 from models.embeddings import PositionEmbedding, TokenEmbedding
-from models.utils import LabelSmoothingLoss, ProbeNewTranslator # need to change this ProbeNewTranslator
+from models.utils import LabelSmoothingLoss, ProbeTranslator # need to change this ProbeNewTranslator
 from utils import left_shift, right_shift, triu
 
 
@@ -37,7 +37,11 @@ class TransformerSublayer(nn.Module):
 
     def forward(self, inputs, *sublayer_args, **sublayer_kwargs): # pylint:disable=arguments-differ
         ''' The forward pass of the sublayer '''
-        return self.norm(inputs + self.dropout(self.sublayer(*sublayer_args, **sublayer_kwargs)))
+        if type(self.sublayer) is ProbeNewAttention:
+            attention, attn_weights = self.sublayer(*sublayer_args, **sublayer_kwargs)
+            return self.norm(inputs + self.dropout(attention)), attn_weights
+        else:
+            return self.norm(inputs + self.dropout(self.sublayer(*sublayer_args, **sublayer_kwargs)))
 
 
 class TransformerFFN(nn.Module):
@@ -78,7 +82,7 @@ class TransformerEncoderLayer(nn.Module):
         )
 
         self.self_attention = TransformerSublayer(
-            NewAttention(attn_config, dim, num_heads),
+            ProbeNewAttention(attn_config, dim, num_heads),
             dim, dropout_p
         )
 
@@ -126,7 +130,7 @@ class TransformerDecoderLayer(nn.Module):
         )
 
         self.self_attention = TransformerSublayer(
-            NewAttention(dec_attn_config, dim, num_heads),
+            ProbeNewAttention(dec_attn_config, dim, num_heads),
             dim, dropout_p
         )
 
@@ -136,7 +140,7 @@ class TransformerDecoderLayer(nn.Module):
             assert src_num_heads != 0
 
             self.source_attention = TransformerSublayer(
-                NewAttention(enc_dec_attn_config, dim, src_num_heads),
+                ProbeNewAttention(enc_dec_attn_config, dim, src_num_heads),
                 dim, dropout_p
             )
 
@@ -341,7 +345,7 @@ class ProbeNewTransformer(nn.Module):
 
     def translator(self, config):
         ''' Get a translator for this model '''
-        return Translator(config, self, self.dataset)
+        return ProbeTranslator(config, self, self.dataset)
 
     def reset_named_parameters(self, modules):
         ''' Get a translator for this model '''
@@ -371,10 +375,10 @@ class ProbeNewTransformer(nn.Module):
         smoothed_nll = self.label_smoothing(logits, targets).sum(dims)
 
         return {'smoothed_nll': smoothed_nll,
-                'nll': nll,
-                'encoder_attn_weights_tensor': encoder_attn_weights_tensor,
-                'decoder_attn_weights_tensor': decoded['decoder_attn_weights_tensor'],
-                'enc_dec_attn_weights_tensor': decoded['enc_dec_attn_weights_tensor']}
+            'nll': nll,
+            'encoder_attn_weights_tensor': encoder_attn_weights_tensor,
+            'decoder_attn_weights_tensor': decoded['decoder_attn_weights_tensor'],
+            'enc_dec_attn_weights_tensor': decoded['enc_dec_attn_weights_tensor']}
 
     def encode(self, inputs):
         ''' Encode the inputs '''
@@ -412,8 +416,12 @@ class ProbeNewTransformer(nn.Module):
         for i, decoder in enumerate(decoders):
             # print("i", i)
             decoded = decoder(decoded, encoded, i, word_embedding)
-            decoder_attn_weights_list.append(decoded['decoder_attn_weights'])
-            enc_dec_attn_weights_list.append(decoded['enc_dec_attn_weights'])
+            if 'enc_dec_attn_weights' not in decoded:
+                decoder_attn_weights_list.append(decoded['decoder_attn_weights'])
+                # enc_dec_attn_weights_list.append([])
+            else:
+                decoder_attn_weights_list.append(decoded['decoder_attn_weights'])
+                enc_dec_attn_weights_list.append(decoded['enc_dec_attn_weights'])
 
         decoder_attn_weights_tensor = torch.stack(decoder_attn_weights_list)
         enc_dec_attn_weights_tensor = torch.stack(enc_dec_attn_weights_list)
