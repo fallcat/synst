@@ -484,7 +484,7 @@ class NewAttention(nn.Module):
                                     print("values_shape[1]", values_shape[1])
                                     if attn_displacement[i] in self.attn_weights[attn_type[i]][attn_position[i]][attn_param[i]]:
                                         print("self.attn_weights[attn_type[i]][attn_position[i]][attn_param[i]]",
-                                              self.attn_weights[attn_type[i]][attn_position[i]][attn_param[i]].shape)
+                                              self.attn_weights[attn_type[i]][attn_position[i]][attn_param[i]][attn_displacement[i]].shape)
                                     else:
                                         print("non-exist")
                         else:  # attn_position[i] in ['last', 'bin']
