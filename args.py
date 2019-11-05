@@ -1094,7 +1094,7 @@ def parse_args(argv=None):
     parser.add_argument(
         '--project-name',
         default='probe_transformer',
-        type=int,
+        type=str,
         help='Specify where to store in comet'
     )
     parser.add_argument(
