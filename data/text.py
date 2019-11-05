@@ -169,7 +169,6 @@ class TextDataset(Dataset):
 
         self.load_vocab()
         self.load_text()
-        self.load_word_align_stats()
 
         return self
 
@@ -225,10 +224,6 @@ class TextDataset(Dataset):
 
         self.token2id[END_OF_SUMMARY] = len(self.id2token)
         self.id2token.append(END_OF_SUMMARY)
-
-    def load_word_align_stats(self):
-        ''' Load word align stats '''
-        raise NotImplementedError('Subclasses must implement load_text!')
 
     def add_datum(self, datum):
         ''' Add a single datum '''

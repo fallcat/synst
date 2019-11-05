@@ -266,7 +266,7 @@ class Translator(object):
             )
             targets = [
                 beam.best_hypothesis.sequence[self.span - 1:]
-                for beam in decoder.decode(encoded, beams, target_lens=batch['target_lens'])
+                for beam in decoder.decode(encoded, beams)
             ]
 
             gold_targets = []
@@ -536,6 +536,10 @@ def save_attention(input_sentence, output_words, attentions, file_path):
     fig.colorbar(cax)
 
     # Set up axes
+    # print("input_sentence: ", input_sentence)
+    # print("input_sentence len: ", len(input_sentence.split(' ')))
+    # print("output_words: ", output_words)
+    # print("output_words len:", len(output_words.split(' ')))
     ax.set_xticklabels([''] + input_sentence.split(' ') +
                        ['<EOS>'], rotation=90)
     ax.set_yticklabels([''] + output_words.split(' '))
