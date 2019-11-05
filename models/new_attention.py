@@ -772,10 +772,13 @@ class NewAttention(nn.Module):
         print(self.which_attn, "HARD-CODED elapsed_time_ms", elapsed_time_ms)
         if 'recompute' in self.times:
             print("recompute {}".format(self.times['recompute']))
+            self.times.pop('recompute')
         if 'retrieve' in self.times:
             print("retrieve {}".format(self.times['retrieve']))
+            self.times.pop('retrieve')
         if 'stack' in self.times:
             print("stack {}".format(self.times['stack']))
+            self.times.pop('stack')
 
         start_event = torch.cuda.Event(enable_timing=True)
         end_event = torch.cuda.Event(enable_timing=True)
