@@ -644,7 +644,7 @@ class NewAttention(nn.Module):
         batch_size = values.shape[0]
         # print("key_mask", key_mask)
 
-        if 'learned' in self.attn_type or 'learned' == self.attn_type:
+        if 'learned' in self.attn_type or 'learned' == self.attn_type or True:
             if self.attn_linear_transform == 1:
                 if same_tensor(values, keys, queries):
                     values, keys, queries = self.project(values, chunks=3)
