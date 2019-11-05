@@ -66,6 +66,7 @@ class NewAttention(nn.Module):
         self.attn_configs = list(self.load_attn_configs())
 
         self.attn_weights = {}
+        self.times = {}
 
     def reset_parameters(self):
         ''' Reset parameters using xavier initialization '''
@@ -711,8 +712,21 @@ class NewAttention(nn.Module):
         if num_queries:
             queries = queries[:, -num_queries:]
 
+        start_event = torch.cuda.Event(enable_timing=True)
+        end_event = torch.cuda.Event(enable_timing=True)
+        start_event.record()
+
         attended = self.attention(values, keys, queries, key_mask, attention_mask, layer_i, decoder_position,
                                   input_lens)
+
+        end_event.record()
+        torch.cuda.synchronize()  # Wait for the events to be recorded!
+        elapsed_time_ms = start_event.elapsed_time(end_event)
+        print(self.which_attn, "elapsed_time_ms", elapsed_time_ms)
+        if 'total' in self.times:
+            self.times['total'] += elapsed_time_ms
+        else:
+            self.times['total'] = elapsed_time_ms
 
         queries = queries.view(
             batch_size,
