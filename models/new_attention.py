@@ -456,6 +456,10 @@ class NewAttention(nn.Module):
                                 print("queries_shape[1]", queries_shape[1])
                                 print("decoder_position + 1", decoder_position + 1)
                                 print("values_shape[1]", values_shape[1])
+                                if attn_param[i] in self.attn_weights[attn_type[i]][attn_position[i]]:
+                                    print("self.attn_weights[attn_type[i]][attn_position[i]][attn_param[i]]", self.attn_weights[attn_type[i]][attn_position[i]][attn_param[i]].shape)
+                                else:
+                                    print("non-exist")
                     elif attn_position[i] == 'first':
                         if attn_param[i] not in self.attn_weights[attn_type[i]][attn_position[i]] \
                                 or values_shape[1] > self.attn_weights[attn_type[i]][attn_position[i]][attn_param[i]].shape[1]:
@@ -478,6 +482,11 @@ class NewAttention(nn.Module):
                                     print("queries_shape[1]", queries_shape[1])
                                     print("decoder_position + 1", decoder_position + 1)
                                     print("values_shape[1]", values_shape[1])
+                                    if attn_displacement[i] in self.attn_weights[attn_type[i]][attn_position[i]][attn_param[i]]:
+                                        print("self.attn_weights[attn_type[i]][attn_position[i]][attn_param[i]]",
+                                              self.attn_weights[attn_type[i]][attn_position[i]][attn_param[i]].shape)
+                                    else:
+                                        print("non-exist")
                         else:  # attn_position[i] in ['last', 'bin']
                             # last_indices_set = set(last_indices)
                             max_last_index = last_indices[0].cpu().item()
