@@ -649,6 +649,10 @@ class NewAttention(nn.Module):
             torch.cuda.synchronize()  # Wait for the events to be recorded!
             elapsed_time_ms = start_event.elapsed_time(end_event)
             self.times['stack'] = elapsed_time_ms
+
+        start_event = torch.cuda.Event(enable_timing=True)
+        end_event = torch.cuda.Event(enable_timing=True)
+        start_event.record()
         if mask is not None:
             new_mask = mask.clone()
             new_mask[new_mask == 0] = 1
@@ -660,6 +664,10 @@ class NewAttention(nn.Module):
             attn_weights = attn_weights.view(batch_size, self.num_heads, attn_weights_shape[1], attn_weights_shape[2])
             attn_weights.masked_fill_(key_mask[:, None, None], float(0))
             attn_weights = attn_weights.view(attn_weights_shape)
+        end_event.record()
+        torch.cuda.synchronize()  # Wait for the events to be recorded!
+        elapsed_time_ms = start_event.elapsed_time(end_event)
+        self.times['mask'] = elapsed_time_ms
         attended = torch.bmm(attn_weights,
                              values)
 
@@ -779,6 +787,9 @@ class NewAttention(nn.Module):
         if 'stack' in self.times:
             print("stack {}".format(self.times['stack']))
             self.times.pop('stack')
+        if 'mask' in self.times:
+            print("stack {}".format(self.times['mask']))
+            self.times.pop('mask')
 
         start_event = torch.cuda.Event(enable_timing=True)
         end_event = torch.cuda.Event(enable_timing=True)
