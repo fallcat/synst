@@ -160,7 +160,7 @@ class NewAttention(nn.Module):
                     attn_configs.append(attn_config_i)
             yield attn_configs
 
-    def attention(self, values, keys, queries, key_mask=None, mask=None, layer_i=0, decoder_position=-1, input_lens=None):
+    def attention(self, values, keys, queries, key_mask=None, mask=None, layer_i=0, decoder_position=-1, input_lens=None, learned=False):
         ''' Scaled dot product attention with optional masks '''
 
         # print("values", values.shape)
@@ -183,7 +183,7 @@ class NewAttention(nn.Module):
 
         attn_type, attn_position, attn_param, attn_displacement = self.attn_configs[layer_i]
 
-        if attn_type == 'learned':
+        if attn_type == 'learned' or learned:
             time1 = time.time()
             logits = self.scale * torch.bmm(queries, keys.transpose(2, 1))
             if mask is not None:
@@ -722,7 +722,19 @@ class NewAttention(nn.Module):
         end_event.record()
         torch.cuda.synchronize()  # Wait for the events to be recorded!
         elapsed_time_ms = start_event.elapsed_time(end_event)
-        print(self.which_attn, "elapsed_time_ms", elapsed_time_ms)
+        print(self.which_attn, "HARD-CODED elapsed_time_ms", elapsed_time_ms)
+
+        start_event = torch.cuda.Event(enable_timing=True)
+        end_event = torch.cuda.Event(enable_timing=True)
+        start_event.record()
+
+        attended = self.attention(values, keys, queries, key_mask, attention_mask, layer_i, decoder_position,
+                                  input_lens, learned=True)
+
+        end_event.record()
+        torch.cuda.synchronize()  # Wait for the events to be recorded!
+        elapsed_time_ms = start_event.elapsed_time(end_event)
+        print(self.which_attn, "LEARNED elapsed_time_ms", elapsed_time_ms)
         if 'total' in self.times:
             self.times['total'] += elapsed_time_ms
         else:
