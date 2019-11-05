@@ -451,6 +451,11 @@ class NewAttention(nn.Module):
                                     or values_shape[1] > self.attn_weights[attn_type[i]][attn_position[i]][attn_param[i]].shape[
                                         1]):
                             need_recompute = True
+                            if self.which_attn == 'decoder':
+                                print("center")
+                                print("queries_shape[1]", queries_shape[1])
+                                print("decoder_position + 1", decoder_position + 1)
+                                print("values_shape[1]", values_shape[1])
                     elif attn_position[i] == 'first':
                         if attn_param[i] not in self.attn_weights[attn_type[i]][attn_position[i]] \
                                 or values_shape[1] > self.attn_weights[attn_type[i]][attn_position[i]][attn_param[i]].shape[1]:
@@ -460,12 +465,19 @@ class NewAttention(nn.Module):
                             if attn_param[i] not in self.attn_weights[attn_type[i]][attn_position[i]]:
                                 self.attn_weights[attn_type[i]][attn_position[i]][attn_param[i]] = {}
                                 need_recompute = True
+                                if self.which_attn == 'decoder':
+                                    print("left, not exist")
                             if attn_displacement[i] not in self.attn_weights[attn_type[i]][attn_position[i]][attn_param[i]] \
                                     or (queries_shape[1] > self.attn_weights[attn_type[i]][attn_position[i]][attn_param[i]][attn_displacement[i]].shape[0]
                                         or decoder_position + 1 > self.attn_weights[attn_type[i]][attn_position[i]][attn_param[i]][attn_displacement[i]].shape[0]
                                         or values_shape[1] > self.attn_weights[attn_type[i]][attn_position[i]][attn_param[i]][
                                             attn_displacement[i]].shape[1]):
                                 need_recompute = True
+                                if self.which_attn == 'decoder':
+                                    print("center")
+                                    print("queries_shape[1]", queries_shape[1])
+                                    print("decoder_position + 1", decoder_position + 1)
+                                    print("values_shape[1]", values_shape[1])
                         else:  # attn_position[i] in ['last', 'bin']
                             # last_indices_set = set(last_indices)
                             max_last_index = last_indices[0].cpu().item()
@@ -485,6 +497,7 @@ class NewAttention(nn.Module):
 
                     # print("conditions", time.time() - time3)
                     # time4 = time.time()
+
 
                     if need_recompute:
                         indices_v = torch.arange(values_shape[1]).view(1, -1).type_as(values)
