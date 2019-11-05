@@ -61,6 +61,8 @@ class NewAttention(nn.Module):
                     self.input_weights = nn.Parameter(torch.Tensor(2 * embed_dim, embed_dim))
             else:
                 self.input_weights = nn.Parameter(torch.Tensor(embed_dim, embed_dim))
+        self.input_weights = nn.Parameter(torch.Tensor(3 * embed_dim, embed_dim))
+
         self.output_projection = nn.Linear(embed_dim, embed_dim, bias=False)
         self.reset_parameters()
         self.attn_configs = list(self.load_attn_configs())
