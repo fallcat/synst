@@ -290,7 +290,8 @@ class ProbeNewTransformer(nn.Module):
                        'which_attn': 'encoder',
                        'attn_weights': config.attn_weights,
                        'attn_score': config.attn_score,
-                       'attn_bins': config.attn_bins}
+                       'attn_bins': config.attn_bins,
+                       'attn_threshold': config.attn_threshold}
         args = [attn_config, config.num_heads, config.embedding_size, config.hidden_dim]
         return nn.ModuleList([
             TransformerEncoderLayer(*args, **kwargs)
@@ -311,7 +312,8 @@ class ProbeNewTransformer(nn.Module):
                            'which_attn': 'decoder',
                            'attn_weights': config.dec_attn_weights,
                            'attn_score': config.dec_attn_score,
-                           'attn_bins': config.dec_attn_bins}
+                           'attn_bins': config.dec_attn_bins,
+                           'attn_threshold': config.dec_attn_threshold}
         enc_dec_attn_config = {'attn_type': config.enc_dec_attn_type,
                                'attn_position': config.enc_dec_attn_position,
                                'attn_param': config.enc_dec_attn_param,
@@ -325,7 +327,8 @@ class ProbeNewTransformer(nn.Module):
                                'attn_score': config.enc_dec_attn_score,
                                'attn_bins': config.enc_dec_attn_bins,
                                'enc_dec_attn_layer': config.enc_dec_attn_layer,
-                               'enc_dec_attn_num_heads': config.enc_dec_attn_num_heads
+                               'enc_dec_attn_num_heads': config.enc_dec_attn_num_heads,
+                               'attn_threshold': config.enc_dec_attn_threshold
                                }
         args = [dec_attn_config, enc_dec_attn_config, config.num_heads, config.embedding_size, config.hidden_dim]
         return nn.ModuleList([
