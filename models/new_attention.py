@@ -663,10 +663,22 @@ class NewAttention(nn.Module):
         end_event = torch.cuda.Event(enable_timing=True)
         start_event.record()
         if mask is not None:
-            new_mask = mask.clone()
-            new_mask[new_mask == 0] = 1
-            new_mask[new_mask == float('-inf')] = 0
-            attn_weights = attn_weights.clone() * new_mask
+            # new_mask = mask == 0
+            # new_mask[new_mask == 0] = 1
+            # new_mask[new_mask == float('-inf')] = 0
+            attn_weights = attn_weights[mask == 0]
+        end_event.record()
+        torch.cuda.synchronize()  # Wait for the events to be recorded!
+        elapsed_time_ms = start_event.elapsed_time(end_event)
+        self.times['mask'] = elapsed_time_ms
+        if mask is not None:
+            print("mask shape", mask.shape)
+            print("attn_weights shape", attn_weights.shape)
+        attended = torch.bmm(attn_weights,
+                             values)
+        start_event = torch.cuda.Event(enable_timing=True)
+        end_event = torch.cuda.Event(enable_timing=True)
+        start_event.record()
         if key_mask is not None:
             attn_weights_shape = attn_weights.shape
             batch_size = attn_weights_shape[0] // self.num_heads
@@ -686,7 +698,7 @@ class NewAttention(nn.Module):
         end_event.record()
         torch.cuda.synchronize()  # Wait for the events to be recorded!
         elapsed_time_ms = start_event.elapsed_time(end_event)
-        self.times['mask'] = elapsed_time_ms
+        self.times['key_mask'] = elapsed_time_ms
         attended = torch.bmm(attn_weights,
                              values)
 
@@ -809,6 +821,9 @@ class NewAttention(nn.Module):
         if 'mask' in self.times:
             print("mask {}".format(self.times['mask']))
             self.times.pop('mask')
+        if 'key_mask' in self.times:
+            print("key_mask {}".format(self.times['key_mask']))
+            self.times.pop('key_mask')
 
         start_event = torch.cuda.Event(enable_timing=True)
         end_event = torch.cuda.Event(enable_timing=True)
