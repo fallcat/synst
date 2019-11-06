@@ -188,6 +188,10 @@ class NewAttention(nn.Module):
         if attn_type == 'learned' or learned:
             time1 = time.time()
             logits = self.scale * torch.bmm(queries, keys.transpose(2, 1))
+
+            start_event = torch.cuda.Event(enable_timing=True)
+            end_event = torch.cuda.Event(enable_timing=True)
+            start_event.record()
             if mask is not None:
                 logits += mask
 
@@ -197,6 +201,11 @@ class NewAttention(nn.Module):
                 logits = logits.view(batch_size, self.num_heads, logits_shape[1], logits_shape[2])
                 logits.masked_fill_(key_mask[:, None, None], float('-inf'))
                 logits = logits.view(logits_shape)
+
+            end_event.record()
+            torch.cuda.synchronize()  # Wait for the events to be recorded!
+            elapsed_time_ms = start_event.elapsed_time(end_event)
+            self.times['mask'] = elapsed_time_ms
 
             attn_weights = F.softmax(logits, dim=-1)
 
@@ -664,6 +673,16 @@ class NewAttention(nn.Module):
             attn_weights = attn_weights.view(batch_size, self.num_heads, attn_weights_shape[1], attn_weights_shape[2])
             attn_weights.masked_fill_(key_mask[:, None, None], float(0))
             attn_weights = attn_weights.view(attn_weights_shape)
+
+        # if mask is not None:
+        #     logits += mask
+        #
+        # if key_mask is not None:
+        #     logits_shape = logits.shape
+        #     batch_size = logits_shape[0] // self.num_heads
+        #     logits = logits.view(batch_size, self.num_heads, logits_shape[1], logits_shape[2])
+        #     logits.masked_fill_(key_mask[:, None, None], float('-inf'))
+        #     logits = logits.view(logits_shape)
         end_event.record()
         torch.cuda.synchronize()  # Wait for the events to be recorded!
         elapsed_time_ms = start_event.elapsed_time(end_event)
@@ -788,7 +807,7 @@ class NewAttention(nn.Module):
             print("stack {}".format(self.times['stack']))
             self.times.pop('stack')
         if 'mask' in self.times:
-            print("stack {}".format(self.times['mask']))
+            print("mask {}".format(self.times['mask']))
             self.times.pop('mask')
 
         start_event = torch.cuda.Event(enable_timing=True)
