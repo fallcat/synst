@@ -61,7 +61,7 @@ class NewAttention(nn.Module):
                     self.input_weights = nn.Parameter(torch.Tensor(2 * embed_dim, embed_dim))
             else:
                 self.input_weights = nn.Parameter(torch.Tensor(embed_dim, embed_dim))
-        self.input_weights = nn.Parameter(torch.Tensor(3 * embed_dim, embed_dim))
+        # self.input_weights = nn.Parameter(torch.Tensor(3 * embed_dim, embed_dim))
 
         self.output_projection = nn.Linear(embed_dim, embed_dim, bias=False)
         self.reset_parameters()
@@ -732,7 +732,7 @@ class NewAttention(nn.Module):
         batch_size = values.shape[0]
         # print("key_mask", key_mask)
 
-        if 'learned' in self.attn_type or 'learned' == self.attn_type or True:
+        if 'learned' in self.attn_type or 'learned' == self.attn_type:
             if self.attn_linear_transform == 1:
                 if same_tensor(values, keys, queries):
                     values, keys, queries = self.project(values, chunks=3)
@@ -800,17 +800,17 @@ class NewAttention(nn.Module):
         if num_queries:
             queries = queries[:, -num_queries:]
 
-        start_event = torch.cuda.Event(enable_timing=True)
-        end_event = torch.cuda.Event(enable_timing=True)
-        start_event.record()
+        # start_event = torch.cuda.Event(enable_timing=True)
+        # end_event = torch.cuda.Event(enable_timing=True)
+        # start_event.record()
 
         attended = self.attention(values, keys, queries, key_mask, attention_mask, layer_i, decoder_position,
                                   input_lens)
 
-        end_event.record()
-        torch.cuda.synchronize()  # Wait for the events to be recorded!
-        elapsed_time_ms = start_event.elapsed_time(end_event)
-        print(self.which_attn, "HARD-CODED elapsed_time_ms", elapsed_time_ms)
+        # end_event.record()
+        # torch.cuda.synchronize()  # Wait for the events to be recorded!
+        # elapsed_time_ms = start_event.elapsed_time(end_event)
+        # print(self.which_attn, "HARD-CODED elapsed_time_ms", elapsed_time_ms)
         # if 'recompute' in self.times:
         #     print("recompute {}".format(self.times['recompute']))
         #     self.times.pop('recompute')
@@ -827,17 +827,17 @@ class NewAttention(nn.Module):
         #     print("key_mask {}".format(self.times['key_mask']))
         #     self.times.pop('key_mask')
 
-        start_event = torch.cuda.Event(enable_timing=True)
-        end_event = torch.cuda.Event(enable_timing=True)
-        start_event.record()
-
-        attended = self.attention(values, keys, queries, key_mask, attention_mask, layer_i, decoder_position,
-                                  input_lens, learned=True)
-
-        end_event.record()
-        torch.cuda.synchronize()  # Wait for the events to be recorded!
-        elapsed_time_ms = start_event.elapsed_time(end_event)
-        print(self.which_attn, "LEARNED elapsed_time_ms", elapsed_time_ms)
+        # start_event = torch.cuda.Event(enable_timing=True)
+        # end_event = torch.cuda.Event(enable_timing=True)
+        # start_event.record()
+        #
+        # attended = self.attention(values, keys, queries, key_mask, attention_mask, layer_i, decoder_position,
+        #                           input_lens, learned=True)
+        #
+        # end_event.record()
+        # torch.cuda.synchronize()  # Wait for the events to be recorded!
+        # elapsed_time_ms = start_event.elapsed_time(end_event)
+        # print(self.which_attn, "LEARNED elapsed_time_ms", elapsed_time_ms)
         # if 'mask' in self.times:
         #     print("mask {}".format(self.times['mask']))
         #     self.times.pop('mask')
