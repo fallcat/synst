@@ -10,7 +10,7 @@ from torch import nn
 from models.probe_new_attention import ProbeNewAttention
 from models.attention import MultiHeadedAttention
 from models.embeddings import PositionEmbedding, TokenEmbedding
-from models.utils import LabelSmoothingLoss, ProbeTranslator # need to change this ProbeNewTranslator
+from models.utils import LabelSmoothingLoss, ProbeNewTranslator # need to change this ProbeNewTranslator
 from utils import left_shift, right_shift, triu
 
 
@@ -345,7 +345,7 @@ class ProbeNewTransformer(nn.Module):
 
     def translator(self, config):
         ''' Get a translator for this model '''
-        return ProbeTranslator(config, self, self.dataset)
+        return ProbeNewTranslator(config, self, self.dataset)
 
     def reset_named_parameters(self, modules):
         ''' Get a translator for this model '''
