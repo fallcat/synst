@@ -7,9 +7,8 @@ import time
 import numpy as np
 from torch import nn
 from torch.nn import functional as F
-from models.attention import MultiHeadedAttention
 
-from utils import same_tensor, pad_unsorted_sequence
+from utils import same_tensor
 
 
 class NewAttention(nn.Module):
