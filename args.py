@@ -202,6 +202,13 @@ def add_new_transformer_args(parser):
              'If window size is 2, then we have uniform distribution on 5 words.'
     )
     group.add_argument(
+        '--attn-threshold',
+        type=float,
+        default=-1,
+        help='when attention type is normal, '
+             'Only attend to places where distribution is above or equal to the attn-threshold'
+    )
+    group.add_argument(
         '--attn-displacement',
         type=int,
         nargs='+',
@@ -266,6 +273,13 @@ def add_new_transformer_args(parser):
              'If window size is 2, then we have uniform distribution on 5 words.'
     )
     group.add_argument(
+        '--dec-attn-threshold',
+        type=float,
+        default=-1,
+        help='when attention type is normal, '
+             'Only attend to places where distribution is above or equal to the attn-threshold'
+    )
+    group.add_argument(
         '--dec-attn-displacement',
         type=int,
         nargs='+',
@@ -328,6 +342,13 @@ def add_new_transformer_args(parser):
         help='when attention type is normal. The standard deviation.'
              'when attention type is uniform. The number of tokens to focus on to each direction.'
              'If window size is 2, then we have uniform distribution on 5 words.'
+    )
+    group.add_argument(
+        '--enc-dec-attn-threshold',
+        type=float,
+        default=-1,
+        help='when attention type is normal, '
+             'Only attend to places where distribution is above or equal to the attn-threshold'
     )
     group.add_argument(
         '--enc-dec-attn-displacement',
