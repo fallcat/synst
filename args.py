@@ -1090,6 +1090,13 @@ def parse_args(argv=None):
         the existing experiment. If a filename ending with guid it is provided, it will wait \
         until the file exists, then start tracking that experiment.'
     )
+
+    parser.add_argument(
+        '--project-name',
+        default='probe_transformer',
+        type=str,
+        help='Specify where to store in comet'
+    )
     parser.add_argument(
         '-v',
         '--verbose',
@@ -1224,7 +1231,7 @@ Commit your changes first, then try again.''')
 
     args.experiment = experiment_type(
         *experiment_args,
-        project_name='probe-transformer',
+        project_name=args.project_name,
         workspace='umass-nlp',
         disabled=not args.track,
         auto_metric_logging=False,
