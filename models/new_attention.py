@@ -821,6 +821,9 @@ class NewAttention(nn.Module):
         torch.cuda.synchronize()  # Wait for the events to be recorded!
         elapsed_time_ms = start_event.elapsed_time(end_event)
         print(self.which_attn, "LEARNED elapsed_time_ms", elapsed_time_ms)
+        if 'mask' in self.times:
+            print("mask {}".format(self.times['mask']))
+            self.times.pop('mask')
 
         queries = queries.view(
             batch_size,
