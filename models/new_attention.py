@@ -518,9 +518,9 @@ class NewAttention(nn.Module):
 
 
                     if need_recompute:
-                        start_event = torch.cuda.Event(enable_timing=True)
-                        end_event = torch.cuda.Event(enable_timing=True)
-                        start_event.record()
+                        # start_event = torch.cuda.Event(enable_timing=True)
+                        # end_event = torch.cuda.Event(enable_timing=True)
+                        # start_event.record()
                         indices_v = torch.arange(values_shape[1]).view(1, -1).type_as(values)
 
                         if attn_position[i] not in ['last', 'bin']:
@@ -598,16 +598,16 @@ class NewAttention(nn.Module):
                             #     {new_last_indices_list[i]: row[0][:, :new_last_indices_list[i] + 1] for i, row in enumerate(logits)})
 
                         # print("store", time.time() - time6)
-                        end_event.record()
-                        torch.cuda.synchronize()  # Wait for the events to be recorded!
-                        elapsed_time_ms = start_event.elapsed_time(end_event)
-                        self.times['recompute'] = elapsed_time_ms
+                        # end_event.record()
+                        # torch.cuda.synchronize()  # Wait for the events to be recorded!
+                        # elapsed_time_ms = start_event.elapsed_time(end_event)
+                        # self.times['recompute'] = elapsed_time_ms
 
                     # time7 = time.time()
 
-                    start_event = torch.cuda.Event(enable_timing=True)
-                    end_event = torch.cuda.Event(enable_timing=True)
-                    start_event.record()
+                    # start_event = torch.cuda.Event(enable_timing=True)
+                    # end_event = torch.cuda.Event(enable_timing=True)
+                    # start_event.record()
                     if attn_position[i] in ['center', 'first', 'last']:
                         retrieve_dict = self.attn_weights[attn_type[i]][attn_position[i]][attn_param[i]]
                     else:
@@ -636,49 +636,49 @@ class NewAttention(nn.Module):
 
                     logits = logits.expand(batch_size, 1, queries_shape[1], values_shape[1])  # .type_as(values)
 
-                    end_event.record()
-                    torch.cuda.synchronize()  # Wait for the events to be recorded!
-                    elapsed_time_ms = start_event.elapsed_time(end_event)
-                    self.times['retrieve'] = elapsed_time_ms
+                    # end_event.record()
+                    # torch.cuda.synchronize()  # Wait for the events to be recorded!
+                    # elapsed_time_ms = start_event.elapsed_time(end_event)
+                    # self.times['retrieve'] = elapsed_time_ms
                 logits_list.append(logits)
             #
             #     if self.which_attn == 'source':
             #         print("time in loop", time.time() - time3)
             # if self.which_attn == 'source':
             #     print("final time", time.time() - time3)
-            start_event = torch.cuda.Event(enable_timing=True)
-            end_event = torch.cuda.Event(enable_timing=True)
-            start_event.record()
+            # start_event = torch.cuda.Event(enable_timing=True)
+            # end_event = torch.cuda.Event(enable_timing=True)
+            # start_event.record()
             attn_weights = torch.stack(logits_list, dim=1)
             # print("attn_weights", attn_weights.shape)
             attn_weights = attn_weights.view(values_shape[0],
                                              queries_shape[1],
                                              values_shape[1])
-            end_event.record()
-            torch.cuda.synchronize()  # Wait for the events to be recorded!
-            elapsed_time_ms = start_event.elapsed_time(end_event)
-            self.times['stack'] = elapsed_time_ms
+            # end_event.record()
+            # torch.cuda.synchronize()  # Wait for the events to be recorded!
+            # elapsed_time_ms = start_event.elapsed_time(end_event)
+            # self.times['stack'] = elapsed_time_ms
 
-        start_event = torch.cuda.Event(enable_timing=True)
-        end_event = torch.cuda.Event(enable_timing=True)
-        start_event.record()
+        # start_event = torch.cuda.Event(enable_timing=True)
+        # end_event = torch.cuda.Event(enable_timing=True)
+        # start_event.record()
         if mask is not None:
             # new_mask = mask == 0
             # new_mask[new_mask == 0] = 1
             # new_mask[new_mask == float('-inf')] = 0
             attn_weights = attn_weights * (mask == 0).to(dtype=torch.float32)
-        end_event.record()
-        torch.cuda.synchronize()  # Wait for the events to be recorded!
-        elapsed_time_ms = start_event.elapsed_time(end_event)
-        self.times['mask'] = elapsed_time_ms
-        if mask is not None:
-            print("mask shape", mask.shape)
-            print("attn_weights shape", attn_weights.shape)
+        # end_event.record()
+        # torch.cuda.synchronize()  # Wait for the events to be recorded!
+        # elapsed_time_ms = start_event.elapsed_time(end_event)
+        # self.times['mask'] = elapsed_time_ms
+        # if mask is not None:
+        #     print("mask shape", mask.shape)
+        #     print("attn_weights shape", attn_weights.shape)
         attended = torch.bmm(attn_weights,
                              values)
-        start_event = torch.cuda.Event(enable_timing=True)
-        end_event = torch.cuda.Event(enable_timing=True)
-        start_event.record()
+        # start_event = torch.cuda.Event(enable_timing=True)
+        # end_event = torch.cuda.Event(enable_timing=True)
+        # start_event.record()
         if key_mask is not None:
             attn_weights_shape = attn_weights.shape
             batch_size = attn_weights_shape[0] // self.num_heads
@@ -695,12 +695,12 @@ class NewAttention(nn.Module):
         #     logits = logits.view(batch_size, self.num_heads, logits_shape[1], logits_shape[2])
         #     logits.masked_fill_(key_mask[:, None, None], float('-inf'))
         #     logits = logits.view(logits_shape)
-        end_event.record()
-        torch.cuda.synchronize()  # Wait for the events to be recorded!
-        elapsed_time_ms = start_event.elapsed_time(end_event)
-        self.times['key_mask'] = elapsed_time_ms
-        attended = torch.bmm(attn_weights,
-                             values)
+        # end_event.record()
+        # torch.cuda.synchronize()  # Wait for the events to be recorded!
+        # elapsed_time_ms = start_event.elapsed_time(end_event)
+        # self.times['key_mask'] = elapsed_time_ms
+        # attended = torch.bmm(attn_weights,
+        #                      values)
 
         # torch.set_printoptions(profile='full')
         # print("values", values)
@@ -809,21 +809,21 @@ class NewAttention(nn.Module):
         torch.cuda.synchronize()  # Wait for the events to be recorded!
         elapsed_time_ms = start_event.elapsed_time(end_event)
         print(self.which_attn, "HARD-CODED elapsed_time_ms", elapsed_time_ms)
-        if 'recompute' in self.times:
-            print("recompute {}".format(self.times['recompute']))
-            self.times.pop('recompute')
-        if 'retrieve' in self.times:
-            print("retrieve {}".format(self.times['retrieve']))
-            self.times.pop('retrieve')
-        if 'stack' in self.times:
-            print("stack {}".format(self.times['stack']))
-            self.times.pop('stack')
-        if 'mask' in self.times:
-            print("mask {}".format(self.times['mask']))
-            self.times.pop('mask')
-        if 'key_mask' in self.times:
-            print("key_mask {}".format(self.times['key_mask']))
-            self.times.pop('key_mask')
+        # if 'recompute' in self.times:
+        #     print("recompute {}".format(self.times['recompute']))
+        #     self.times.pop('recompute')
+        # if 'retrieve' in self.times:
+        #     print("retrieve {}".format(self.times['retrieve']))
+        #     self.times.pop('retrieve')
+        # if 'stack' in self.times:
+        #     print("stack {}".format(self.times['stack']))
+        #     self.times.pop('stack')
+        # if 'mask' in self.times:
+        #     print("mask {}".format(self.times['mask']))
+        #     self.times.pop('mask')
+        # if 'key_mask' in self.times:
+        #     print("key_mask {}".format(self.times['key_mask']))
+        #     self.times.pop('key_mask')
 
         start_event = torch.cuda.Event(enable_timing=True)
         end_event = torch.cuda.Event(enable_timing=True)
@@ -836,9 +836,9 @@ class NewAttention(nn.Module):
         torch.cuda.synchronize()  # Wait for the events to be recorded!
         elapsed_time_ms = start_event.elapsed_time(end_event)
         print(self.which_attn, "LEARNED elapsed_time_ms", elapsed_time_ms)
-        if 'mask' in self.times:
-            print("mask {}".format(self.times['mask']))
-            self.times.pop('mask')
+        # if 'mask' in self.times:
+        #     print("mask {}".format(self.times['mask']))
+        #     self.times.pop('mask')
 
         queries = queries.view(
             batch_size,
