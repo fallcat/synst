@@ -189,9 +189,9 @@ class NewAttention(nn.Module):
             time1 = time.time()
             logits = self.scale * torch.bmm(queries, keys.transpose(2, 1))
 
-            start_event = torch.cuda.Event(enable_timing=True)
-            end_event = torch.cuda.Event(enable_timing=True)
-            start_event.record()
+            # start_event = torch.cuda.Event(enable_timing=True)
+            # end_event = torch.cuda.Event(enable_timing=True)
+            # start_event.record()
             if mask is not None:
                 logits += mask
 
@@ -202,10 +202,10 @@ class NewAttention(nn.Module):
                 logits.masked_fill_(key_mask[:, None, None], float('-inf'))
                 logits = logits.view(logits_shape)
 
-            end_event.record()
-            torch.cuda.synchronize()  # Wait for the events to be recorded!
-            elapsed_time_ms = start_event.elapsed_time(end_event)
-            self.times['mask'] = elapsed_time_ms
+            # end_event.record()
+            # torch.cuda.synchronize()  # Wait for the events to be recorded!
+            # elapsed_time_ms = start_event.elapsed_time(end_event)
+            # self.times['mask'] = elapsed_time_ms
 
             attn_weights = F.softmax(logits, dim=-1)
 
@@ -674,8 +674,7 @@ class NewAttention(nn.Module):
         # if mask is not None:
         #     print("mask shape", mask.shape)
         #     print("attn_weights shape", attn_weights.shape)
-        attended = torch.bmm(attn_weights,
-                             values)
+
         # start_event = torch.cuda.Event(enable_timing=True)
         # end_event = torch.cuda.Event(enable_timing=True)
         # start_event.record()
@@ -685,6 +684,9 @@ class NewAttention(nn.Module):
             attn_weights = attn_weights.view(batch_size, self.num_heads, attn_weights_shape[1], attn_weights_shape[2])
             attn_weights.masked_fill_(key_mask[:, None, None], float(0))
             attn_weights = attn_weights.view(attn_weights_shape)
+
+        attended = torch.bmm(attn_weights,
+                             values)
 
         # if mask is not None:
         #     logits += mask
