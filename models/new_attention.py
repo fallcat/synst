@@ -207,7 +207,6 @@ class NewAttention(nn.Module):
         # If we are learning some of the heads but not all, apply multiheaded attention to thoese heads together and
         # concat with rest of the hard-coded heads later.
         elif 'learned' in attn_type:
-            time1 = time.time()
             learned_idx = np.where(np.array(attn_type) == 'learned')[0]
             len_learned_idex = len(learned_idx)
             queries_ = self.project_learned(queries, learned_idx)
@@ -230,7 +229,6 @@ class NewAttention(nn.Module):
                                                       logits_shape_[-1])
 
             learned_count = 0
-            # print("time for partially learned:", time.time() - time1)
 
         # If we want to look at last token of the sentence, or different bins of the sentence,
         # we would need sentence length to compute the focused position. If we have input_lens,
@@ -241,7 +239,6 @@ class NewAttention(nn.Module):
         with torch.no_grad():
 
             if not {'last', 'bin'}.isdisjoint(attn_position) or attn_position in ['last', 'bin']:
-                time2 = time.time()
                 if input_lens is not None:
                     last_indices = (input_lens - 1).cpu().view(-1)
                 elif key_mask is not None:
@@ -403,7 +400,6 @@ class NewAttention(nn.Module):
                 logits_list = []
 
                 for i in range(self.num_heads):
-                    time4 = time.time()
                     if attn_type[i] == 'learned':
                         logits = logits_[:, learned_count]
                         learned_count += 1
