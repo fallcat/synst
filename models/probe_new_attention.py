@@ -200,7 +200,7 @@ class ProbeNewAttention(nn.Module):
                         batch_size,
                         -1,
                         self.num_heads * self.projection_dim
-                    )
+                    ), attn_weights
 
         elif 'learned' in attn_type:
             time1 = time.time()
