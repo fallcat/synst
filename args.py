@@ -181,7 +181,7 @@ def add_new_transformer_args(parser):
         type=str,
         nargs='+',
         default='normal',
-        choices=['normal', 'uniform', 'whole', 'no', 'learned'],
+        choices=['normal', 'uniform', 'no', 'learned'],
         help='What type of attention we are using for the rules'
     )
     group.add_argument(
@@ -189,8 +189,8 @@ def add_new_transformer_args(parser):
         type=str,
         nargs='+',
         default='center',
-        choices=['center', 'left', 'right', 'first', 'last', 'middle', 'bin'],
-        help='Where to put the attention. Center is centered at the word. Middle is the middle of sentence'
+        choices=['center', 'left', 'right', 'first', 'last', 'bin'],
+        help='Where to put the attention. Center is centered at the word.'
     )
     group.add_argument(
         '--attn-param',
@@ -245,7 +245,7 @@ def add_new_transformer_args(parser):
         type=str,
         nargs='+',
         default='learned',
-        choices=['normal', 'uniform', 'whole', 'no', 'learned'],
+        choices=['normal', 'uniform', 'no', 'learned'],
         help='What type of attention we are using for the rules'
     )
     group.add_argument(
@@ -253,8 +253,8 @@ def add_new_transformer_args(parser):
         type=str,
         nargs='+',
         default='center',
-        choices=['center', 'left', 'right', 'first', 'last', 'middle', 'bin'],
-        help='Where to put the attention. Center is centered at the word. Middle is the middle of sentence'
+        choices=['center', 'left', 'right', 'first', 'last', 'bin'],
+        help='Where to put the attention. Center is centered at the word.'
     )
     group.add_argument(
         '--dec-attn-param',
@@ -309,7 +309,7 @@ def add_new_transformer_args(parser):
         type=str,
         nargs='+',
         default='learned',
-        choices=['normal', 'uniform', 'whole', 'no', 'learned'],
+        choices=['normal', 'uniform', 'no', 'learned'],
         help='What type of attention we are using for the rules'
     )
     group.add_argument(
@@ -317,8 +317,8 @@ def add_new_transformer_args(parser):
         type=str,
         nargs='+',
         default='center',
-        choices=['center', 'left', 'right', 'first', 'last', 'middle', 'bin'],
-        help='Where to put the attention. Center is centered at the word. Middle is the middle of sentence'
+        choices=['center', 'left', 'right', 'first', 'last', 'bin'],
+        help='Where to put the attention. Center is centered at the word.'
     )
     group.add_argument(
         '--enc-dec-attn-param',
@@ -369,6 +369,26 @@ def add_new_transformer_args(parser):
         type=int,
         default=2,
         help='Number of bins to look at in total'
+    )
+
+    group.add_argument(
+        '--enc-dec-attn-layer',
+        type=int,
+        nargs='+',
+        default=1,
+        choices=[0, 1],
+        help="Determine the presence of encoder-decoder (source) attention after the decoder self-attention layer. "
+             "Length of list should be equal to the number of layers. "
+    )
+
+    group.add_argument(
+        '--enc-dec-attn-num-heads',
+        type=int,
+        nargs='+',
+        default=-1,
+        help="number of heads for enc-dec-attn at each layer; length of list should be equal to the number of layers. "
+             "if a layer does not have source attention, it should be 0."
+             "If the number of heads is same as encoder/decoder self attentions, then use -1 to specify that."
     )
 
     return group
@@ -1070,6 +1090,13 @@ def parse_args(argv=None):
         the existing experiment. If a filename ending with guid it is provided, it will wait \
         until the file exists, then start tracking that experiment.'
     )
+
+    parser.add_argument(
+        '--project-name',
+        default='probe_transformer',
+        type=str,
+        help='Specify where to store in comet'
+    )
     parser.add_argument(
         '-v',
         '--verbose',
@@ -1204,7 +1231,7 @@ Commit your changes first, then try again.''')
 
     args.experiment = experiment_type(
         *experiment_args,
-        project_name='probe-transformer',
+        project_name=args.project_name,
         workspace='umass-nlp',
         disabled=not args.track,
         auto_metric_logging=False,

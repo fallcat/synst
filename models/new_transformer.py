@@ -110,13 +110,16 @@ class TransformerEncoderLayer(nn.Module):
 
 class TransformerDecoderLayer(nn.Module):
     ''' Implements a single decoder layer in a transformer decoder stack '''
-    def __init__(self, dec_attn_config, enc_dec_attn_config, num_heads, dim, hidden_dim, causal=True, span=1, dropout_p=0.1):
+    def __init__(self, dec_attn_config, enc_dec_attn_config, num_heads, dim, hidden_dim, layer_i, causal=True, span=1,
+                 dropout_p=0.1):
         ''' Initialize the transformer layer '''
         super(TransformerDecoderLayer, self).__init__()
 
         self.span = span
         self.causal = causal
         self.uuid = uuid.uuid4()
+
+        self.enc_dec_attn_config = enc_dec_attn_config
 
         self.ffn = TransformerSublayer(
             TransformerFFN(dim, hidden_dim),
@@ -128,22 +131,37 @@ class TransformerDecoderLayer(nn.Module):
             dim, dropout_p
         )
 
-        self.source_attention = TransformerSublayer(
-            NewAttention(enc_dec_attn_config, dim, num_heads),
-            dim, dropout_p
-        )
+        if self.enc_dec_attn_config['enc_dec_attn_layer'] == 1 or \
+                (type(self.enc_dec_attn_config['enc_dec_attn_layer'] is list) and
+                 self.enc_dec_attn_config['enc_dec_attn_layer'][layer_i] == 1):
+            if self.enc_dec_attn_config['enc_dec_attn_num_heads'] == -1:
+                src_num_heads = num_heads
+            elif type(self.enc_dec_attn_config['enc_dec_attn_num_heads']) is not list:
+                src_num_heads = self.enc_dec_attn_config['enc_dec_attn_num_heads']
+            else:
+                src_num_heads = self.enc_dec_attn_config['enc_dec_attn_num_heads'][layer_i]
+            assert src_num_heads != 0
+
+            self.source_attention = TransformerSublayer(
+                NewAttention(enc_dec_attn_config, dim, src_num_heads),
+                dim, dropout_p
+            )
+
+            print('layer %i num of src heads %i' % (layer_i, src_num_heads))
 
     def reset_parameters(self):
         ''' Reset the parameters of the module '''
         self.ffn.reset_parameters()
         self.self_attention.reset_parameters()
-        self.source_attention.reset_parameters()
+        if hasattr(self, 'source_attention'):
+            self.source_attention.reset_parameters()
 
     def forward(self, inputs, sources, layer_i, word_embedding): # pylint:disable=arguments-differ
         ''' The forward pass '''
         mask = inputs['mask']
         state = inputs['state']
         cache = inputs.get('cache')
+        input_lens = inputs.get('input_lens')
 
         kwargs = {'layer_i': layer_i}
         decoder_position = state.shape[1] - 1
@@ -169,7 +187,7 @@ class TransformerDecoderLayer(nn.Module):
 
         source = sources['state']
         # print("source", source)
-        kwargs = {'key_mask': sources['mask'], 'layer_i': layer_i}
+        kwargs = {'key_mask': sources['mask'], 'layer_i': layer_i, 'input_lens': input_lens}
         if self.causal and cache is not None:
             kwargs['num_queries'] = self.span
             kwargs['decoder_position'] = decoder_position
@@ -179,10 +197,11 @@ class TransformerDecoderLayer(nn.Module):
 
         # print("decoder source attention")
 
-        state = self.source_attention(
-            state, # residual
-            source, source, state, **kwargs # passed to multiheaded attention
-        )
+        if hasattr(self, 'source_attention'):
+            state = self.source_attention(
+                state, # residual
+                source, source, state, **kwargs # passed to multiheaded attention
+            )
 
         state = self.ffn(
             state, # residual
@@ -302,11 +321,14 @@ class NewTransformer(nn.Module):
                                'which_attn': 'source',
                                'attn_weights': config.enc_dec_attn_weights,
                                'attn_score': config.enc_dec_attn_score,
-                               'attn_bins': config.enc_dec_attn_bins}
+                               'attn_bins': config.enc_dec_attn_bins,
+                               'enc_dec_attn_layer': config.enc_dec_attn_layer,
+                               'enc_dec_attn_num_heads': config.enc_dec_attn_num_heads
+                               }
         args = [dec_attn_config, enc_dec_attn_config, config.num_heads, config.embedding_size, config.hidden_dim]
         return nn.ModuleList([
-            TransformerDecoderLayer(*args, **kwargs)
-            for _ in range(config.num_layers)
+            TransformerDecoderLayer(*args, layer_i, **kwargs)
+            for layer_i in range(config.num_layers)
         ])
 
     @property
@@ -339,6 +361,7 @@ class NewTransformer(nn.Module):
         decoded = self.decode(
             self.encode(batch['inputs']),
             right_shift(right_shift(batch['targets']), shift=self.span - 1, fill=self.sos_idx),
+            input_lens=batch['input_lens']
         )
 
         logits = decoded['logits']
@@ -361,7 +384,7 @@ class NewTransformer(nn.Module):
 
         return encoded
 
-    def decode(self, encoded, targets, decoders=None, embedding=None, cache=None, mask=None):
+    def decode(self, encoded, targets, decoders=None, embedding=None, cache=None, mask=None, input_lens=None):
         ''' Decode the encoded sequence to the targets '''
         if decoders is None:
             decoders = self.decoders
@@ -374,7 +397,8 @@ class NewTransformer(nn.Module):
         decoded = {
             'cache': cache,
             'state': word_embedding,
-            'mask': targets.eq(self.padding_idx) if mask is None else mask
+            'mask': targets.eq(self.padding_idx) if mask is None else mask,
+            'input_lens': input_lens
         }
         for i, decoder in enumerate(decoders):
             # print("i", i)
