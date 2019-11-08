@@ -22,6 +22,7 @@
 		/mnt/nfs/work1/miyyer/simengsun/lingeval97/synst.{model-type}.scores
 
 """
+import os
 import pdb
 import torch
 import pickle
@@ -31,12 +32,7 @@ from models.utils import restore
 from binarize_lingeval97 import load_vocab
 
 LINGEVAL97_PATH = "/mnt/nfs/work1/miyyer/simengsun/lingeval97/lingeval97.synst.32000.pkl"
-# synst learn source
-#CKPT_PATH = "/mnt/nfs/work1/miyyer/simengsun/synst/experiments/wmt_ende_02/checkpoint1.pt"
-#SCORES_PATH = "/mnt/nfs/work1/miyyer/simengsun/lingeval97/synst.learn_src.scores"
-# synst all learned
-CKPT_PATH = "/mnt/nfs/work1/miyyer/wyou/synst/experiments/wmt01/checkpoint.pt"
-SCORES_PATH = "/mnt/nfs/work1/miyyer/simengsun/lingeval97/synst.all_learned.scores"
+SCORES_PATH = "/mnt/nfs/work1/miyyer/simengsun/lingeval97/synst"
 
 def get_scores(model, batches):
 
@@ -64,6 +60,10 @@ if __name__ == "__main__":
 	print("parsing args ...")
 	args = parse_args(argv=None)
 
+	score_fname = os.path.dirname(args.restore)
+	score_fname = os.path.basename(score_fname)
+	print("Will store score file to %s" % (os.path.join(SCORES_PATH, score_fname)))
+
 	# load dummy dataset, while init model, only need dataset.vocab_size/padding_idx/sos_idx
 	print("loading vocab ...")
 	t2i, i2t = load_vocab()
@@ -81,17 +81,18 @@ if __name__ == "__main__":
 	# reload checkpoint
 	print("restoring ckpt ...")
 	restore_modules = {'model' : model}
-	_, _ = restore(CKPT_PATH, 
+	_, _ = restore(args.restore, 
 					restore_modules, 
 					num_checkpoints=args.average_checkpoints,
 		            map_location=args.device.type,
-		            strict=not args.reset_parameters
+		            strict=False
 				)
-	pdb.set_trace()
+
 	print("computing scores ...")
 	scores = get_scores(model, data['batches'])
 
-	with open(SCORES_PATH, "w") as f:
+
+	with open(os.path.join(SCORES_PATH, score_fname), "w") as f:
 		for s in scores:
 			f.write(str(s) + "\n")
 

@@ -114,9 +114,7 @@ class ProbeStatsGetter(object):
                     batches.set_description_str(get_description())
 
                     result = self.model(batch)
-                    #
-                    # stats
-                    # pdb.set_trace()
+
                     enc_dec_stats = probe(result['enc_dec_attn_weights_tensor'])
                     train_stats = {'enc_dec_stats': {stats_type: enc_dec_stats[stats_type].view(self.num_layers,
                                                                                                 self.num_heads,
@@ -125,7 +123,22 @@ class ProbeStatsGetter(object):
 
                     self.update_stats(train_stats, self.train_stats, self.train_count)
 
-                    sequences, test_stats = self.translator.translate(batch)
+                    # translate
+                    sequences, attn_weights_tensors = self.translator.translate(batch)
+                    target_sequences = next(iter(sequences.values()))
+                    new_targets = [torch.LongTensor(sequence) for sequence in target_sequences]
+
+                    # new data with new targets
+                    self.dataset.collate_field(batch, 'target', new_targets)
+
+                    # model(new-batch)
+                    result = self.model(batch)
+
+                    enc_dec_stats = probe(result['enc_dec_attn_weights_tensor'])
+                    test_stats = {'enc_dec_stats': {stats_type: enc_dec_stats[stats_type].view(self.num_layers,
+                                                                                                self.num_heads,
+                                                                                                -1)
+                                                     for stats_type in STATS_TYPES}}
 
                     self.update_stats(test_stats, self.test_stats, self.test_count)
 
