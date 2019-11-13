@@ -210,6 +210,12 @@ def add_new_transformer_args(parser):
              'Only attend to places where distribution is above or equal to the attn-threshold'
     )
     group.add_argument(
+        '--attn-window',
+        type=int,
+        default=3,
+        help='The window to do convolution at'
+    )
+    group.add_argument(
         '--attn-displacement',
         type=int,
         nargs='+',
@@ -281,6 +287,12 @@ def add_new_transformer_args(parser):
              'Only attend to places where distribution is above or equal to the attn-threshold'
     )
     group.add_argument(
+        '--dec-attn-window',
+        type=int,
+        default=3,
+        help='The window to do convolution at'
+    )
+    group.add_argument(
         '--dec-attn-displacement',
         type=int,
         nargs='+',
@@ -350,6 +362,12 @@ def add_new_transformer_args(parser):
         default=-1,
         help='when attention type is normal, '
              'Only attend to places where distribution is above or equal to the attn-threshold'
+    )
+    group.add_argument(
+        '--enc-dec-attn-window',
+        type=int,
+        default=3,
+        help='The window to do convolution at'
     )
     group.add_argument(
         '--enc-dec-attn-displacement',

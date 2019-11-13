@@ -33,6 +33,8 @@ class NewAttention(nn.Module):
         self.attn_position = attn_config['attn_position']
         self.attn_param = attn_config['attn_param']
         self.attn_threshold = attn_config['attn_threshold']
+        self.attn_window = attn_config['attn_window']
+        self.half_window = int((self.attn_window - 1) / 2)
         self.attn_displacement = attn_config['attn_displacement']
         self.num_layers = attn_config['num_layers']
         self.word_count_ratio = attn_config['word_count_ratio'] if 'word_count_ratio' in attn_config else 1
@@ -65,7 +67,7 @@ class NewAttention(nn.Module):
 
         self.output_projection = nn.Linear(embed_dim, embed_dim, bias=False)
         self.reset_parameters()
-        self.attn_configs = list(self.load_attn_configs())
+        self.attn_configs, self.conv_filter = list(self.load_attn_configs())
 
         self.attn_weights = {}
         self.times = {}
@@ -160,7 +162,35 @@ class NewAttention(nn.Module):
                                                                                                  self.num_heads * self.num_layers))
                 else:
                     attn_configs.append(attn_config_i)
-            yield attn_configs
+
+            easy_positions = ['left', 'center', 'right', 'first']
+
+            with torch.no_grad():
+                if ('normal' == attn_configs[0] or 'normal' == set(attn_configs[0])) \
+                        and (attn_configs[1] in easy_positions or set(attn_configs[1]).issubset(easy_positions)):
+                    attn_type, attn_position, attn_param, attn_displacement = attn_configs
+
+                    if list not in [type(x) for x in [attn_position, attn_param]]:
+                        distance_diff = torch.arange(-self.half_window, self.half_window + 1)
+                        conv_filter = (1 / (attn_param * math.sqrt(2 * math.pi)) * torch.exp(- 1 / 2 * (distance_diff / attn_param) ** 2)).view(1, 1, -1)
+                    else:
+                        attn_config = []
+                        for attn_config_i in [attn_type, attn_position, attn_param, attn_displacement]:
+                            if type(attn_config_i) is not list:
+                                attn_config.append([attn_config_i] * self.num_heads)
+                            else:
+                                attn_config.append(attn_config_i)
+
+                        attn_type, attn_position, attn_param, attn_displacement = attn_config
+                        conv_filter = []
+                        for i in range(self.num_heads):
+                            distance_diff = torch.arange(-self.half_window, self.half_window + 1)
+                            conv_filter.append((1 / (attn_param[i] * math.sqrt(2 * math.pi)) * torch.exp(
+                                - 1 / 2 * (distance_diff / attn_param[i]) ** 2))).view(1, 1, -1)
+                else:
+                    conv_filter = None
+
+            yield attn_configs, conv_filter
 
     def attention(self, values, keys, queries, key_mask=None, mask=None, layer_i=0, decoder_position=-1, input_lens=None, learned=False):
         ''' Scaled dot product attention with optional masks '''
@@ -229,6 +259,52 @@ class NewAttention(nn.Module):
                                                       logits_shape_[-1])
 
             learned_count = 0
+
+        # If we have conv filter, then we don't need to go through the huge amount of calculation
+        # but can just use conv filter
+        if self.conv_filter is not None:
+            if list not in [type(x) for x in [attn_position, attn_param]]:
+                if attn_type == 'center':
+                    # if mask is not None:
+                    #     attn_weights = attn_weights * (mask == 0).to(dtype=torch.float32)
+                    # if key_mask is not None:
+                    #     attn_weights_shape = attn_weights.shape
+                    #     batch_size = attn_weights_shape[0] // self.num_heads
+                    #     attn_weights = attn_weights.view(batch_size, self.num_heads, attn_weights_shape[1],
+                    #                                      attn_weights_shape[2])
+                    #     attn_weights.masked_fill_(key_mask[:, None, None], float(0))
+                    #     attn_weights = attn_weights.view(attn_weights_shape)
+                    if mask is not None:
+                        values = values * (mask == 0).to(dtype=torch.float32)
+                    if key_mask is not None:
+                        values = values.view(batch_size, self.num_heads, values_shape[1],
+                                                         values_shape[2])
+                        values.masked_fill_(key_mask[:, None, None], float(0))
+                        values = values.view(values_shape)
+
+                    values = values.transpose(1, 2).view(batch_size * self.embed_dim, 1, -1)
+                    try:
+                        attended = F.conv1d(values, self.conv_filter, padding=self.half_window)
+                    except:
+                        print("Convert conv filter to correct device")
+                        self.conv_filter.type_as(values)
+                        attended = F.conv1d(values, self.conv_filter, padding=self.half_window)
+                    attended = attended.view(batch_size * self.num_heads,
+                                             self.projection_dim,
+                                             -1).transpose(1, 2).contiguous()
+                    if values_shape[1] >= queries_shape[1]:
+                        return attended[:, :queries_shape[1]].view(batch_size,
+                                                                   self.num_heads,
+                                                                   -1,
+                                                                   self.projection_dim
+                                                                   ).transpose(2, 1).contiguous().view(batch_size,
+                                                                                                       -1,
+                                                                                                       self.num_heads * self.projection_dim
+                                                                                                       )
+                    else:
+                        new_attended = values.new_zeros(queries_shape)
+                        new_attended[:, :values_shape[1]] = attended
+                        return new_attended
 
         # If we want to look at last token of the sentence, or different bins of the sentence,
         # we would need sentence length to compute the focused position. If we have input_lens,
