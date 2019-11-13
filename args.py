@@ -684,6 +684,13 @@ def add_train_args(parser):
         default=4000,
         help='Number of warmup steps for the Transformer learning rate'
     )
+    group.add_argument(
+        '--optimizer',
+        type=str,
+        default='adam',
+        choices=['adam', 'sgd'],
+        help='add optimizer'
+    )
 
     return group
 

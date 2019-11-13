@@ -41,30 +41,44 @@ class Trainer(object):
         if 'cuda' in device.type:
             self.model = nn.DataParallel(model.cuda())
 
-        self.optimizer = optim.Adam(model.parameters(), config.base_lr, betas=(0.9, 0.98), eps=1e-9)
-        if config.lr_scheduler == 'warmup':
+        if self.config.optimizer == "adam":
+            self.optimizer = optim.Adam(model.parameters(), config.base_lr, betas=(0.9, 0.98), eps=1e-9)
+            if config.lr_scheduler == 'warmup':
+                self.lr_scheduler = LambdaLR(
+                    self.optimizer,
+                    WarmupLRSchedule(
+                        config.warmup_steps
+                    )
+                )
+            elif config.lr_scheduler == 'linear':
+                self.lr_scheduler = LambdaLR(
+                    self.optimizer,
+                    LinearLRSchedule(
+                        config.base_lr,
+                        config.final_lr,
+                        config.max_steps
+                    )
+                )
+            elif config.lr_scheduler == 'exponential':
+                self.lr_scheduler = ExponentialLR(
+                    self.optimizer,
+                    config.lr_decay
+                )
+            else:
+                raise ValueError('Unknown learning rate scheduler!')
+
+        elif self.config.optimizer == "sgd":
+            print("using optimizer: SGD")
+            self.optimizer = optim.SGD(model.parameters(), lr=config.base_lr, momentum=0.9)
             self.lr_scheduler = LambdaLR(
                 self.optimizer,
-                WarmupLRSchedule(
-                    config.warmup_steps
+                DummyLRSchedule(
+                    config.base_lr
                 )
-            )
-        elif config.lr_scheduler == 'linear':
-            self.lr_scheduler = LambdaLR(
-                self.optimizer,
-                LinearLRSchedule(
-                    config.base_lr,
-                    config.final_lr,
-                    config.max_steps
-                )
-            )
-        elif config.lr_scheduler == 'exponential':
-            self.lr_scheduler = ExponentialLR(
-                self.optimizer,
-                config.lr_decay
             )
         else:
-            raise ValueError('Unknown learning rate scheduler!')
+            raise ValueError('Unknown optimizer!') 
+
 
         # Initialize the metrics
         metrics_path = os.path.join(self.config.checkpoint_directory, 'train_metrics.pt')
@@ -283,3 +297,4 @@ class Trainer(object):
                     new_best = self.evaluate(experiment, epoch, verbose)
 
                 self.checkpoint(epoch, experiment.curr_step, new_best)
+
