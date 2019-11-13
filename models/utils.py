@@ -192,6 +192,16 @@ class WarmupLRSchedule(object):
         return min(step ** -0.5, step * self.warmup_steps ** -1.5)
 
 
+class DummyLRSchedule(object):
+    def __init__(self, lr):
+        ''' Initialize the learning rate schedule '''
+        self.lr = lr
+
+    def __call__(self):
+        ''' The actual learning rate schedule '''
+        return self.lr
+
+
 class ModuleWrapper(nn.Module):
     ''' A wrapper module that calls a particular method in it's forward pass '''
     def __init__(self, module, method_name):
@@ -296,7 +306,7 @@ class ProbeTranslator(object):
         }
 
         self.num_layers = sum(model.decoders[0].enc_dec_attn_config['enc_dec_attn_layer'])
-        self.num_heads = 1
+        self.num_heads = 4
 
     def to(self, device):
         ''' Move the translator to the specified device '''
