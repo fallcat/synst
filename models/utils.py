@@ -197,7 +197,7 @@ class DummyLRSchedule(object):
         ''' Initialize the learning rate schedule '''
         self.lr = lr
 
-    def __call__(self):
+    def __call__(self, step):
         ''' The actual learning rate schedule '''
         return self.lr
 
