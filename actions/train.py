@@ -23,7 +23,7 @@ import args
 import metrics
 from actions.evaluate import Evaluator
 from data.parallel import chunked_scattering
-from models.utils import LinearLRSchedule, WarmupLRSchedule, checkpoint
+from models.utils import LinearLRSchedule, WarmupLRSchedule, DummyLRSchedule, checkpoint
 from utils import profile, tqdm_wrap_stdout, tqdm_unwrap_stdout
 
 
