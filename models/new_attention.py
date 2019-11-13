@@ -265,15 +265,7 @@ class NewAttention(nn.Module):
         if self.conv_filter is not None:
             if list not in [type(x) for x in [attn_position, attn_param]]:
                 if attn_type == 'center':
-                    # if mask is not None:
-                    #     attn_weights = attn_weights * (mask == 0).to(dtype=torch.float32)
-                    # if key_mask is not None:
-                    #     attn_weights_shape = attn_weights.shape
-                    #     batch_size = attn_weights_shape[0] // self.num_heads
-                    #     attn_weights = attn_weights.view(batch_size, self.num_heads, attn_weights_shape[1],
-                    #                                      attn_weights_shape[2])
-                    #     attn_weights.masked_fill_(key_mask[:, None, None], float(0))
-                    #     attn_weights = attn_weights.view(attn_weights_shape)
+                    print("Using CNN!")
                     if mask is not None:
                         values = values * (mask == 0).to(dtype=torch.float32)
                     if key_mask is not None:
