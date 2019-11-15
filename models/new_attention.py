@@ -553,7 +553,11 @@ class NewAttention(nn.Module):
                                                  values_shape[1])
 
         if mask is not None:
-            attn_weights = attn_weights * (mask == 0).to(dtype=torch.float32)
+            try:
+                attn_weights = attn_weights * (mask == 0).to(dtype=torch.float32)
+            except:
+                attn_weights = attn_weights.to(mask.device)
+                attn_weights = attn_weights * (mask == 0).to(dtype=torch.float32)
         if key_mask is not None:
             attn_weights_shape = attn_weights.shape
             batch_size = attn_weights_shape[0] // self.num_heads
