@@ -561,7 +561,11 @@ class NewAttention(nn.Module):
             try:
                 attn_weights.masked_fill_(key_mask[:, None, None], float(0))
             except:
+                print("attn_weights", attn_weights.get_device())
+                print("key_mask", key_mask.get_device())
+                print("values", values.get_device())
                 attn_weights = attn_weights.type_as(values)
+                
                 attn_weights.masked_fill_(key_mask[:, None, None], float(0))
             attn_weights = attn_weights.view(attn_weights_shape)
 
