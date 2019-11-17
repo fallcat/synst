@@ -21,4 +21,4 @@ class PETITEEnRoDataset(AnnotatedTextDataset):
 class PETITEEnJpDataset(AnnotatedTextDataset):
 	NAME="petite"
 	LANGUAGE_PAIR = ('en', 'ja')
-	
+	WORD_COUNT = (5114050, 3576290)
