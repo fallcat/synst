@@ -265,6 +265,7 @@ class NewAttention(nn.Module):
 
         # If we have conv filter, then we don't need to go through the huge amount of calculation
         # but can just use conv filter
+        conv_filter = None
         if conv_filter is not None:
             print("hi")
             if list not in [type(x) for x in [attn_position, attn_param]]:
