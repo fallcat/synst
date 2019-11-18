@@ -171,7 +171,7 @@ class NewAttention(nn.Module):
                     attn_type, attn_position, attn_param, attn_displacement = attn_configs
 
                     if list not in [type(x) for x in [attn_position, attn_param]]:
-                        distance_diff = torch.arange(-self.half_window, self.half_window + 1)
+                        distance_diff = torch.arange(-self.half_window, self.half_window + 1, dtype=torch.float32)
                         conv_filter = (1 / (attn_param * math.sqrt(2 * math.pi)) * torch.exp(- 1 / 2 * (distance_diff / attn_param) ** 2)).view(1, 1, -1)
                     else:
                         attn_config = []
@@ -184,7 +184,7 @@ class NewAttention(nn.Module):
                         attn_type, attn_position, attn_param, attn_displacement = attn_config
                         conv_filter = []
                         for i in range(self.num_heads):
-                            distance_diff = torch.arange(-self.half_window, self.half_window + 1)
+                            distance_diff = torch.arange(-self.half_window, self.half_window + 1, dtype=torch.float32)
                             conv_filter.append((1 / (attn_param[i] * math.sqrt(2 * math.pi)) * torch.exp(
                                 - 1 / 2 * (distance_diff / attn_param[i]) ** 2))).view(1, 1, -1)
                 else:
