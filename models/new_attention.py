@@ -464,13 +464,13 @@ class NewAttention(nn.Module):
                                 # If it is training time, or encoder self attention at test time,
                                 # we compute the whole matrix with attention focused on the diagonal
                                 elif decoder_position == -1:
-                                    indices_q = torch.arange(queries_shape[1]
-                                                             ).view(-1, 1).type_as(values) * self.word_count_ratio
+                                    indices_q = torch.round(torch.arange(queries_shape[1]
+                                                             ).view(-1, 1).type_as(values) * self.word_count_ratio)
                                 # If it is test time decoder self/source attention,
                                 # we compute the matrix of size of this sentence
                                 else:
-                                    indices_q = torch.arange(decoder_position + 1
-                                                             ).view(-1, 1).type_as(values) * self.word_count_ratio
+                                    indices_q = torch.round(torch.arange(decoder_position + 1
+                                                             ).view(-1, 1).type_as(values) * self.word_count_ratio)
                                 # If we are looking at left or right,
                                 # we can move the center according to the offset we specify
                                 if attn_position[i] == 'left':
@@ -578,8 +578,8 @@ class NewAttention(nn.Module):
         # print("values shape", values.shape)
         # torch.set_printoptions(profile="full")
         # if self.which_attn == 'source':
-        # print("attn_weights", attn_weights)
-        # print("attn_weights shape", attn_weights.shape)
+        print("attn_weights", attn_weights)
+        print("attn_weights shape", attn_weights.shape)
         # print("attended", attended)
         # print("attended shape", attended.shape)
 
