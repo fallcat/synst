@@ -202,7 +202,9 @@ class NewAttention(nn.Module):
 
         # Get the parameters for hard-coded attention for this layer, which was already initialized
         attn_configs, conv_filter = self.attn_configs[layer_i]
+        print("conv_filter", conv_filter)
         attn_type, attn_position, attn_param, attn_displacement = attn_configs
+        print("attn_type, attn_position, attn_param, attn_displacement", attn_type, attn_position, attn_param, attn_displacement)
 
         # If we are using learned attention, then just do it the same way as multi-headed attention
         if attn_type == 'learned' or learned:
@@ -264,7 +266,9 @@ class NewAttention(nn.Module):
         # If we have conv filter, then we don't need to go through the huge amount of calculation
         # but can just use conv filter
         if conv_filter is not None:
+            print("hi")
             if list not in [type(x) for x in [attn_position, attn_param]]:
+                print("hello")
                 if attn_type == 'center':
                     print("Using CNN!")
                     if mask is not None:
@@ -286,7 +290,7 @@ class NewAttention(nn.Module):
                                              self.projection_dim,
                                              -1).transpose(1, 2).contiguous()
                     if values_shape[1] >= queries_shape[1]:
-                        return attended[:, :queries_shape[1]].view(batch_size,
+                        conv_attended = attended[:, :queries_shape[1]].view(batch_size,
                                                                    self.num_heads,
                                                                    -1,
                                                                    self.projection_dim
@@ -297,7 +301,7 @@ class NewAttention(nn.Module):
                     else:
                         new_attended = values.new_zeros(queries_shape)
                         new_attended[:, :values_shape[1]] = attended
-                        return new_attended
+                        conv_attended = new_attended
 
         # If we want to look at last token of the sentence, or different bins of the sentence,
         # we would need sentence length to compute the focused position. If we have input_lens,
