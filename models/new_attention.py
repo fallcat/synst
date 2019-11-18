@@ -269,7 +269,7 @@ class NewAttention(nn.Module):
             print("hi")
             if list not in [type(x) for x in [attn_position, attn_param]]:
                 print("hello")
-                if attn_type == 'center':
+                if attn_position == 'center':
                     print("Using CNN!")
                     if mask is not None:
                         values = values * (mask == 0).to(dtype=torch.float32)
