@@ -373,11 +373,11 @@ class NewAttention(nn.Module):
                         # attention focused on the diagonal
                         elif decoder_position == -1:
                             indices_q = torch.round(torch.arange(queries_shape[1]
-                                                     ).view(-1, 1).type_as(values) * self.word_count_ratio)
+                                                                 ).view(-1, 1).type_as(values) * self.word_count_ratio)
                         # If it is test time decoder self/source attention, we compute the matrix of size of this sentence
                         else:
                             indices_q = torch.round(torch.arange(decoder_position + 1
-                                                     ).view(-1, 1).type_as(values) * self.word_count_ratio)
+                                                                 ).view(-1, 1).type_as(values) * self.word_count_ratio)
                         # If we are looking at left or right, we can move the center according to the offset we specify
                         if attn_position == 'left':
                             indices_q = indices_q - attn_displacement
