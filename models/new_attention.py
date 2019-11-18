@@ -372,12 +372,12 @@ class NewAttention(nn.Module):
                         # If it is training time, or encoder self attention at test time, we compute the whole matrix with
                         # attention focused on the diagonal
                         elif decoder_position == -1:
-                            indices_q = torch.arange(queries_shape[1]
-                                                     ).view(-1, 1).type_as(values) * self.word_count_ratio
+                            indices_q = torch.round(torch.arange(queries_shape[1]
+                                                     ).view(-1, 1).type_as(values) * self.word_count_ratio)
                         # If it is test time decoder self/source attention, we compute the matrix of size of this sentence
                         else:
-                            indices_q = torch.arange(decoder_position + 1
-                                                     ).view(-1, 1).type_as(values) * self.word_count_ratio
+                            indices_q = torch.round(torch.arange(decoder_position + 1
+                                                     ).view(-1, 1).type_as(values) * self.word_count_ratio)
                         # If we are looking at left or right, we can move the center according to the offset we specify
                         if attn_position == 'left':
                             indices_q = indices_q - attn_displacement
@@ -532,13 +532,13 @@ class NewAttention(nn.Module):
                                 # If it is training time, or encoder self attention at test time,
                                 # we compute the whole matrix with attention focused on the diagonal
                                 elif decoder_position == -1:
-                                    indices_q = torch.arange(queries_shape[1]
-                                                             ).view(-1, 1).type_as(values) * self.word_count_ratio
+                                    indices_q = torch.round(torch.arange(queries_shape[1]
+                                                             ).view(-1, 1).type_as(values) * self.word_count_ratio)
                                 # If it is test time decoder self/source attention,
                                 # we compute the matrix of size of this sentence
                                 else:
-                                    indices_q = torch.arange(decoder_position + 1
-                                                             ).view(-1, 1).type_as(values) * self.word_count_ratio
+                                    indices_q = torch.round(torch.arange(decoder_position + 1
+                                                             ).view(-1, 1).type_as(values) * self.word_count_ratio)
                                 # If we are looking at left or right,
                                 # we can move the center according to the offset we specify
                                 if attn_position[i] == 'left':
@@ -621,12 +621,21 @@ class NewAttention(nn.Module):
                                                  values_shape[1])
 
         if mask is not None:
-            attn_weights = attn_weights * (mask == 0).to(dtype=torch.float32)
+            try:
+                attn_weights = attn_weights * (mask == 0).to(dtype=torch.float32)
+            except:
+                attn_weights = attn_weights.to(mask.device)
+                attn_weights = attn_weights * (mask == 0).to(dtype=torch.float32)
         if key_mask is not None:
             attn_weights_shape = attn_weights.shape
             batch_size = attn_weights_shape[0] // self.num_heads
             attn_weights = attn_weights.view(batch_size, self.num_heads, attn_weights_shape[1], attn_weights_shape[2])
-            attn_weights.masked_fill_(key_mask[:, None, None], float(0))
+            try:
+                attn_weights.masked_fill_(key_mask[:, None, None], float(0))
+            except:
+                attn_weights = attn_weights.to(key_mask.device)
+                
+                attn_weights.masked_fill_(key_mask[:, None, None], float(0))
             attn_weights = attn_weights.view(attn_weights_shape)
 
         attended = torch.bmm(attn_weights,
