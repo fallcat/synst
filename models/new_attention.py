@@ -67,7 +67,7 @@ class NewAttention(nn.Module):
 
         self.output_projection = nn.Linear(embed_dim, embed_dim, bias=False)
         self.reset_parameters()
-        self.attn_configs, self.conv_filter = list(self.load_attn_configs())
+        self.attn_configs = list(self.load_attn_configs())
 
         self.attn_weights = {}
         self.times = {}
@@ -201,7 +201,8 @@ class NewAttention(nn.Module):
         batch_size = queries_shape[0] // self.num_heads
 
         # Get the parameters for hard-coded attention for this layer, which was already initialized
-        attn_type, attn_position, attn_param, attn_displacement = self.attn_configs[layer_i]
+        attn_configs, conv_filter = self.attn_configs[layer_i]
+        attn_type, attn_position, attn_param, attn_displacement = attn_configs
 
         # If we are using learned attention, then just do it the same way as multi-headed attention
         if attn_type == 'learned' or learned:
@@ -262,7 +263,7 @@ class NewAttention(nn.Module):
 
         # If we have conv filter, then we don't need to go through the huge amount of calculation
         # but can just use conv filter
-        if self.conv_filter is not None:
+        if conv_filter is not None:
             if list not in [type(x) for x in [attn_position, attn_param]]:
                 if attn_type == 'center':
                     print("Using CNN!")
@@ -276,11 +277,11 @@ class NewAttention(nn.Module):
 
                     values = values.transpose(1, 2).view(batch_size * self.embed_dim, 1, -1)
                     try:
-                        attended = F.conv1d(values, self.conv_filter, padding=self.half_window)
+                        attended = F.conv1d(values, conv_filter, padding=self.half_window)
                     except:
                         print("Convert conv filter to correct device")
-                        self.conv_filter.type_as(values)
-                        attended = F.conv1d(values, self.conv_filter, padding=self.half_window)
+                        conv_filter.type_as(values)
+                        attended = F.conv1d(values, conv_filter, padding=self.half_window)
                     attended = attended.view(batch_size * self.num_heads,
                                              self.projection_dim,
                                              -1).transpose(1, 2).contiguous()
