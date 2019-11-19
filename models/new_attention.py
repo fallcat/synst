@@ -676,7 +676,7 @@ class NewAttention(nn.Module):
             self.num_heads * self.projection_dim
         ) == conv_attended)
 
-        print("same", torch.sum(same.where(same==0)))
+        print("same", torch.sum(same == 0))
 
         # torch.set_printoptions(profile='full')
         # print("values", values)
