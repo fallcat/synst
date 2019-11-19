@@ -266,6 +266,7 @@ class NewAttention(nn.Module):
         # If we have conv filter, then we don't need to go through the huge amount of calculation
         # but can just use conv filter
         # conv_filter = None
+        old_values = values
         if conv_filter is not None:
             print("hi")
             if list not in [type(x) for x in [attn_position, attn_param]]:
@@ -317,6 +318,8 @@ class NewAttention(nn.Module):
         # it means we are in training, and we can directly use input_lens - 1. If we don't have input lens,
         # we can use key_mask to compute it, but it's a bit slower. At test time, we simply use the length
         # of the whole sentence.
+
+        values = old_values
 
         with torch.no_grad():
 
@@ -658,6 +661,8 @@ class NewAttention(nn.Module):
 
         attended = torch.bmm(attn_weights,
                              values)
+
+        print("same", attended == conv_attended)
 
         # torch.set_printoptions(profile='full')
         # print("values", values)
