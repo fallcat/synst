@@ -276,6 +276,7 @@ class NewAttention(nn.Module):
                     if mask is not None:
                         # print("values", values.shape)
                         # print("mask", mask.shape)
+                        print("conv_filter", conv_filter.shape)
                         conv_filter[-self.half_window:] = 0
                         # values = values * (mask == 0).to(dtype=torch.float32)
                     if key_mask is not None:
