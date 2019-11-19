@@ -312,28 +312,46 @@ class NewAttention(nn.Module):
                     attended = attended.view(batch_size * self.num_heads,
                                              self.projection_dim,
                                              -1).transpose(1, 2).contiguous()
-                    if values_shape[1] >= queries_shape[1]:
-                        print("greater")
-                        print("values_shape[1]", values_shape[1])
-                        print("queries_shape[1]", queries_shape[1])
-                        if self.word_count_ratio != 1:
-                            print("torch.round(torch.arange(queries_shape[1], device=values.get_device()) * self.word_count_ratio)", torch.round(torch.arange(queries_shape[1], device=values.get_device(), dtype=torch.float32) * self.word_count_ratio))
-                            indices_q = torch.round(torch.arange(queries_shape[1], device=values.get_device(), dtype=torch.float32) * self.word_count_ratio).long()
-                            conv_attended = attended[:, indices_q]
-                        else:
+                    if self.word_count_ratio == 1:
+                        if values_shape[1] >= queries_shape[1]:
+                            print("greater")
+                            print("values_shape[1]", values_shape[1])
+                            print("queries_shape[1]", queries_shape[1])
+
                             conv_attended = attended[:, :queries_shape[1]]
-                        conv_attended = conv_attended.view(batch_size,
-                                                           self.num_heads,
-                                                           -1,
-                                                           self.projection_dim
-                                                           ).transpose(2, 1).contiguous().view(batch_size,
-                                                                                               -1,
-                                                                                               self.num_heads * self.projection_dim
-                                                                                               )
+                            conv_attended = conv_attended.view(batch_size,
+                                                               self.num_heads,
+                                                               -1,
+                                                               self.projection_dim
+                                                               ).transpose(2, 1).contiguous().view(batch_size,
+                                                                                                   -1,
+                                                                                                   self.num_heads * self.projection_dim
+                                                                                                   )
+                        else:
+                            new_attended = values.new_zeros(queries_shape)
+                            new_attended[:, :values_shape[1]] = attended
+                            conv_attended = new_attended
                     else:
-                        new_attended = values.new_zeros(queries_shape)
-                        new_attended[:, :values_shape[1]] = attended
-                        conv_attended = new_attended
+                        if values_shape[1] >= torch.round(queries_shape[1] * self.word_count_ratio):
+                            print(
+                                    "torch.round(torch.arange(queries_shape[1], device=values.get_device()) * self.word_count_ratio)",
+                                    torch.round(torch.arange(queries_shape[1], device=values.get_device(),
+                                                             dtype=torch.float32) * self.word_count_ratio))
+
+                            indices_q = torch.round(torch.arange(queries_shape[1], device=values.get_device(),
+                                                                 dtype=torch.float32) * self.word_count_ratio).long()
+                            conv_attended = torch.index_select(attended, 1, indices_q).view(batch_size,
+                                                               self.num_heads,
+                                                               -1,
+                                                               self.projection_dim
+                                                               ).transpose(2, 1).contiguous().view(batch_size,
+                                                                                                   -1,
+                                                                                                   self.num_heads * self.projection_dim
+                                                                                                   )
+                        else:
+                            new_attended = values.new_zeros(queries_shape)
+                            new_attended[:, :values_shape[1]] = attended
+                            conv_attended = new_attended
 
         # If we want to look at last token of the sentence, or different bins of the sentence,
         # we would need sentence length to compute the focused position. If we have input_lens,
