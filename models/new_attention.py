@@ -277,7 +277,8 @@ class NewAttention(nn.Module):
                         # print("values", values.shape)
                         # print("mask", mask.shape)
                         print("conv_filter", conv_filter.shape)
-                        conv_filter[-self.half_window:] = 0
+                        conv_filter[:, :, -self.half_window:] = 0
+                        print("conv_filter", conv_filter)
                         # values = values * (mask == 0).to(dtype=torch.float32)
                     if key_mask is not None:
                         values = values.view(batch_size, self.num_heads, values_shape[1],
