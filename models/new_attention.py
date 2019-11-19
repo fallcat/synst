@@ -288,7 +288,7 @@ class NewAttention(nn.Module):
                         attended = F.conv1d(values, conv_filter, padding=self.half_window)
                     except:
                         print("Convert conv filter to correct device")
-                        conv_filter.type_as(values)
+                        conv_filter.type_as(values).to(values.get_device())
                         attended = F.conv1d(values, conv_filter, padding=self.half_window)
                     attended = attended.view(batch_size * self.num_heads,
                                              self.projection_dim,
