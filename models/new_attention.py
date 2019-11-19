@@ -288,6 +288,8 @@ class NewAttention(nn.Module):
                         attended = F.conv1d(values, conv_filter, padding=self.half_window)
                     except:
                         print("Convert conv filter to correct device")
+                        if values.is_cuda:
+                            conv_filter = conv_filter.cuda()
                         conv_filter.type_as(values).to(values.get_device())
                         print("values.get_device()", values.get_device())
                         print("conv_filter type", type(conv_filter))
