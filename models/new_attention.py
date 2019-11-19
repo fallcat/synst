@@ -332,7 +332,7 @@ class NewAttention(nn.Module):
                             new_attended[:, :values_shape[1]] = attended
                             conv_attended = new_attended
                     else:
-                        if values_shape[1] >= torch.round(queries_shape[1] * self.word_count_ratio):
+                        if values_shape[1] >= round(queries_shape[1] * self.word_count_ratio):
                             print(
                                     "torch.round(torch.arange(queries_shape[1], device=values.get_device()) * self.word_count_ratio)",
                                     torch.round(torch.arange(queries_shape[1], device=values.get_device(),
