@@ -278,9 +278,9 @@ class NewAttention(nn.Module):
                         values = values.view(batch_size, self.num_heads, values_shape[1],
                                                          values_shape[2])
                         print("key_mask", key_mask.shape)
-                        print("key_mask[:, None]", key_mask[:, None, None].shape)
+                        print("key_mask[:, None]", key_mask[:, None, :, None].shape)
                         print("values", values.shape)
-                        values.masked_fill_(key_mask[:, None], float(0))
+                        values.masked_fill_(key_mask[:, None, :, None], float(0))
                         values = values.view(values_shape)
 
                     values = values.transpose(1, 2).view(batch_size * self.embed_dim, 1, -1)
