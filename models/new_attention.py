@@ -187,10 +187,12 @@ class NewAttention(nn.Module):
                             distance_diff = torch.arange(-self.half_window, self.half_window + 1, dtype=torch.float32)
                             conv_filter.append((1 / (attn_param[i] * math.sqrt(2 * math.pi)) * torch.exp(
                                 - 1 / 2 * (distance_diff / attn_param[i]) ** 2))).view(1, 1, -1)
+                    mask_conv_filter = conv_filter
+                    mask_conv_filter[:, :, -self.half_window:] = 0
                 else:
                     conv_filter = None
 
-            yield attn_configs, conv_filter
+            yield attn_configs, conv_filter, mask_conv_filter
 
     def attention(self, values, keys, queries, key_mask=None, mask=None, layer_i=0, decoder_position=-1, input_lens=None, learned=False):
         ''' Scaled dot product attention with optional masks '''
@@ -201,7 +203,7 @@ class NewAttention(nn.Module):
         batch_size = queries_shape[0] // self.num_heads
 
         # Get the parameters for hard-coded attention for this layer, which was already initialized
-        attn_configs, conv_filter = self.attn_configs[layer_i]
+        attn_configs, conv_filter, mask_conv_filter = self.attn_configs[layer_i]
         print("conv_filter", conv_filter)
         attn_type, attn_position, attn_param, attn_displacement = attn_configs
         print("attn_type, attn_position, attn_param, attn_displacement", attn_type, attn_position, attn_param, attn_displacement)
@@ -277,9 +279,11 @@ class NewAttention(nn.Module):
                         # print("values", values.shape)
                         # print("mask", mask.shape)
                         print("conv_filter", conv_filter.shape)
-                        conv_filter[:, :, -self.half_window:] = 0
+                        use_conv_filter = mask_conv_filter
                         print("conv_filter", conv_filter)
                         # values = values * (mask == 0).to(dtype=torch.float32)
+                    else:
+                        use_conv_filter = conv_filter
                     if key_mask is not None:
                         values = values.view(batch_size, self.num_heads, values_shape[1],
                                                          values_shape[2])
@@ -291,16 +295,20 @@ class NewAttention(nn.Module):
 
                     values = values.transpose(1, 2).contiguous().view(batch_size * self.embed_dim, 1, -1)
                     try:
-                        attended = F.conv1d(values, conv_filter, padding=self.half_window)
+                        attended = F.conv1d(values, use_conv_filter, padding=self.half_window)
                     except:
                         print("Convert conv filter to correct device")
                         if values.is_cuda:
-                            conv_filter = conv_filter.cuda()
-                        conv_filter.type_as(values).to(values.get_device())
+                            use_conv_filter = use_conv_filter.cuda()
+                        use_conv_filter.type_as(values).to(values.get_device())
+                        if mask is None:
+                            self.attn_configs[layer_i] = attn_configs, use_conv_filter, mask_conv_filter
+                        else:
+                            self.attn_configs[layer_i] = attn_configs, conv_filter, use_conv_filter
                         print("values.get_device()", values.get_device())
                         print("conv_filter type", type(conv_filter))
                         print("conv_filter", conv_filter.is_cuda)
-                        attended = F.conv1d(values, conv_filter, padding=self.half_window)
+                        attended = F.conv1d(values, use_conv_filter, padding=self.half_window)
                     attended = attended.view(batch_size * self.num_heads,
                                              self.projection_dim,
                                              -1).transpose(1, 2).contiguous()
