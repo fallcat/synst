@@ -313,14 +313,21 @@ class NewAttention(nn.Module):
                                              self.projection_dim,
                                              -1).transpose(1, 2).contiguous()
                     if values_shape[1] >= queries_shape[1]:
-                        conv_attended = attended[:, :queries_shape[1]].view(batch_size,
-                                                                   self.num_heads,
-                                                                   -1,
-                                                                   self.projection_dim
-                                                                   ).transpose(2, 1).contiguous().view(batch_size,
-                                                                                                       -1,
-                                                                                                       self.num_heads * self.projection_dim
-                                                                                                       )
+                        print("greater")
+                        if self.word_count_ratio != 1:
+                            indices_q = torch.round(torch.arange(queries_shape[1]
+                                                             ).type_as(values) * self.word_count_ratio)
+                            conv_attended = attended[:, indices_q]
+                        else:
+                            conv_attended = attended[:, :queries_shape[1]]
+                        conv_attended = conv_attended.view(batch_size,
+                                                           self.num_heads,
+                                                           -1,
+                                                           self.projection_dim
+                                                           ).transpose(2, 1).contiguous().view(batch_size,
+                                                                                               -1,
+                                                                                               self.num_heads * self.projection_dim
+                                                                                               )
                     else:
                         new_attended = values.new_zeros(queries_shape)
                         new_attended[:, :values_shape[1]] = attended
