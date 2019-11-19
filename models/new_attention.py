@@ -289,6 +289,8 @@ class NewAttention(nn.Module):
                     except:
                         print("Convert conv filter to correct device")
                         conv_filter.type_as(values).to(values.get_device())
+                        print("conv_filter type", type(conv_filter))
+                        print("conv_filter", conv_filter.is_cuda)
                         attended = F.conv1d(values, conv_filter, padding=self.half_window)
                     attended = attended.view(batch_size * self.num_heads,
                                              self.projection_dim,
