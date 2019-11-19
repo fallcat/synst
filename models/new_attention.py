@@ -315,8 +315,7 @@ class NewAttention(nn.Module):
                     if values_shape[1] >= queries_shape[1]:
                         print("greater")
                         if self.word_count_ratio != 1:
-                            indices_q = torch.round(torch.arange(queries_shape[1]
-                                                             ).type_as(values) * self.word_count_ratio)
+                            indices_q = torch.round(torch.arange(queries_shape[1]) * self.word_count_ratio).to(dtype=torch.long)
                             conv_attended = attended[:, indices_q]
                         else:
                             conv_attended = attended[:, :queries_shape[1]]
