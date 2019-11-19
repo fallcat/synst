@@ -274,9 +274,10 @@ class NewAttention(nn.Module):
                 if attn_position == 'center':
                     print("Using CNN!")
                     if mask is not None:
-                        print("values", values.shape)
-                        print("mask", mask.shape)
-                        values = values * (mask == 0).to(dtype=torch.float32)
+                        # print("values", values.shape)
+                        # print("mask", mask.shape)
+                        conv_filter[-self.half_window:] = 0
+                        # values = values * (mask == 0).to(dtype=torch.float32)
                     if key_mask is not None:
                         values = values.view(batch_size, self.num_heads, values_shape[1],
                                                          values_shape[2])
