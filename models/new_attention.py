@@ -265,7 +265,7 @@ class NewAttention(nn.Module):
 
         # If we have conv filter, then we don't need to go through the huge amount of calculation
         # but can just use conv filter
-        conv_filter = None
+        # conv_filter = None
         if conv_filter is not None:
             print("hi")
             if list not in [type(x) for x in [attn_position, attn_param]]:
@@ -277,6 +277,9 @@ class NewAttention(nn.Module):
                     if key_mask is not None:
                         values = values.view(batch_size, self.num_heads, values_shape[1],
                                                          values_shape[2])
+                        print("key_mask", key_mask.shape)
+                        print("key_mask[:, None, None]", key_mask[:, None, None].shape)
+                        print("values", values.shape)
                         values.masked_fill_(key_mask[:, None, None], float(0))
                         values = values.view(values_shape)
 
@@ -634,8 +637,10 @@ class NewAttention(nn.Module):
                 attn_weights = attn_weights * (mask == 0).to(dtype=torch.float32)
         if key_mask is not None:
             attn_weights_shape = attn_weights.shape
+            print("previous implementation")
             print("attn_weights_shape", attn_weights_shape)
             print("key_mask", key_mask.shape)
+            print("key_mask[:, None, None]", key_mask[:, None, None].shape)
             batch_size = attn_weights_shape[0] // self.num_heads
             attn_weights = attn_weights.view(batch_size, self.num_heads, attn_weights_shape[1], attn_weights_shape[2])
             try:
