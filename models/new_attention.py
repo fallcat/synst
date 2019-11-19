@@ -662,7 +662,19 @@ class NewAttention(nn.Module):
         attended = torch.bmm(attn_weights,
                              values)
 
-        print("same", attended == conv_attended)
+        print("conv_attended", conv_attended.shape)
+        print("attended", attended.shape)
+
+        print("same", attended.view(
+            batch_size,
+            self.num_heads,
+            -1,
+            self.projection_dim
+        ).transpose(2, 1).contiguous().view(
+            batch_size,
+            -1,
+            self.num_heads * self.projection_dim
+        ) == conv_attended)
 
         # torch.set_printoptions(profile='full')
         # print("values", values)
