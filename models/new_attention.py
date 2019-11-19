@@ -314,6 +314,8 @@ class NewAttention(nn.Module):
                                              -1).transpose(1, 2).contiguous()
                     if values_shape[1] >= queries_shape[1]:
                         print("greater")
+                        print("values_shape[1]", values_shape[1])
+                        print("queries_shape[1]", queries_shape[1])
                         if self.word_count_ratio != 1:
                             print("torch.round(torch.arange(queries_shape[1], device=values.get_device()) * self.word_count_ratio)", torch.round(torch.arange(queries_shape[1], device=values.get_device(), dtype=torch.float32) * self.word_count_ratio))
                             indices_q = torch.round(torch.arange(queries_shape[1], device=values.get_device(), dtype=torch.float32) * self.word_count_ratio).long()
