@@ -283,7 +283,7 @@ class NewAttention(nn.Module):
                         values.masked_fill_(key_mask[:, None, :, None], float(0))
                         values = values.view(values_shape)
 
-                    values = values.transpose(1, 2).view(batch_size * self.embed_dim, 1, -1)
+                    values = values.transpose(1, 2).contiguous().view(batch_size * self.embed_dim, 1, -1)
                     try:
                         attended = F.conv1d(values, conv_filter, padding=self.half_window)
                     except:
