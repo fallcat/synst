@@ -187,7 +187,7 @@ class NewAttention(nn.Module):
                             distance_diff = torch.arange(-self.half_window, self.half_window + 1, dtype=torch.float32)
                             conv_filter.append((1 / (attn_param[i] * math.sqrt(2 * math.pi)) * torch.exp(
                                 - 1 / 2 * (distance_diff / attn_param[i]) ** 2))).view(1, 1, -1)
-                    mask_conv_filter = conv_filter
+                    mask_conv_filter = conv_filter.copy()
                     mask_conv_filter[:, :, -self.half_window:] = 0
                 else:
                     conv_filter = None
