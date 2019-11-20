@@ -187,10 +187,11 @@ class NewAttention(nn.Module):
                             distance_diff = torch.arange(-self.half_window, self.half_window + 1, dtype=torch.float32)
                             conv_filter.append((1 / (attn_param[i] * math.sqrt(2 * math.pi)) * torch.exp(
                                 - 1 / 2 * (distance_diff / attn_param[i]) ** 2))).view(1, 1, -1)
-                    if attn_position is not list:
+                    if type(attn_position) is not list:
                         attn_position = [attn_position]
                     mask_conv_filters = []
                     print("attn_configs", attn_configs)
+                    print("attn_position", attn_position)
                     for i, p in enumerate(attn_position):
                         mask_conv_filter = conv_filter.clone()
                         d = attn_displacement[i] if type(attn_displacement) is list else attn_displacement
