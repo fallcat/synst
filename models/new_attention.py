@@ -200,6 +200,7 @@ class NewAttention(nn.Module):
                         else:
                             mask_conv_filter[:, :, -self.half_window - d:] = 0
                         mask_conv_filters.append(mask_conv_filter)
+                        print("mask_conv_filters first calculated", mask_conv_filters)
                 else:
                     conv_filter = None
 
@@ -294,6 +295,7 @@ class NewAttention(nn.Module):
                     # print("mask", mask.shape)
                     # print("conv_filter", conv_filter.shape)
                     use_conv_filter = mask_conv_filters if len(mask_conv_filters) != 1 else mask_conv_filters[0]
+                    print("using mask")
                     # print("conv_filter", conv_filter)
                     # values = values * (mask == 0).to(dtype=torch.float32)
                 else:
@@ -362,7 +364,7 @@ class NewAttention(nn.Module):
                 if self.word_count_ratio == 1:
                     if values_shape[1] < queries_shape[1]:
                         new_attended = values.new_zeros(queries_shape).view(batch_size, self.num_heads, -1, self.projection_dim)
-                        new_attended[:, :values_shape[1]] = attended
+                        new_attended[:, :, :values_shape[1]] = attended
                         attended = new_attended
                     # if values_shape[1] >= queries_shape[1]:
                         # print("greater")
@@ -409,7 +411,7 @@ class NewAttention(nn.Module):
                 else:
                     if values_shape[1] < round(queries_shape[1] * self.word_count_ratio):
                         new_attended = values.new_zeros(queries_shape).view(batch_size, self.num_heads, -1, self.projection_dim)
-                        new_attended[:, :values_shape[1]] = attended
+                        new_attended[:, :, :values_shape[1]] = attended
                         attended = new_attended
 
                         # print(
