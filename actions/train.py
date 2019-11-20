@@ -76,8 +76,8 @@ class Trainer(object):
                     config.base_lr
                 )
             )
-	
-	elif self.config.optimizer == "adam-fixed":
+
+        elif self.config.optimizer == "adam-fixed":
             print("using optimizer: adam with fixed learning rate")
             self.optimizer = optim.Adam(model.parameters(), config.base_lr, betas=(0.9, 0.98), eps=1e-9)
             self.lr_scheduler = LambdaLR(
@@ -86,7 +86,7 @@ class Trainer(object):
                     config.base_lr
                 )
             )
-	
+
         else:
             raise ValueError('Unknown optimizer!') 
 
