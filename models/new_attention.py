@@ -334,7 +334,10 @@ class NewAttention(nn.Module):
                     if mask is None:
                         self.attn_configs[layer_i] = attn_configs, use_conv_filter, mask_conv_filters
                     else:
-                        self.attn_configs[layer_i] = attn_configs, conv_filter, use_conv_filter
+                        if type(use_conv_filter) is not list
+                            self.attn_configs[layer_i] = attn_configs, conv_filter, [use_conv_filter]
+                        else:
+                            self.attn_configs[layer_i] = attn_configs, conv_filter, [use_conv_filter]
                     # print("values.get_device()", values.get_device())
                     # print("conv_filter type", type(conv_filter))
                     # print("conv_filter", conv_filter.is_cuda)
