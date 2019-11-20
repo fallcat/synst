@@ -688,7 +688,7 @@ def add_train_args(parser):
         '--optimizer',
         type=str,
         default='adam',
-        choices=['adam', 'sgd'],
+        choices=['adam', 'sgd', 'adam-fixed'],
         help='add optimizer'
     )
 
