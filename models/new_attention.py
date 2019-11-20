@@ -399,7 +399,7 @@ class NewAttention(nn.Module):
                                 conv_attended.append(attended[:, i,
                                                      attn_displacement:queries_shape[1] + 2 * attn_displacement])
                             else:
-                                conv_attended.append(attended[:, i:i+1, attn_displacement].expand(batch_size,
+                                conv_attended.append(attended[:, i:i+1, attn_displacement:attn_displacement+1].expand(batch_size,
                                                                                               queries_shape[1],
                                                                                               self.projection_dim))
                         conv_attended = torch.stack(conv_attended, dim=1)
@@ -444,7 +444,7 @@ class NewAttention(nn.Module):
                         elif attn_position == "right":
                             conv_attended = attended[:, :, indices_q + 2 * attn_displacement]
                         else:
-                            conv_attended = attended[:, :, attn_displacement].expand(batch_size, self.num_heads, queries_shape[1], self.projection_dim)
+                            conv_attended = attended[:, :, attn_displacement:attn_displacement+1].expand(batch_size, self.num_heads, queries_shape[1], self.projection_dim)
                     else:
                         conv_attended = []
                         for i, p in enumerate(attn_position):
@@ -455,7 +455,7 @@ class NewAttention(nn.Module):
                             elif attn_position == "right":
                                 conv_attended.append(attended[:, i, indices_q + attn_displacement])
                             else:
-                                conv_attended.append(attended[:, i:i+1, attn_displacement].expand(batch_size,
+                                conv_attended.append(attended[:, i:i+1, attn_displacement:attn_displacement+1].expand(batch_size,
                                                                                               queries_shape[1],
                                                                                               self.projection_dim))
                         conv_attended = torch.stack(conv_attended, dim=1)
