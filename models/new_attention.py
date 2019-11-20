@@ -809,11 +809,11 @@ class NewAttention(nn.Module):
         attended = torch.bmm(attn_weights,
                              values)
 
-        print("value", values_shape[1])
-        print("query", queries_shape[1])
-
-        print("conv_attended", conv_attended.shape)
-        print("attended", attended.shape)
+        # print("value", values_shape[1])
+        # print("query", queries_shape[1])
+        #
+        # print("conv_attended", conv_attended.shape)
+        # print("attended", attended.shape)
 
         same = (attended.view(
             batch_size,
