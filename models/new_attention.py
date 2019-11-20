@@ -313,9 +313,14 @@ class NewAttention(nn.Module):
                     else:
                         attended = []
                         for i, f in enumerate(use_conv_filter):
-                            a = F.conv1d(values.view(batch_size, self.num_heads, self.projection_dim, -1)[:, i],
-                                                use_conv_filter[i], padding=self.half_window + attn_displacement)
-                            attended.append(a)
+                            a = F.conv1d(values.view(batch_size,
+                                                     self.num_heads,
+                                                     self.projection_dim,
+                                                     -1)[:, i].view(batch_size * self.projection_dim,
+                                                                    1,
+                                                                    -1),
+                                         use_conv_filter[i], padding=self.half_window + attn_displacement)
+                            attended.append(a.view(batch_size, self.projection_dim, -1))
                         attended = torch.stack(attended, dim=1)
                 except:
                     # print("Convert conv filter to correct device")
@@ -338,7 +343,12 @@ class NewAttention(nn.Module):
                     else:
                         attended = []
                         for i, f in enumerate(use_conv_filter):
-                            a = F.conv1d(values.view(batch_size, self.num_heads, self.projection_dim, -1)[:, i],
+                            a = F.conv1d(values.view(batch_size,
+                                                     self.num_heads,
+                                                     self.projection_dim,
+                                                     -1)[:, i].view(batch_size * self.projection_dim,
+                                                                    1,
+                                                                    -1),
                                          use_conv_filter[i], padding=self.half_window + attn_displacement)
                             attended.append(a)
                         attended = torch.stack(attended, dim=1)
