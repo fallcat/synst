@@ -373,16 +373,16 @@ class NewAttention(nn.Module):
                         #                                  device=values.get_device(),
                         #                                  dtype=torch.float32) * self.word_count_ratio))
 
-                    indices_q = torch.round(torch.arange(attn_displacement, queries_shape[1] + attn_displacement,
+                    indices_q = torch.round(torch.arange(queries_shape[1],
                                                          device=values.get_device(),
                                                          dtype=torch.float32) * self.word_count_ratio).long()
                     if type(attn_position) is not list:
                         if attn_position == "center":
-                            conv_attended = attended[:, :, indices_q]
-                        elif attn_position == "left":
-                            conv_attended = attended[:, :, indices_q - attn_displacement]
-                        elif attn_position == "right":
                             conv_attended = attended[:, :, indices_q + attn_displacement]
+                        elif attn_position == "left":
+                            conv_attended = attended[:, :, indices_q]
+                        elif attn_position == "right":
+                            conv_attended = attended[:, :, indices_q + 2 * attn_displacement]
                         else:
                             conv_attended = attended[:, :, attn_displacement].expand(batch_size, self.num_heads, values_shape[1], self.projection_dim)
                     else:
