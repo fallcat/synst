@@ -310,7 +310,7 @@ class NewAttention(nn.Module):
                     # print("values.get_device()", values.get_device())
                     # print("conv_filter type", type(conv_filter))
                     # print("conv_filter", conv_filter.is_cuda)
-                    attended = F.conv1d(values, use_conv_filter, padding=self.half_window)
+                    attended = F.conv1d(values, use_conv_filter, padding=self.half_window + attn_displacement)
                 attended = attended.view(batch_size, self.num_heads,
                                          self.projection_dim,
                                          -1).transpose(2, 3).contiguous()
@@ -332,7 +332,7 @@ class NewAttention(nn.Module):
                         elif attn_position == "right":
                             conv_attended = attended[:, :, attn_displacement:queries_shape[1] + 2*attn_displacement]
                         else:
-                            conv_attended = attended[:, :, attn_displacement].expand(batch_size, self.num_heads, values_shape[1], self.projection_dim)
+                            conv_attended = attended[:, :, attn_displacement].expand(batch_size, self.num_heads, queries_shape[1], self.projection_dim)
                     else:
                         conv_attended = []
                         for i, p in enumerate(attn_position):
@@ -346,7 +346,7 @@ class NewAttention(nn.Module):
                                                      attn_displacement:queries_shape[1] + 2 * attn_displacement])
                             else:
                                 conv_attended.append(attended[:, i, attn_displacement].expand(batch_size,
-                                                                                              values_shape[1],
+                                                                                              queries_shape[1],
                                                                                               self.projection_dim))
                         conv_attended = torch.stack(conv_attended, dim=1)
                     conv_attended = conv_attended.view(batch_size,
@@ -763,6 +763,9 @@ class NewAttention(nn.Module):
 
         attended = torch.bmm(attn_weights,
                              values)
+
+        print("value", values_shape[1])
+        print("query", queries_shape[1])
 
         print("conv_attended", conv_attended.shape)
         print("attended", attended.shape)
