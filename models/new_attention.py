@@ -362,8 +362,13 @@ class NewAttention(nn.Module):
                                          self.projection_dim,
                                          -1).transpose(2, 3).contiguous()
                 if self.word_count_ratio == 1:
-                    if values_shape[1] < queries_shape[1]:
-                        new_attended = values.new_zeros(queries_shape).view(batch_size, self.num_heads, -1, self.projection_dim)
+                    if values_shape[1] < queries_shape[1] + 2 * attn_displacement:
+                        new_attended = values.new_zeros((queries_shape[0],
+                                                        queries_shape[1] + 2 * attn_displacement,
+                                                        queries_shape[2])).view(batch_size,
+                                                                               self.num_heads,
+                                                                               -1,
+                                                                               self.projection_dim)
                         new_attended[:, :, :values_shape[1]] = attended
                         attended = new_attended
                     # if values_shape[1] >= queries_shape[1]:
@@ -409,8 +414,14 @@ class NewAttention(nn.Module):
                     #     new_attended[:, :values_shape[1]] = attended
                     #     conv_attended = new_attended
                 else:
-                    if values_shape[1] < round(queries_shape[1] * self.word_count_ratio):
-                        new_attended = values.new_zeros(queries_shape).view(batch_size, self.num_heads, -1, self.projection_dim)
+                    if values_shape[1] < round(queries_shape[1] * self.word_count_ratio + 2 * attn_displacement):
+                        new_attended = values.new_zeros((queries_shape[0],
+                                                         queries_shape[1] * self.word_count_ratio
+                                                         + 2 * attn_displacement,
+                                                         queries_shape[2])).view(batch_size,
+                                                                                 self.num_heads,
+                                                                                 -1,
+                                                                                 self.projection_dim)
                         new_attended[:, :, :values_shape[1]] = attended
                         attended = new_attended
 
