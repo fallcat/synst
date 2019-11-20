@@ -190,6 +190,7 @@ class NewAttention(nn.Module):
                     if attn_position is not list:
                         attn_position = [attn_position]
                     mask_conv_filters = []
+                    print("attn_configs", attn_configs)
                     for i, p in enumerate(attn_position):
                         mask_conv_filter = conv_filter.clone()
                         d = attn_displacement[i] if type(attn_displacement) is list else attn_displacement
