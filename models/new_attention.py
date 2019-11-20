@@ -334,7 +334,7 @@ class NewAttention(nn.Module):
                     if mask is None:
                         self.attn_configs[layer_i] = attn_configs, use_conv_filter, mask_conv_filters
                     else:
-                        if type(use_conv_filter) is not list
+                        if type(use_conv_filter) is not list:
                             self.attn_configs[layer_i] = attn_configs, conv_filter, [use_conv_filter]
                         else:
                             self.attn_configs[layer_i] = attn_configs, conv_filter, [use_conv_filter]
