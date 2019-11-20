@@ -426,8 +426,8 @@ class NewAttention(nn.Module):
                         # If looking at the first token, we just need one vector, and use the first l tokens for each length
                         if attn_position == 'first':
                             indices_q = torch.tensor(0.0).type_as(values) # torch.full((queries_shape[1], 1), 0).to(dtype=torch.float32)
-                        # If it is training time, or encoder self attention at test time, we compute the whole matrix with
-                        # attention focused on the diagonal
+                        # If it is training time, or encoder self attention at test time,
+                        # we compute the whole matrix with attention focused on the diagonal
                         elif decoder_position == -1:
                             indices_q = torch.round(torch.arange(queries_shape[1]
                                                                  ).view(-1, 1).type_as(values) * self.word_count_ratio)
@@ -728,9 +728,9 @@ class NewAttention(nn.Module):
         # print("values", values)
         # print("values shape", values.shape)
         # torch.set_printoptions(profile="full")
-        # if self.which_attn == 'source':
-        # print("attn_weights", attn_weights)
-        # print("attn_weights shape", attn_weights.shape)
+        if self.which_attn == 'source':
+            print("attn_weights", attn_weights)
+            print("attn_weights shape", attn_weights.shape)
         # print("attended", attended)
         # print("attended shape", attended.shape)
 
