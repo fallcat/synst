@@ -293,7 +293,7 @@ class NewAttention(nn.Module):
                     # print("values", values.shape)
                     # print("mask", mask.shape)
                     # print("conv_filter", conv_filter.shape)
-                    use_conv_filter = mask_conv_filters if len(mask_conv_filters) != 0 else mask_conv_filters[0]
+                    use_conv_filter = mask_conv_filters if len(mask_conv_filters) != 1 else mask_conv_filters[0]
                     # print("conv_filter", conv_filter)
                     # values = values * (mask == 0).to(dtype=torch.float32)
                 else:
