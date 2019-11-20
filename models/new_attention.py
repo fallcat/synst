@@ -328,9 +328,9 @@ class NewAttention(nn.Module):
                         if attn_position == "center":
                             conv_attended = attended[:, :, attn_displacement:queries_shape[1] + attn_displacement]
                         elif attn_position == "left":
-                            conv_attended = attended[:, :, attn_displacement:queries_shape[1]]
+                            conv_attended = attended[:, :, :queries_shape[1]]
                         elif attn_position == "right":
-                            conv_attended = attended[:, :, attn_displacement:queries_shape[1] + 2*attn_displacement]
+                            conv_attended = attended[:, :, 2*attn_displacement:queries_shape[1] + 2*attn_displacement]
                         else:
                             conv_attended = attended[:, :, attn_displacement].expand(batch_size, self.num_heads, queries_shape[1], self.projection_dim)
                     else:
@@ -764,11 +764,11 @@ class NewAttention(nn.Module):
         attended = torch.bmm(attn_weights,
                              values)
 
-        # print("value", values_shape[1])
-        # print("query", queries_shape[1])
-        #
-        # print("conv_attended", conv_attended.shape)
-        # print("attended", attended.shape)
+        print("value", values_shape[1])
+        print("query", queries_shape[1])
+
+        print("conv_attended", conv_attended.shape)
+        print("attended", attended.shape)
 
         same = (attended.view(
             batch_size,
