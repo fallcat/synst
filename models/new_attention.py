@@ -298,6 +298,7 @@ class NewAttention(nn.Module):
                     # values = values * (mask == 0).to(dtype=torch.float32)
                 else:
                     use_conv_filter = conv_filter
+                print("use_conv_filter", use_conv_filter)
                 if key_mask is not None:
                     values = values.view(batch_size, self.num_heads, values_shape[1], values_shape[2])
                     # print("key_mask", key_mask.shape)
@@ -316,9 +317,9 @@ class NewAttention(nn.Module):
                             a = F.conv1d(values.view(batch_size,
                                                      self.num_heads,
                                                      self.projection_dim,
-                                                     -1)[:, i].view(batch_size * self.projection_dim,
-                                                                    1,
-                                                                    -1),
+                                                     -1)[:, i].contiguous().view(batch_size * self.projection_dim,
+                                                                                 1,
+                                                                                 -1),
                                          use_conv_filter[i], padding=self.half_window + attn_displacement)
                             attended.append(a.view(batch_size, self.projection_dim, -1))
                         attended = torch.stack(attended, dim=1)
@@ -346,9 +347,9 @@ class NewAttention(nn.Module):
                             a = F.conv1d(values.view(batch_size,
                                                      self.num_heads,
                                                      self.projection_dim,
-                                                     -1)[:, i].view(batch_size * self.projection_dim,
-                                                                    1,
-                                                                    -1),
+                                                     -1)[:, i].contiguous().view(batch_size * self.projection_dim,
+                                                                                 1,
+                                                                                 -1),
                                          use_conv_filter[i], padding=self.half_window + attn_displacement)
                             attended.append(a)
                         attended = torch.stack(attended, dim=1)
