@@ -361,7 +361,7 @@ class NewAttention(nn.Module):
                                          -1).transpose(2, 3).contiguous()
                 if self.word_count_ratio == 1:
                     if values_shape[1] < queries_shape[1]:
-                        new_attended = values.new_zeros(queries_shape)
+                        new_attended = values.new_zeros(queries_shape).view(batch_size, self.num_heads, -1, self.projection_dim)
                         new_attended[:, :values_shape[1]] = attended
                         attended = new_attended
                     # if values_shape[1] >= queries_shape[1]:
@@ -408,7 +408,7 @@ class NewAttention(nn.Module):
                     #     conv_attended = new_attended
                 else:
                     if values_shape[1] < round(queries_shape[1] * self.word_count_ratio):
-                        new_attended = values.new_zeros(queries_shape)
+                        new_attended = values.new_zeros(queries_shape).view(batch_size, self.num_heads, -1, self.projection_dim)
                         new_attended[:, :values_shape[1]] = attended
                         attended = new_attended
 
