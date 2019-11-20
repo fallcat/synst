@@ -270,14 +270,14 @@ class NewAttention(nn.Module):
         # conv_filter = None
         old_values = values
         if conv_filter is not None:
-            print("hi")
+            # print("hi")
             if list not in [type(x) for x in [attn_param, attn_displacement]]:
-                print("hello")
+                # print("hello")
                 # if attn_position in ['center', 'first']:
                 #     padding = self.half_window
                 # else:
                 #     padding = self.half_window + attn_displacement
-                print("Using CNN!")
+                # print("Using CNN!")
                 if mask is not None:
                     # print("values", values.shape)
                     # print("mask", mask.shape)
@@ -764,11 +764,11 @@ class NewAttention(nn.Module):
         attended = torch.bmm(attn_weights,
                              values)
 
-        print("value", values_shape[1])
-        print("query", queries_shape[1])
-
-        print("conv_attended", conv_attended.shape)
-        print("attended", attended.shape)
+        # print("value", values_shape[1])
+        # print("query", queries_shape[1])
+        #
+        # print("conv_attended", conv_attended.shape)
+        # print("attended", attended.shape)
 
         same = (attended.view(
             batch_size,
