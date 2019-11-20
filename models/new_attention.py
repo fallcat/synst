@@ -170,7 +170,7 @@ class NewAttention(nn.Module):
                         and (attn_configs[1] in easy_positions or set(attn_configs[1]).issubset(easy_positions)):
                     attn_type, attn_position, attn_param, attn_displacement = attn_configs
 
-                    if list not in [type(x) for x in [attn_position, attn_param]]:
+                    if list not in [type(x) for x in [attn_displacement, attn_param]]:
                         distance_diff = torch.arange(-self.half_window, self.half_window + 1, dtype=torch.float32)
                         conv_filter = (1 / (attn_param * math.sqrt(2 * math.pi)) * torch.exp(- 1 / 2 * (distance_diff / attn_param) ** 2)).view(1, 1, -1)
                     else:
