@@ -196,7 +196,7 @@ class NewAttention(nn.Module):
                         if p in ["center", "first"]:
                             mask_conv_filter[:, :, -self.half_window:] = 0
                         elif p == "left":
-                            mask_conv_filter[:, :, -self.half_window + d:] = 0
+                            mask_conv_filter[:, :, self.attn_window - self.half_window + d:] = 0
                         else:
                             mask_conv_filter[:, :, -self.half_window - d:] = 0
                         mask_conv_filters.append(mask_conv_filter)
