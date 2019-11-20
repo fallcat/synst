@@ -394,10 +394,10 @@ class NewAttention(nn.Module):
                                 conv_attended.append(attended[:, i,
                                                 attn_displacement:queries_shape[1] + attn_displacement])
                             elif attn_position == "left":
-                                conv_attended.append(attended[:, i, attn_displacement:queries_shape[1]])
+                                conv_attended.append(attended[:, i, :queries_shape[1]])
                             elif attn_position == "right":
                                 conv_attended.append(attended[:, i,
-                                                     attn_displacement:queries_shape[1] + 2 * attn_displacement])
+                                                     2 * attn_displacement:queries_shape[1] + 2 * attn_displacement])
                             else:
                                 conv_attended.append(attended[:, i, attn_displacement:attn_displacement+1].expand(batch_size,
                                                                                               queries_shape[1],
@@ -449,11 +449,11 @@ class NewAttention(nn.Module):
                         conv_attended = []
                         for i, p in enumerate(attn_position):
                             if attn_position == "center":
-                                conv_attended.append(attended[:, i, indices_q])
-                            elif attn_position == "left":
-                                conv_attended.append(attended[:, i, indices_q - attn_displacement])
-                            elif attn_position == "right":
                                 conv_attended.append(attended[:, i, indices_q + attn_displacement])
+                            elif attn_position == "left":
+                                conv_attended.append(attended[:, i, indices_q])
+                            elif attn_position == "right":
+                                conv_attended.append(attended[:, i, indices_q + 2 * attn_displacement])
                             else:
                                 conv_attended.append(attended[:, i, attn_displacement:attn_displacement+1].expand(batch_size,
                                                                                               queries_shape[1],
