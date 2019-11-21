@@ -445,8 +445,8 @@ class NewAttention(nn.Module):
                         # if self.which_attn == "decoder":
                         #     print("else")
                         print("self.word_count_ratio != 1")
-                        print("attended", attended.shape)
-                        print("round(queries_shape[1] * self.word_count_ratio) + 2 * attn_displacement", round(queries_shape[1] * self.word_count_ratio) + 2 * attn_displacement)
+                        print(attended.shape[3])
+                        print(round((queries_shape[1] - 1) * self.word_count_ratio) + 1 + 2 * attn_displacement)
                         if attended.shape[3] < round((queries_shape[1] - 1) * self.word_count_ratio) + 1 + 2 * attn_displacement:
                             new_attended = values.new_zeros((batch_size,
                                                              self.num_heads,
@@ -467,6 +467,10 @@ class NewAttention(nn.Module):
                         indices_q = torch.round(torch.arange(queries_shape[1],
                                                              device=values.get_device(),
                                                              dtype=torch.float32) * self.word_count_ratio).long()
+                        if (indices_q + 2 * attn_displacement)[-1].item() >= attended.shape[3]:
+                            print("indices_q[-1]",indices_q[-1])
+                            print("attn_displacement", attn_displacement)
+                            print("attended.shape[3]", attended.shape[3])
                         if type(attn_position) is not list:
                             if attn_position == "center":
                                 conv_attended = attended[:, :, indices_q + attn_displacement]
