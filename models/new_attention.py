@@ -190,8 +190,8 @@ class NewAttention(nn.Module):
                     if type(attn_position) is not list:
                         attn_position = [attn_position]
                     mask_conv_filters = []
-                    print("attn_configs", attn_configs)
-                    print("attn_position", attn_position)
+                    # print("attn_configs", attn_configs)
+                    # print("attn_position", attn_position)
                     for i, p in enumerate(attn_position):
                         mask_conv_filter = conv_filter.clone()
                         d = attn_displacement[i] if type(attn_displacement) is list else attn_displacement
@@ -202,7 +202,7 @@ class NewAttention(nn.Module):
                         else:
                             mask_conv_filter[:, :, -self.half_window - d:] = 0
                         mask_conv_filters.append(mask_conv_filter)
-                        print("mask_conv_filters first calculated", mask_conv_filters)
+                        # print("mask_conv_filters first calculated", mask_conv_filters)
                 else:
                     conv_filter = None
 
@@ -218,9 +218,9 @@ class NewAttention(nn.Module):
 
         # Get the parameters for hard-coded attention for this layer, which was already initialized
         attn_configs, conv_filter, mask_conv_filters = self.attn_configs[layer_i]
-        print("conv_filter", conv_filter)
+        # print("conv_filter", conv_filter)
         attn_type, attn_position, attn_param, attn_displacement = attn_configs
-        print("attn_type, attn_position, attn_param, attn_displacement", attn_type, attn_position, attn_param, attn_displacement)
+        # print("attn_type, attn_position, attn_param, attn_displacement", attn_type, attn_position, attn_param, attn_displacement)
 
         # If we are using learned attention, then just do it the same way as multi-headed attention
         if attn_type == 'learned' or learned:
@@ -282,7 +282,7 @@ class NewAttention(nn.Module):
         # If we have conv filter, then we don't need to go through the huge amount of calculation
         # but can just use conv filter
         # conv_filter = None
-        old_values = values
+        # old_values = values
         if conv_filter is not None:
             # print("hi")
             if list not in [type(x) for x in [attn_param, attn_displacement]]:
@@ -297,12 +297,12 @@ class NewAttention(nn.Module):
                     # print("mask", mask.shape)
                     # print("conv_filter", conv_filter.shape)
                     use_conv_filter = mask_conv_filters if len(mask_conv_filters) != 1 else mask_conv_filters[0]
-                    print("using mask")
+                    # print("using mask")
                     # print("conv_filter", conv_filter)
                     # values = values * (mask == 0).to(dtype=torch.float32)
                 else:
                     use_conv_filter = conv_filter
-                print("use_conv_filter", use_conv_filter)
+                # print("use_conv_filter", use_conv_filter)
                 if key_mask is not None:
                     values = values.view(batch_size, self.num_heads, values_shape[1], values_shape[2])
                     # print("key_mask", key_mask.shape)
@@ -473,6 +473,7 @@ class NewAttention(nn.Module):
                     #     new_attended = values.new_zeros(queries_shape)
                     #     new_attended[:, :values_shape[1]] = attended
                     #     conv_attended = new_attended
+                    return conv_attended
 
         # If we want to look at last token of the sentence, or different bins of the sentence,
         # we would need sentence length to compute the focused position. If we have input_lens,
@@ -480,7 +481,7 @@ class NewAttention(nn.Module):
         # we can use key_mask to compute it, but it's a bit slower. At test time, we simply use the length
         # of the whole sentence.
 
-        values = old_values
+        # values = old_values
 
         with torch.no_grad():
 
@@ -552,7 +553,7 @@ class NewAttention(nn.Module):
                         elif decoder_position == -1:
                             indices_q = torch.round(torch.arange(queries_shape[1]
                                                                  ).view(-1, 1).type_as(values) * self.word_count_ratio)
-                            print("indices_q", indices_q)
+                            # print("indices_q", indices_q)
                         # If it is test time decoder self/source attention, we compute the matrix of size of this sentence
                         else:
                             indices_q = torch.round(torch.arange(decoder_position + 1
@@ -841,8 +842,8 @@ class NewAttention(nn.Module):
             self.num_heads * self.projection_dim
         ) == conv_attended)
 
-        print("self.which_attn", self.which_attn)
-        print("same", torch.sum(same == 0))
+        # print("self.which_attn", self.which_attn)
+        # print("same", torch.sum(same == 0))
         # if torch.sum(same == 0).item() != 0:
         #     torch.set_printoptions(profile='full')
             # print("conv_attended", conv_attended)
