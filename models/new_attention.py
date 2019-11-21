@@ -352,6 +352,8 @@ class NewAttention(nn.Module):
                         else:
                             attended = []
                             for i, f in enumerate(use_conv_filter):
+                                if self.which_attn == "decoder":
+                                    print("use_conv_filter", i, use_conv_filter[i])
                                 a = F.conv1d(values.view(batch_size,
                                                          self.num_heads,
                                                          self.projection_dim,
