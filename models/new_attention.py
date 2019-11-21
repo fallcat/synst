@@ -282,7 +282,7 @@ class NewAttention(nn.Module):
         # If we have conv filter, then we don't need to go through the huge amount of calculation
         # but can just use conv filter
         # conv_filter = None
-        old_values = values
+        # old_values = values
         if conv_filter is not None:
             # print("hi")
             with torch.no_grad():
@@ -434,7 +434,7 @@ class NewAttention(nn.Module):
                         #     new_attended = values.new_zeros(queries_shape)
                         #     new_attended[:, :values_shape[1]] = attended
                         #     conv_attended = new_attended
-                    # return conv_attended
+                    return conv_attended
 
         # If we want to look at last token of the sentence, or different bins of the sentence,
         # we would need sentence length to compute the focused position. If we have input_lens,
@@ -442,7 +442,7 @@ class NewAttention(nn.Module):
         # we can use key_mask to compute it, but it's a bit slower. At test time, we simply use the length
         # of the whole sentence.
 
-        values = old_values
+        # values = old_values
 
         with torch.no_grad():
 
@@ -807,13 +807,13 @@ class NewAttention(nn.Module):
 
         # print("self.which_attn", self.which_attn)
         # print("same", torch.sum(same == 0))
-        if torch.sum(same == 0).item() != 0:
-        # #     torch.set_printoptions(profile='full')
-            print("which", self.which_attn)
-            print("conv_attended", conv_attended.shape)
-            print("attended", a.shape)
-            print("conv_attended", conv_attended)
-            print("attended", a)
+        # if torch.sum(same == 0).item() != 0:
+        # # #     torch.set_printoptions(profile='full')
+        #     print("which", self.which_attn)
+        #     print("conv_attended", conv_attended.shape)
+        #     print("attended", a.shape)
+        #     print("conv_attended", conv_attended)
+        #     print("attended", a)
         #     print("---------------------------------------------------------------")
         #
         # print("==================================================================")
