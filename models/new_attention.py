@@ -447,7 +447,7 @@ class NewAttention(nn.Module):
                         print("self.word_count_ratio != 1")
                         print("attended", attended.shape)
                         print("round(queries_shape[1] * self.word_count_ratio) + 2 * attn_displacement", round(queries_shape[1] * self.word_count_ratio) + 2 * attn_displacement)
-                        if attended.shape[3] < round(queries_shape[1] * self.word_count_ratio) + 2 * attn_displacement:
+                        if attended.shape[3] < round((queries_shape[1] - 1) * self.word_count_ratio) + 1 + 2 * attn_displacement:
                             new_attended = values.new_zeros((batch_size,
                                                              self.num_heads,
                                                              round(queries_shape[1] * self.word_count_ratio)
@@ -467,38 +467,38 @@ class NewAttention(nn.Module):
                         indices_q = torch.round(torch.arange(queries_shape[1],
                                                              device=values.get_device(),
                                                              dtype=torch.float32) * self.word_count_ratio).long()
-                        # if type(attn_position) is not list:
-                        #     if attn_position == "center":
-                        #         conv_attended = attended[:, :, indices_q + attn_displacement]
-                        #     elif attn_position == "left":
-                        #         conv_attended = attended[:, :, indices_q]
-                        #     elif attn_position == "right":
-                        #         conv_attended = attended[:, :, indices_q + 2 * attn_displacement]
-                        #     else:
-                        #         conv_attended = attended[:, :, attn_displacement:attn_displacement+1].expand(batch_size, self.num_heads, queries_shape[1], self.projection_dim)
-                        # else:
-                        #     conv_attended = []
-                        #     for i, p in enumerate(attn_position):
-                        #         if p == "center":
-                        #             conv_attended.append(attended[:, i, indices_q + attn_displacement])
-                        #         elif p == "left":
-                        #             conv_attended.append(attended[:, i, indices_q])
-                        #         elif p == "right":
-                        #             conv_attended.append(attended[:, i, indices_q + 2 * attn_displacement])
-                        #         else:
-                        #             conv_attended.append(attended[:, i, attn_displacement:attn_displacement+1].expand(batch_size,
-                        #                                                                           queries_shape[1],
-                        #                                                                           self.projection_dim))
-                        #     conv_attended = torch.stack(conv_attended, dim=1)
-                        #
-                        # conv_attended = conv_attended.view(batch_size,
-                        #                                    self.num_heads,
-                        #                                    -1,
-                        #                                    self.projection_dim
-                        #                                    ).transpose(2, 1).contiguous().view(batch_size,
-                        #                                                                        -1,
-                        #                                                                        self.num_heads * self.projection_dim
-                        #                                                                        )
+                        if type(attn_position) is not list:
+                            if attn_position == "center":
+                                conv_attended = attended[:, :, indices_q + attn_displacement]
+                            elif attn_position == "left":
+                                conv_attended = attended[:, :, indices_q]
+                            elif attn_position == "right":
+                                conv_attended = attended[:, :, indices_q + 2 * attn_displacement]
+                            else:
+                                conv_attended = attended[:, :, attn_displacement:attn_displacement+1].expand(batch_size, self.num_heads, queries_shape[1], self.projection_dim)
+                        else:
+                            conv_attended = []
+                            for i, p in enumerate(attn_position):
+                                if p == "center":
+                                    conv_attended.append(attended[:, i, indices_q + attn_displacement])
+                                elif p == "left":
+                                    conv_attended.append(attended[:, i, indices_q])
+                                elif p == "right":
+                                    conv_attended.append(attended[:, i, indices_q + 2 * attn_displacement])
+                                else:
+                                    conv_attended.append(attended[:, i, attn_displacement:attn_displacement+1].expand(batch_size,
+                                                                                                  queries_shape[1],
+                                                                                                  self.projection_dim))
+                            conv_attended = torch.stack(conv_attended, dim=1)
+
+                        conv_attended = conv_attended.view(batch_size,
+                                                           self.num_heads,
+                                                           -1,
+                                                           self.projection_dim
+                                                           ).transpose(2, 1).contiguous().view(batch_size,
+                                                                                               -1,
+                                                                                               self.num_heads * self.projection_dim
+                                                                                               )
                             # torch.index_select(attended, 1, indices_q)
                         # else:
                         #     new_attended = values.new_zeros(queries_shape)
