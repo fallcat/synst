@@ -847,6 +847,9 @@ class NewAttention(nn.Module):
         # print("same", torch.sum(same == 0))
         if torch.sum(same == 0).item() != 0:
         #     torch.set_printoptions(profile='full')
+            print("which", self.which_attn)
+            print("conv_attended", conv_attended.shape)
+            print("attended", attended.shape)
             print("conv_attended", conv_attended)
             print("attended", attended)
 
