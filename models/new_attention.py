@@ -364,10 +364,14 @@ class NewAttention(nn.Module):
                     attended = attended.view(batch_size, self.num_heads,
                                              self.projection_dim,
                                              -1).transpose(2, 3).contiguous()
-                    print("in conv, attended", attended.shape)
+                    if self.which_attn == "decoder":
+                        print("in conv, attended", attended.shape)
                     if self.word_count_ratio == 1:
-                        print("self.word_count_ratio == 1")
+                        if self.which_attn == "decoder":
+                            print("self.word_count_ratio == 1")
                         if attended.shape[3] < queries_shape[1] + 2 * attn_displacement:
+                            if self.which_attn == "decoder":
+                                print("attended.shape[3] < queries_shape[1] + 2 * attn_displacement")
                             new_attended = values.new_zeros((queries_shape[0],
                                                             queries_shape[1] + 2 * attn_displacement,
                                                             queries_shape[2])).view(batch_size,
@@ -375,7 +379,12 @@ class NewAttention(nn.Module):
                                                                                    -1,
                                                                                    self.projection_dim)
                             new_attended[:, :, :attended.shape[3]] = attended
+                            if self.which_attn == "decoder":
+                                print("attended", attended.shape)
+                                print("new_attended", new_attended.shape)
+                                print("...")
                             attended = new_attended
+
                         # if values_shape[1] >= queries_shape[1]:
                             # print("greater")
                             # print("values_shape[1]", values_shape[1])
@@ -390,6 +399,9 @@ class NewAttention(nn.Module):
                                 conv_attended = attended[:, :, 2*attn_displacement:queries_shape[1] + 2*attn_displacement]
                             else:
                                 conv_attended = attended[:, :, attn_displacement:attn_displacement+1].expand(batch_size, self.num_heads, queries_shape[1], self.projection_dim)
+                            if self.which_attn == "decoder":
+                                print("dec not list")
+                                print("conv_attended", conv_attended.shape)
                         else:
                             conv_attended = []
                             for i, p in enumerate(attn_position):
@@ -406,6 +418,9 @@ class NewAttention(nn.Module):
                                                                                                   queries_shape[1],
                                                                                                   self.projection_dim))
                             conv_attended = torch.stack(conv_attended, dim=1)
+                            if self.which_attn == "decoder":
+                                print("dec list")
+                                print("conv_attended", conv_attended.shape)
                         conv_attended = conv_attended.view(batch_size,
                                                            self.num_heads,
                                                            -1,
@@ -414,12 +429,14 @@ class NewAttention(nn.Module):
                                                                                                -1,
                                                                                                self.num_heads * self.projection_dim
                                                                                                )
+                        print("final conv_attended", conv_attended.shape)
                         # else:
                         #     new_attended = values.new_zeros(queries_shape)
                         #     new_attended[:, :values_shape[1]] = attended
                         #     conv_attended = new_attended
                     else:
-                        print("else")
+                        if self.which_attn == "decoder":
+                            print("else")
                         if attended.shape[3] < round(queries_shape[1] * self.word_count_ratio) + 2 * attn_displacement:
                             new_attended = values.new_zeros((queries_shape[0],
                                                              queries_shape[1] * self.word_count_ratio
