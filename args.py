@@ -12,7 +12,8 @@ import torch
 
 from data import DATASETS
 from models import MODELS
-from actions import Trainer, Evaluator, Translator, Pass, Prober, ProbeTrainer, ProbeEvaluator, ProbeNewTranslator, ProbeStatsGetter
+from actions import Trainer, Evaluator, Translator, Pass, Prober, ProbeTrainer, ProbeEvaluator, ProbeNewTranslator, \
+    ProbeOffDiagonal
 from utils import get_version_string, get_random_seed_fn
 
 
@@ -181,7 +182,7 @@ def add_new_transformer_args(parser):
         type=str,
         nargs='+',
         default='normal',
-        choices=['normal', 'uniform', 'whole', 'no', 'learned'],
+        choices=['normal', 'uniform', 'no', 'learned'],
         help='What type of attention we are using for the rules'
     )
     group.add_argument(
@@ -189,8 +190,8 @@ def add_new_transformer_args(parser):
         type=str,
         nargs='+',
         default='center',
-        choices=['center', 'left', 'right', 'first', 'last', 'middle', 'bin'],
-        help='Where to put the attention. Center is centered at the word. Middle is the middle of sentence'
+        choices=['center', 'left', 'right', 'first', 'last', 'bin'],
+        help='Where to put the attention. Center is centered at the word.'
     )
     group.add_argument(
         '--attn-param',
@@ -200,6 +201,19 @@ def add_new_transformer_args(parser):
         help='when attention type is normal. The standard deviation.'
              'when attention type is uniform. The number of tokens to focus on to each direction.'
              'If window size is 2, then we have uniform distribution on 5 words.'
+    )
+    group.add_argument(
+        '--attn-threshold',
+        type=float,
+        default=-1,
+        help='when attention type is normal, '
+             'Only attend to places where distribution is above or equal to the attn-threshold'
+    )
+    group.add_argument(
+        '--attn-window',
+        type=int,
+        default=3,
+        help='The window to do convolution at'
     )
     group.add_argument(
         '--attn-displacement',
@@ -245,7 +259,7 @@ def add_new_transformer_args(parser):
         type=str,
         nargs='+',
         default='learned',
-        choices=['normal', 'uniform', 'whole', 'no', 'learned'],
+        choices=['normal', 'uniform', 'no', 'learned'],
         help='What type of attention we are using for the rules'
     )
     group.add_argument(
@@ -253,8 +267,8 @@ def add_new_transformer_args(parser):
         type=str,
         nargs='+',
         default='center',
-        choices=['center', 'left', 'right', 'first', 'last', 'middle', 'bin'],
-        help='Where to put the attention. Center is centered at the word. Middle is the middle of sentence'
+        choices=['center', 'left', 'right', 'first', 'last', 'bin'],
+        help='Where to put the attention. Center is centered at the word.'
     )
     group.add_argument(
         '--dec-attn-param',
@@ -264,6 +278,19 @@ def add_new_transformer_args(parser):
         help='when attention type is normal. The standard deviation.'
              'when attention type is uniform. The number of tokens to focus on to each direction.'
              'If window size is 2, then we have uniform distribution on 5 words.'
+    )
+    group.add_argument(
+        '--dec-attn-threshold',
+        type=float,
+        default=-1,
+        help='when attention type is normal, '
+             'Only attend to places where distribution is above or equal to the attn-threshold'
+    )
+    group.add_argument(
+        '--dec-attn-window',
+        type=int,
+        default=3,
+        help='The window to do convolution at'
     )
     group.add_argument(
         '--dec-attn-displacement',
@@ -309,7 +336,7 @@ def add_new_transformer_args(parser):
         type=str,
         nargs='+',
         default='learned',
-        choices=['normal', 'uniform', 'whole', 'no', 'learned'],
+        choices=['normal', 'uniform', 'no', 'learned'],
         help='What type of attention we are using for the rules'
     )
     group.add_argument(
@@ -317,8 +344,8 @@ def add_new_transformer_args(parser):
         type=str,
         nargs='+',
         default='center',
-        choices=['center', 'left', 'right', 'first', 'last', 'middle', 'bin'],
-        help='Where to put the attention. Center is centered at the word. Middle is the middle of sentence'
+        choices=['center', 'left', 'right', 'first', 'last', 'bin'],
+        help='Where to put the attention. Center is centered at the word.'
     )
     group.add_argument(
         '--enc-dec-attn-param',
@@ -328,6 +355,19 @@ def add_new_transformer_args(parser):
         help='when attention type is normal. The standard deviation.'
              'when attention type is uniform. The number of tokens to focus on to each direction.'
              'If window size is 2, then we have uniform distribution on 5 words.'
+    )
+    group.add_argument(
+        '--enc-dec-attn-threshold',
+        type=float,
+        default=-1,
+        help='when attention type is normal, '
+             'Only attend to places where distribution is above or equal to the attn-threshold'
+    )
+    group.add_argument(
+        '--enc-dec-attn-window',
+        type=int,
+        default=3,
+        help='The window to do convolution at'
     )
     group.add_argument(
         '--enc-dec-attn-displacement',
@@ -377,15 +417,39 @@ def add_new_transformer_args(parser):
         nargs='+',
         default=1,
         choices=[0, 1],
-        help="Determine the presence of encoder-decoder (source) attention after the decoder self-attention layer. Length of list should be equal to the number of layers. "
+        help="Determine the presence of encoder-decoder (source) attention after the decoder self-attention layer. "
+             "Length of list should be equal to the number of layers. "
     )
 
     group.add_argument(
         '--enc-dec-attn-num-heads',
         type=int,
         nargs='+',
-        default=4,
-        help="number of heads for enc-dec-attn at each layer; length of list should be equal to the number of layers. if a layer does not have source attention, it should be 0."
+        default=-1,
+        help="number of heads for enc-dec-attn at each layer; length of list should be equal to the number of layers. "
+             "if a layer does not have source attention, it should be 0."
+             "If the number of heads is same as encoder/decoder self attentions, then use -1 to specify that."
+    )
+
+    group.add_argument(
+        '--enc-attn-indexing',
+        type=bool,
+        default=False,
+        help="flag indicating whether use indexing(window-size=1) or not. if use, center+displacement word will be selected directly from values."
+    )
+
+    group.add_argument(
+        '--dec-attn-indexing',
+        type=bool,
+        default=False,
+        help="flag indicating whether use indexing(window-size=1) or not. if use, center+displacement word will be selected directly from values."
+    )
+
+    group.add_argument(
+        '--enc-dec-attn-indexing',
+        type=bool,
+        default=False,
+        help="flag indicating whether use indexing(window-size=1) or not. if use, center+displacement word will be selected directly from values."
     )
 
     return group
@@ -936,11 +1000,101 @@ def add_translate_args(parser):
         help='How many times to run translation to gauge the translation speed'
     )
 
+    group.set_defaults(gold_p=0)
+    group.set_defaults(dropout_p=0)
+
+    return group
+
+
+def add_probe_off_diagonal_args(parser):
+    ''' Defines the generation specific arguments '''
+    group = ArgGroup(parser.add_argument_group('Generation'))
     group.add_argument(
-        '--stats-directory',
+        '--beam-width',
+        default=4,
+        type=int,
+        help='Default beam width for beam search decoder.'
+    )
+    group.add_argument(
+        '--disable-cache',
+        default=False,
+        action='store_true',
+        help='Whether to disable the use of caching in beam search decoder'
+    )
+    group.add_argument(
+        '--length-penalty',
+        type=float,
+        default=0.6,
+        help='Divides the hypothesis log probabilities in beam search by length^<length penalty>.'
+    )
+    group.add_argument(
+        '--length-basis',
         type=str,
-        default='/tmp/synst/stats',
-        help='Where to store stats'
+        default=None,
+        choices=['input_lens', 'target_lens'],
+        help='The basis for max decoding length. Default of None implies no basis, i.e. 0.'
+    )
+    group.add_argument(
+        '--max-decode-length',
+        default=50,
+        type=int,
+        help='How many tokens beyond the length basis to allow decoding to continue.'
+    )
+    group.add_argument(
+        '--output-directory',
+        type=str,
+        default='/tmp/synst/output',
+        help='Where to store translated strings'
+    )
+    group.add_argument(
+        '--output-filename',
+        type=str,
+        default=None,
+        help='Default output filename is translated_{step}.txt'
+    )
+    group.add_argument(
+        '--order-output',
+        default=False,
+        action='store_true',
+        help='Whether to print the translated strings in the original dataset ordering'
+    )
+    group.add_argument(
+        '--gold-annotations',
+        default=False,
+        action='store_true',
+        help='Whether to use gold annotations rather than have the network predict the annotations'
+    )
+    group.add_argument(
+        '--annotations-only',
+        default=False,
+        action='store_true',
+        help='Whether to only output annotations rather than the predicted translation'
+    )
+    group.add_argument(
+        '--timed',
+        type=int,
+        default=0,
+        const=1,
+        nargs='?',
+        help='How many times to run translation to gauge the translation speed'
+    )
+    group.add_argument(
+        '--off-diagonal-threshold-type',
+        type=str,
+        default='argmax_offset',
+        choices=['argmax_offset', 'argmax_prob', 'argmax_number'],
+        help='The type of threshold to determine if the attention of this sentence is considered off-diagonal.'
+             'argmax_offset puts sentences whose argmax offset exceed threshold number into off-diagonal category,'
+             'argmax_prob puts sentences whose argmax prob among off diagonal words exceed threshould number into off-diagonal category,'
+             'argmax_number puts sentences whose number of argmax that is off diagonal exceed the threshold into off-diagonal category.'
+             'Only for source attention.'
+    )
+    group.add_argument(
+        '--off-diagonal-threshold-num',
+        type=float,
+        default=1,
+        help='The type of threshold to determine if the attention of this sentence is considered off-diagonal.'
+             'Only for source attention'
     )
 
     group.set_defaults(gold_p=0)
@@ -1101,6 +1255,13 @@ def parse_args(argv=None):
         the existing experiment. If a filename ending with guid it is provided, it will wait \
         until the file exists, then start tracking that experiment.'
     )
+
+    parser.add_argument(
+        '--project-name',
+        default='probe_transformer',
+        type=str,
+        help='Specify where to store in comet'
+    )
     parser.add_argument(
         '-v',
         '--verbose',
@@ -1175,12 +1336,12 @@ def parse_args(argv=None):
         shuffle=False
     )
 
-    probe_attn_stats_parser = subparsers.add_parser('probe_attn_stats', help='Probe attention stats')
-    groups['probe_attn_stats'] = add_translate_args(probe_attn_stats_parser)
-    probe_attn_stats_parser.set_defaults(
-        action=ProbeStatsGetter,
-        action_type='probe_attn_stats',
-        action_config=groups['probe_attn_stats'],
+    probe_off_diagonal_parser = subparsers.add_parser('probe_off_diagonal', help='Probe the performance of sentences where learned attention looks off diagonal')
+    groups['probe_off_diagonal'] = add_probe_off_diagonal_args(probe_off_diagonal_parser)
+    probe_new_translate_parser.set_defaults(
+        action=ProbeOffDiagonal,
+        action_type='probe_off_diagonal',
+        action_config=groups['probe_off_diagonal'],
         shuffle=False
     )
 
@@ -1244,7 +1405,7 @@ Commit your changes first, then try again.''')
 
     args.experiment = experiment_type(
         *experiment_args,
-        project_name='transformer-attn',
+        project_name=args.project_name,
         workspace='umass-nlp',
         disabled=not args.track,
         auto_metric_logging=False,
