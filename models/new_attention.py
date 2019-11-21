@@ -852,7 +852,7 @@ class NewAttention(nn.Module):
         # print("conv_attended", conv_attended.shape)
         # print("attended", attended.shape)
 
-        same = (attended.view(
+        a = attended.view(
             batch_size,
             self.num_heads,
             -1,
@@ -861,7 +861,9 @@ class NewAttention(nn.Module):
             batch_size,
             -1,
             self.num_heads * self.projection_dim
-        ) == conv_attended)
+        )
+
+        same = (a == conv_attended)
 
         # print("self.which_attn", self.which_attn)
         # print("same", torch.sum(same == 0))
@@ -869,9 +871,9 @@ class NewAttention(nn.Module):
         #     torch.set_printoptions(profile='full')
             print("which", self.which_attn)
             print("conv_attended", conv_attended.shape)
-            print("attended", attended.shape)
+            print("attended", a.shape)
             print("conv_attended", conv_attended)
-            print("attended", attended)
+            print("attended", a)
             print("---------------------------------------------------------------")
 
         print("==================================================================")
