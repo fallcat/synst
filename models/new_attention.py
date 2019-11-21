@@ -327,7 +327,10 @@ class NewAttention(nn.Module):
                                                                                      -1),
                                              use_conv_filter[i], padding=self.half_window + attn_displacement)
                                 attended.append(a.view(batch_size, self.projection_dim, -1))
-                            attended = torch.stack(attended, dim=1)
+                            attended = torch.stack(attended, dim=1).view(batch_size,
+                                                                         self.projection_dim,
+                                                                         self.num_heads,
+                                                                         -1).transpose(1, 2).contiguous()
                     except:
                         # print("Convert conv filter to correct device")
                         if values.is_cuda:
@@ -363,7 +366,10 @@ class NewAttention(nn.Module):
                                              use_conv_filter[i], padding=self.half_window + attn_displacement)
                                 attended.append(a)
 
-                            attended = torch.stack(attended, dim=1)
+                            attended = torch.stack(attended, dim=1).view(batch_size,
+                                                                         self.projection_dim,
+                                                                         self.num_heads,
+                                                                         -1).transpose(1, 2).contiguous()
                             if self.which_attn == "decoder":
                                 print("attended", attended.shape)
                     attended = attended.view(batch_size, self.num_heads,
