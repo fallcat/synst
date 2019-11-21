@@ -166,7 +166,7 @@ class NewAttention(nn.Module):
             easy_positions = ['left', 'center', 'right', 'first']
 
             with torch.no_grad():
-                if ('normal' == attn_configs[0] or 'normal' == set(attn_configs[0])) \
+                if self.attn_window > 0 and ('normal' == attn_configs[0] or 'normal' == set(attn_configs[0])) \
                         and (attn_configs[1] in easy_positions or set(attn_configs[1]).issubset(easy_positions)):
                     attn_type, attn_position, attn_param, attn_displacement = attn_configs
 
@@ -205,6 +205,7 @@ class NewAttention(nn.Module):
                         # print("mask_conv_filters first calculated", mask_conv_filters)
                 else:
                     conv_filter = None
+                    mask_conv_filters = None
 
             yield attn_configs, conv_filter, mask_conv_filters
 
