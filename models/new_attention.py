@@ -378,14 +378,14 @@ class NewAttention(nn.Module):
                         print("self.word_count_ratio == 1")
                         print("attended", attended.shape)
                         print("queries_shape[1] + 2 * attn_displacement", queries_shape[1] + 2 * attn_displacement)
-                        if attended.shape[3] < queries_shape[1] + 2 * attn_displacement:
+                        if attended.shape[2] < queries_shape[1] + 2 * attn_displacement:
                             # if self.which_attn == "decoder":
                             #     print("attended.shape[3] < queries_shape[1] + 2 * attn_displacement")
                             new_attended = values.new_zeros((batch_size,
                                                              self.num_heads,
                                                              queries_shape[1] + 2 * attn_displacement,
                                                              queries_shape[2]))
-                            new_attended[:, :, :attended.shape[3]] = attended
+                            new_attended[:, :, :attended.shape[2]] = attended
                             # if self.which_attn == "decoder":
                             print("attended", attended.shape)
                             print("new_attended", new_attended.shape)
@@ -445,15 +445,15 @@ class NewAttention(nn.Module):
                         # if self.which_attn == "decoder":
                         #     print("else")
                         print("self.word_count_ratio != 1")
-                        print(attended.shape[3])
+                        print(attended.shape[2])
                         print(round((queries_shape[1] - 1) * self.word_count_ratio) + 1 + 2 * attn_displacement)
-                        if attended.shape[3] < round((queries_shape[1] - 1) * self.word_count_ratio) + 1 + 2 * attn_displacement:
+                        if attended.shape[2] < round((queries_shape[1] - 1) * self.word_count_ratio) + 1 + 2 * attn_displacement:
                             new_attended = values.new_zeros((batch_size,
                                                              self.num_heads,
                                                              round(queries_shape[1] * self.word_count_ratio)
                                                              + 2 * attn_displacement,
                                                              queries_shape[2]))
-                            new_attended[:, :, :attended.shape[3]] = attended
+                            new_attended[:, :, :attended.shape[2]] = attended
                             print("attended", attended.shape)
                             print("new_attended", new_attended.shape)
                             attended = new_attended
@@ -467,10 +467,10 @@ class NewAttention(nn.Module):
                         indices_q = torch.round(torch.arange(queries_shape[1],
                                                              device=values.get_device(),
                                                              dtype=torch.float32) * self.word_count_ratio).long()
-                        if (indices_q + 2 * attn_displacement)[-1].item() >= attended.shape[3]:
+                        if (indices_q + 2 * attn_displacement)[-1].item() >= attended.shape[2]:
                             print("indices_q[-1]",indices_q[-1])
                             print("attn_displacement", attn_displacement)
-                            print("attended.shape[3]", attended.shape[3])
+                            print("attended.shape[2]", attended.shape[2])
                         if type(attn_position) is not list:
                             if attn_position == "center":
                                 conv_attended = attended[:, :, indices_q + attn_displacement]
