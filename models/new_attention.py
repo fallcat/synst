@@ -364,7 +364,9 @@ class NewAttention(nn.Module):
                     attended = attended.view(batch_size, self.num_heads,
                                              self.projection_dim,
                                              -1).transpose(2, 3).contiguous()
+                    print("in conv, attended", attended.shape)
                     if self.word_count_ratio == 1:
+                        print("self.word_count_ratio == 1")
                         if attended.shape[3] < queries_shape[1] + 2 * attn_displacement:
                             new_attended = values.new_zeros((queries_shape[0],
                                                             queries_shape[1] + 2 * attn_displacement,
@@ -417,6 +419,7 @@ class NewAttention(nn.Module):
                         #     new_attended[:, :values_shape[1]] = attended
                         #     conv_attended = new_attended
                     else:
+                        print("else")
                         if attended.shape[3] < round(queries_shape[1] * self.word_count_ratio) + 2 * attn_displacement:
                             new_attended = values.new_zeros((queries_shape[0],
                                                              queries_shape[1] * self.word_count_ratio
@@ -852,6 +855,9 @@ class NewAttention(nn.Module):
             print("attended", attended.shape)
             print("conv_attended", conv_attended)
             print("attended", attended)
+            print("---------------------------------------------------------------")
+
+        print("==================================================================")
 
         # torch.set_printoptions(profile='full')
         # print("values", values)
