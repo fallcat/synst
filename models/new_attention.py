@@ -362,7 +362,10 @@ class NewAttention(nn.Module):
                                                                                      -1),
                                              use_conv_filter[i], padding=self.half_window + attn_displacement)
                                 attended.append(a)
+
                             attended = torch.stack(attended, dim=1)
+                            if self.which_attn == "decoder":
+                                print("attended", attended.shape)
                     attended = attended.view(batch_size, self.num_heads,
                                              self.projection_dim,
                                              -1).transpose(2, 3).contiguous()
