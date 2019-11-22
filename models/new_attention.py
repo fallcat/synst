@@ -276,7 +276,7 @@ class NewAttention(nn.Module):
             # return
             # return torch.gather(values, 2, attended_indices).transpose(2,1).contiguous().view(batch_size, -1, self.num_heads * self.projection_dim)
 
-            return values.transpose(2,1).contiguous().view(batch_size, -1, self.num_heads * self.projection_dim)
+            return values[:, :, :queries_shape[1]].transpose(2,1).contiguous().view(batch_size, -1, self.num_heads * self.projection_dim)
 
         # If we are using learned attention, then just do it the same way as multi-headed attention
         if attn_type == 'learned' or learned:
