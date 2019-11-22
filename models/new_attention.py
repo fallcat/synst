@@ -267,28 +267,26 @@ class NewAttention(nn.Module):
             attended = []
             for i, p, in enumerate(attn_position):
                 if p == "center":
-                    attended.append(values[:, i, max_padding + indices_q ])
+                    attended.append(values[:, i, max_padding + indices_q ].squeeze(2))
 
                 elif p == "left":
-                    attended.append(values[:, i, max_padding + indices_q - attn_displacement[i]])
+                    attended.append(values[:, i, max_padding + indices_q - attn_displacement[i]].squeeze(2))
 
                 elif p == "right":
-                    attended.append(values[:, i, max_padding + indices_q + attn_displacement[i]])
+                    attended.append(values[:, i, max_padding + indices_q + attn_displacement[i]].squeeze(2))
 
                 elif p == "first":
-                    attended.append(values[:, i, max_padding])
+                    attended.append(values[:, i, max_padding].squeeze(2))
 
                 elif p == "last":
-                    attended.append(values[:, i, max_padding + indices_last])
+                    attended.append(values[:, i, max_padding + indices_last].squeeze(2))
 
                 else:
                     print("unknown position")
                     exit(-1)
 
             pdb.set_trace()
-            attended = torch.squeeze(torch.stack(attended), dim=3) # num_heads x bs x vlen x proj_dim
-
-            attended = attended.transpose(2, 1).transpose(2, 0).contiguous().view(batch_size, -1, self.num_heads * self.projection_dim)
+            attended = torch.stack(attended, dim=2) # bs x vlen x num_heads x proj_dim
 
             # return
             return attended
