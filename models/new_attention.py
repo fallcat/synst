@@ -276,8 +276,7 @@ class NewAttention(nn.Module):
                     attended.append(values[:, i, max_padding + indices_q + attn_displacement[i]].squeeze(2))
 
                 elif p == "first":
-                    attended.append(values[:, i, max_padding])
-                    pdb.set_trace()
+                    attended.append(values[:, i, [max_padding]*queries_shape[1]])
 
                 elif p == "last":
                     attended.append(values[:, i, max_padding + indices_last].squeeze(2))
