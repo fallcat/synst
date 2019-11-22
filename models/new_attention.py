@@ -284,7 +284,7 @@ class NewAttention(nn.Module):
                     print("unknown position")
                     exit(-1)
 
-            attended_indices = attended_indices.expand_as(values[:, :, max_padding:-max_padding, :])
+            attended_indices = attended_indices.expand(batch_size, self.num_heads, queries_shape[1], self.projection_dim)
 
             # return
             return torch.gather(values, 2, attended_indices).transpose(2,1).contiguous().view(batch_size, -1, self.num_heads * self.projection_dim)
