@@ -255,46 +255,39 @@ class NewAttention(nn.Module):
             values = values.view(batch_size, self.num_heads, values_shape[1], values_shape[2]) # bs x num_heads x vlen x proj_dim
 
             # append zeros at vlen+1
-            padding = torch.zeros(batch_size, self.num_heads, 1, values_shape[2]).type_as(values)
-            values = torch.cat((values, padding), dim=2)
+            max_padding = max(attn_displacement)
+            values = F.pad(values, (0, 0, max_padding, max_padding), "constant", 0)
+            pdb.set_trace()
+            if decoder_position == -1:
+                indices_last = torch.arange(max_last_index + 1).type_as(values).long()
+            else:
+                indices_last = torch.round(torch.arange(decoder_position + 1).type_as(values) * self.word_count_ratio).long()
 
-            # for each head, get corresponding indice_q
-            indice_q_lst = []
-            for i in range(self.num_heads):
-                # get indices q
-                if decoder_position == -1:
-                    indices_q = torch.round(torch.arange(queries_shape[1]).type_as(values) * self.word_count_ratio).type(torch.LongTensor)
+            attended = []
+            for i, p, in enumerate(attn_position):
+                if p == "center":
+                    attended.append(values[:, i, indices_q + max_padding])
+
+                elif p == "left":
+                    attended.append(values[:, i, indices_q])
+
+                elif p == "right":
+                    attended.append(values[:, i, indices_q + max_padding + 1])
+
+                elif p == "first":
+                    attended.append(values[:, i, max_padding])
+
+                elif p == "last":
+                    attended.append(values[:, i, indices_last])
+
                 else:
-                    indices_q = torch.round(torch.arange(decoder_position + 1).type_as(values) * self.word_count_ratio).type(torch.LongTensor)
-
-                if attn_position[i] == "left":
-                    indices_q -= attn_displacement[i]
-                    indices_q[indices_q < 0] = -1
-
-                elif attn_position[i] == "right":
-                    indices_q += attn_displacement[i]
-                    indices_q[indices_q > values_shape[1]-1] = -1
-
-                elif attn_position[i] == "first":
-                    indices_q = torch.tensor(0.0).type_as(values).type(torch.LongTensor)
-
-                elif attn_position[i] == "last":
-                    indices_q = torch.arange(max_last_index + 1).type_as(values).type(torch.LongTensor)
-
-                else:
-                    print('wrong attn position')
+                    print("unknown position")
                     exit(-1)
 
-                indice_q_lst.append(indices_q)
             pdb.set_trace()
-            # stack
-            indice_q_lst = torch.stack(indice_q_lst, dim=0) # num_heads x vlen
+            attended = torch.stack(attended, dim=0) # num_heads x bs x vlen x proj_dim
 
-            attended = values[:, :, indice_q_lst[range(self.num_heads), :]] # bs x num_heads x vlen x proj_dim
-
-            attended[:, :, indice_q_lst[range(self.num_heads), :]]
-
-            attended = attended.transpose(2, 1).view(batch_size, -1, self.num_heads * self.projection_dim)
+            attended = attended.transpose(2, 1).transpose(2, 0).view(batch_size, -1, self.num_heads * self.projection_dim)
 
             # return
             return attended
