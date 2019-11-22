@@ -285,7 +285,7 @@ class NewAttention(nn.Module):
                     print("unknown position")
                     exit(-1)
 
-            attended_indices = b.expand_as(values[:, :, max_padding:-max_padding, :])
+            attended_indices = attended_indices.expand_as(values[:, :, max_padding:-max_padding, :])
 
             # return
             return torch.gather(values[:, :, max_padding:-max_padding,:], 2, attended_indices)
