@@ -285,7 +285,8 @@ class NewAttention(nn.Module):
                     print("unknown position")
                     exit(-1)
 
-            attended = torch.squeeze(torch.stack(attended, dim=0)) # num_heads x bs x vlen x proj_dim
+            pdb.set_trace()
+            attended = torch.squeeze(torch.stack(attended), dim=3) # num_heads x bs x vlen x proj_dim
 
             attended = attended.transpose(2, 1).transpose(2, 0).contiguous().view(batch_size, -1, self.num_heads * self.projection_dim)
 
