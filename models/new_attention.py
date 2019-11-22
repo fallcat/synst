@@ -255,18 +255,17 @@ class NewAttention(nn.Module):
             values = values.view(batch_size, self.num_heads, values_shape[1], values_shape[2]) # bs x num_heads x vlen x proj_dim
 
             # append zeros at vlen+1
-            padding = torch.zeros(batch_size, self.num_heads, 1, values_shape[2]).cuda()
+            padding = torch.zeros(batch_size, self.num_heads, 1, values_shape[2]).type_as(values)
             values = torch.cat((values, padding), dim=2)
 
-            pdb.set_trace()
             # for each head, get corresponding indice_q
             indice_q_lst = []
             for i in range(self.num_heads):
                 # get indices q
                 if decoder_position == -1:
-                    indices_q = torch.round(torch.arange(queries_shape[1]).type_as(values) * self.word_count_ratio)
+                    indices_q = torch.round(torch.arange(queries_shape[1]).type_as(values) * self.word_count_ratio).type(torch.LongTensor)
                 else:
-                    indices_q = torch.round(torch.arange(decoder_position + 1).type_as(values) * self.word_count_ratio)
+                    indices_q = torch.round(torch.arange(decoder_position + 1).type_as(values) * self.word_count_ratio).type(torch.LongTensor)
 
                 if attn_position[i] == "left":
                     indices_q -= attn_displacement[i]
@@ -277,17 +276,17 @@ class NewAttention(nn.Module):
                     indices_q[indices_q > values_shape[1]-1] = -1
 
                 elif attn_position[i] == "first":
-                    indices_q = torch.tensor(0.0).type_as(values)
+                    indices_q = torch.tensor(0.0).type_as(values).type(torch.LongTensor)
 
                 elif attn_position[i] == "last":
-                    indices_q = torch.arange(max_last_index + 1).type_as(values) 
+                    indices_q = torch.arange(max_last_index + 1).type_as(values).type(torch.LongTensor)
 
                 else:
                     print('wrong attn position')
                     exit(-1)
 
                 indice_q_lst.append(indices_q)
-
+            pdb.set_trace()
             # stack
             indice_q_lst = torch.stack(indice_q_lst, dim=0) # num_heads x vlen
 
