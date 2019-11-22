@@ -254,7 +254,7 @@ class NewAttention(nn.Module):
             values = values.view(batch_size, self.num_heads, values_shape[1], values_shape[2]) # bs x num_heads x vlen x proj_dim
 
             # append zeros at vlen+1
-            max_padding = max(attn_displacement)
+            max_padding = 1 + max(attn_displacement)
             values = F.pad(values, (0, 0, max_padding, max_padding), "constant", 0)
             
             if decoder_position == -1:
