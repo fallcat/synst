@@ -855,25 +855,6 @@ class NewAttention(nn.Module):
         attended = torch.bmm(attn_weights,
                              values)
 
-        # print("value", values_shape[1])
-        # print("query", queries_shape[1])
-        #
-        # print("conv_attended", conv_attended.shape)
-        # print("attended", attended.shape)
-
-        a = attended.view(
-            batch_size,
-            self.num_heads,
-            -1,
-            self.projection_dim
-        ).transpose(2, 1).contiguous().view(
-            batch_size,
-            -1,
-            self.num_heads * self.projection_dim
-        )
-
-        same = (a == conv_attended)
-
         # print("self.which_attn", self.which_attn)
         # print("same", torch.sum(same == 0))
         # if torch.sum(same == 0).item() != 0:
