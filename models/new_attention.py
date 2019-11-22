@@ -261,7 +261,6 @@ class NewAttention(nn.Module):
                 indices_last = torch.round(torch.arange(decoder_position + 1).view(-1, 1).type_as(values) * self.word_count_ratio).long()
 
             indices_q = torch.round(torch.arange(queries_shape[1]).view(-1, 1).type_as(values) * self.word_count_ratio).long()
-            indices_q[indices_q >= values_shape[1]] = values_shape[1] - 1
 
             attended_indices = torch.zeros(1, self.num_heads, values_shape[1], 1).type_as(values).long() # 1 x num_heads x vlen x 1
 
@@ -288,7 +287,7 @@ class NewAttention(nn.Module):
             attended_indices = attended_indices.expand_as(values[:, :, max_padding:-max_padding, :])
 
             # return
-            return torch.gather(values[:, :, max_padding:-max_padding,:], 2, attended_indices).transpose(2,1).contiguous().view(batch_size, -1, self.num_heads * self.projection_dim)
+            return torch.gather(values, 2, attended_indices).transpose(2,1).contiguous().view(batch_size, -1, self.num_heads * self.projection_dim)
 
         # If we are using learned attention, then just do it the same way as multi-headed attention
         if attn_type == 'learned' or learned:
