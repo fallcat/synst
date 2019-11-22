@@ -229,7 +229,6 @@ class NewAttention(nn.Module):
         if self.attn_indexing:
             print("using simple indexing")
             max_last_index = -1
-            pdb.set_trace()
             if type(attn_position) is list and 'last' in attn_position or attn_position == 'last':
                 if input_lens is not None:
                     last_indices = (input_lens - 1).cpu().view(-1)
@@ -265,7 +264,6 @@ class NewAttention(nn.Module):
 
             indices_q = torch.round(torch.arange(queries_shape[1]).view(-1, 1).type_as(values) * self.word_count_ratio).long()
 
-            pdb.set_trace()
             attended = []
             for i, p, in enumerate(attn_position):
                 if p == "center":
@@ -287,8 +285,7 @@ class NewAttention(nn.Module):
                     print("unknown position")
                     exit(-1)
 
-            pdb.set_trace()
-            attended = torch.stack(attended, dim=0) # num_heads x bs x vlen x proj_dim
+            attended = torch.squeeze(torch.stack(attended, dim=0)) # num_heads x bs x vlen x proj_dim
 
             attended = attended.transpose(2, 1).transpose(2, 0).view(batch_size, -1, self.num_heads * self.projection_dim)
 
