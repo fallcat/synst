@@ -212,7 +212,7 @@ def add_new_transformer_args(parser):
     group.add_argument(
         '--attn-window',
         type=int,
-        default=3,
+        default=-1,
         help='The window to do convolution at'
     )
     group.add_argument(
@@ -289,7 +289,7 @@ def add_new_transformer_args(parser):
     group.add_argument(
         '--dec-attn-window',
         type=int,
-        default=3,
+        default=-1,
         help='The window to do convolution at'
     )
     group.add_argument(
@@ -366,7 +366,7 @@ def add_new_transformer_args(parser):
     group.add_argument(
         '--enc-dec-attn-window',
         type=int,
-        default=3,
+        default=-1,
         help='The window to do convolution at'
     )
     group.add_argument(
