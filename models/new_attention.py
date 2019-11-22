@@ -268,10 +268,15 @@ class NewAttention(nn.Module):
                     print("unknown position")
                     exit(-1)
 
-            attended_indices = attended_indices.expand(batch_size, self.num_heads, queries_shape[1], self.projection_dim)
+            # bs x nh x qlen x proj_dim
+            # attended_indices = attended_indices.expand(batch_size, self.num_heads, queries_shape[1], self.projection_dim)
+
+
 
             # return
-            return torch.gather(values, 2, attended_indices).transpose(2,1).contiguous().view(batch_size, -1, self.num_heads * self.projection_dim)
+            # return torch.gather(values, 2, attended_indices).transpose(2,1).contiguous().view(batch_size, -1, self.num_heads * self.projection_dim)
+
+            return values.transpose(2,1).contiguous().view(batch_size, -1, self.num_heads * self.projection_dim)
 
         # If we are using learned attention, then just do it the same way as multi-headed attention
         if attn_type == 'learned' or learned:
