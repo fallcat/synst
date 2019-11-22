@@ -261,6 +261,7 @@ class NewAttention(nn.Module):
                 indices_last = torch.round(torch.arange(decoder_position + 1).view(-1, 1).type_as(values) * self.word_count_ratio).long()
 
             indices_q = torch.round(torch.arange(queries_shape[1]).view(-1, 1).type_as(values) * self.word_count_ratio).long()
+            indices_q[indices_q >= values_shape[1]] = values_shape[1] - 1
 
             attended_indices = torch.zeros(1, self.num_heads, queries_shape[1], 1).type_as(values).long() # 1 x num_heads x vlen x 1
 
