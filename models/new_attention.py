@@ -254,7 +254,7 @@ class NewAttention(nn.Module):
             values = values.view(batch_size, self.num_heads, values_shape[1], values_shape[2]) # bs x num_heads x vlen x proj_dim
 
             # append zeros at vlen+1
-            max_padding = max(attn_displacement)+1
+            max_padding = max(attn_displacement)
             values = F.pad(values, (0, 0, max_padding, max_padding), "constant", 0)
             
             if decoder_position == -1:
@@ -276,10 +276,7 @@ class NewAttention(nn.Module):
                     attended.append(values[:, i, max_padding + indices_q + attn_displacement[i]].squeeze())
 
                 elif p == "first":
-                    try:
-                        attended.append(values[:, i, max_padding].squeeze())
-                    except:
-                        pdb.set_trace()
+                    attended.append(values[:, i, max_padding].squeeze())
 
                 elif p == "last":
                     attended.append(values[:, i, max_padding + indices_last].squeeze())
