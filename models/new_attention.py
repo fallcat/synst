@@ -228,7 +228,7 @@ class NewAttention(nn.Module):
         # simple indexing - fix window size 1
         if self.attn_indexing:
             print("using simple indexing")
-
+            pdb.set_trace()
             max_last_index = -1
             if not {'last', 'bin'}.isdisjoint(attn_position) or attn_position in ['last', 'bin']:
                 if input_lens is not None:
