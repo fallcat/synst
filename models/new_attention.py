@@ -228,9 +228,9 @@ class NewAttention(nn.Module):
         # simple indexing - fix window size 1
         if self.attn_indexing:
             print("using simple indexing")
-            pdb.set_trace()
             max_last_index = -1
-            if not {'last', 'bin'}.isdisjoint(attn_position) or attn_position in ['last', 'bin']:
+            pdb.set_trace()
+            if type(attn_position) is list and 'last' in attn_position or attn_position == 'last':
                 if input_lens is not None:
                     last_indices = (input_lens - 1).cpu().view(-1)
                 elif key_mask is not None:
@@ -240,7 +240,7 @@ class NewAttention(nn.Module):
 
                 max_last_index = last_indices[0]
 
-            assert max_last_index != -1 and attn_position == 'last'
+                assert max_last_index != -1
 
             # omitting the branch of not having list
             attn_config = []
@@ -254,7 +254,7 @@ class NewAttention(nn.Module):
 
             values = values.view(batch_size, self.num_heads, values_shape[1], values_shape[2]) # bs x num_heads x vlen x proj_dim
 
-            
+            pdb.set_trace()
             # for each head, get corresponding indice_q
             indice_q_lst = []
             for i in range(self.num_heads):
