@@ -255,7 +255,7 @@ class NewAttention(nn.Module):
             values = values.view(batch_size, self.num_heads, values_shape[1], values_shape[2]) # bs x num_heads x vlen x proj_dim
 
             # append zeros at vlen+1
-            padding = nn.DataParallel(torch.zeros(batch_size, self.num_heads, 1, values_shape[2]).cuda())
+            padding = torch.zeros(batch_size, self.num_heads, 1, values_shape[2]).cuda()
             values = torch.cat((values, padding), dim=2)
 
             pdb.set_trace()
