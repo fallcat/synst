@@ -288,7 +288,7 @@ class NewAttention(nn.Module):
             attended_indices = attended_indices.expand_as(values[:, :, max_padding:-max_padding, :])
 
             # return
-            return torch.gather(values[:, :, max_padding:-max_padding,:], 2, attended_indices)
+            return torch.gather(values[:, :, max_padding:-max_padding,:], 2, attended_indices).contiguous().transpose(2,1).view(batch_size, -1, self.num_heads * self.projection_dim)
 
         # If we are using learned attention, then just do it the same way as multi-headed attention
         if attn_type == 'learned' or learned:
