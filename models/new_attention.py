@@ -262,7 +262,7 @@ class NewAttention(nn.Module):
 
             indices_q = torch.round(torch.arange(queries_shape[1]).view(-1, 1).type_as(values) * self.word_count_ratio).long()
 
-            attended_indices = torch.zeros(1, self.num_heads, values_shape[1], 1).type_as(values).long() # 1 x num_heads x vlen x 1
+            attended_indices = torch.zeros(1, self.num_heads, queries_shape[1], 1).type_as(values).long() # 1 x num_heads x vlen x 1
 
             for i, p, in enumerate(attn_position):
                 if p == "center":
