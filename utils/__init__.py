@@ -277,15 +277,3 @@ def get_random_seed_fn(seed, cuda=True):
             torch.cuda.manual_seed(seed)
 
     return set_random_seed
-
-
-def pad_unsorted_sequence(sequences, max_len, padding_value=0):
-    ''' Allow pad unsorted sequence, but need to specify max_size'''
-    out_dims = (len(sequences), max_len)
-
-    out_tensor = sequences[0].data.new(*out_dims).fill_(padding_value)
-    for i, tensor in enumerate(sequences):
-        length = tensor.size(1)
-        # use index notation to prevent duplicate references to the tensor
-        out_tensor[i, :length, ...] = tensor.view(-1)
-    return out_tensor
