@@ -431,6 +431,27 @@ def add_new_transformer_args(parser):
              "If the number of heads is same as encoder/decoder self attentions, then use -1 to specify that."
     )
 
+    group.add_argument(
+        '--enc-attn-indexing',
+        type=bool,
+        default=False,
+        help="flag indicating whether use indexing(window-size=1) or not. if use, center+displacement word will be selected directly from values."
+    )
+
+    group.add_argument(
+        '--dec-attn-indexing',
+        type=bool,
+        default=False,
+        help="flag indicating whether use indexing(window-size=1) or not. if use, center+displacement word will be selected directly from values."
+    )
+
+    group.add_argument(
+        '--enc-dec-attn-indexing',
+        type=bool,
+        default=False,
+        help="flag indicating whether use indexing(window-size=1) or not. if use, center+displacement word will be selected directly from values."
+    )
+
     return group
 
 

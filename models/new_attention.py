@@ -1,6 +1,7 @@
 '''
 A module which implements various attention mechanisms
 '''
+import pdb
 import math
 import torch
 import time
@@ -34,6 +35,7 @@ class NewAttention(nn.Module):
         self.attn_param = attn_config['attn_param']
         self.attn_threshold = attn_config['attn_threshold']
         self.attn_window = attn_config['attn_window']
+        self.attn_indexing = attn_config['attn_indexing']
         self.half_window = int((self.attn_window - 1) / 2)
         self.attn_displacement = attn_config['attn_displacement']
         self.num_layers = attn_config['num_layers']
@@ -222,6 +224,72 @@ class NewAttention(nn.Module):
         # print("conv_filter", conv_filter)
         attn_type, attn_position, attn_param, attn_displacement = attn_configs
         # print("attn_type, attn_position, attn_param, attn_displacement", attn_type, attn_position, attn_param, attn_displacement)
+
+        # simple indexing - fix window size 1
+        if self.attn_indexing:
+            print("using simple indexing")
+
+            max_last_index = -1
+            if not {'last', 'bin'}.isdisjoint(attn_position) or attn_position in ['last', 'bin']:
+                if input_lens is not None:
+                    last_indices = (input_lens - 1).cpu().view(-1)
+                elif key_mask is not None:
+                    last_indices = ((key_mask == 0).sum(dim=1) - 1).view(-1)
+                else:
+                    last_indices = torch.tensor([values_shape[1] - 1] * queries_shape[0]).view(-1).type_as(values)
+
+                max_last_index = last_indices[0]
+
+            assert max_last_index != -1
+
+            # omitting the branch of not having list
+            attn_config = []
+            for attn_config_i in [attn_type, attn_position, attn_param, attn_displacement]:
+                if type(attn_config_i) is not list:
+                    attn_config.append([attn_config_i] * self.num_heads)
+                else:
+                    attn_config.append(attn_config_i)
+
+            attn_type, attn_position, attn_param, attn_displacement = attn_config
+
+            values = values.view(batch_size, self.num_heads, values_shape[1], values_shape[2]) # bs x num_heads x vlen x proj_dim
+
+            
+            # for each head, get corresponding indice_q
+            indice_q_lst = []
+            for i in range(self.num_heads):
+                # get indices q
+                if decoder_position == -1:
+                    indices_q = torch.round(torch.arange(queries_shape[1]).type_as(values) * self.word_count_ratio)
+                else:
+                    indices_q = torch.round(torch.arange(decoder_position + 1).type_as(values) * self.word_count_ratio)
+
+                if attn_position[i] == "left":
+                    indices_q -= attn_displacement[i]
+
+                elif attn_position[i] == "right":
+                    indices_q += attn_displacement[i]
+
+                elif attn_position[i] == "first":
+                    indices_q = torch.tensor(0.0).type_as(values)
+
+                elif attn_position[i] == "last":
+                    indices_q = torch.arange(max_last_index + 1).type_as(values) 
+                else:
+                    print('wrong attn position')
+                    exit(-1)
+
+                indice_q_lst.append(indices_q)
+            pdb.set_trace()
+            # stack
+            indice_q_lst = torch.stack(indice_q_lst, dim=0) # num_heads x vlen
+
+            attended = values[:, :, indice_q_lst[range(self.num_heads), :]] # bs x num_heads x vlen x proj_dim
+
+            attended = attended.transpose(2, 1).view(batch_size, -1, self.num_heads * self.projection_dim)
+
+            # return
+            return attended
 
         # If we are using learned attention, then just do it the same way as multi-headed attention
         if attn_type == 'learned' or learned:
