@@ -285,11 +285,10 @@ class NewAttention(nn.Module):
                     print("unknown position")
                     exit(-1)
 
-            pdb.set_trace()
             attended = torch.stack(attended, dim=2) # bs x vlen x num_heads x proj_dim
 
             # return
-            return attended
+            return attended.contiguous().view(batch_size, -1, self.num_heads * self.projection_dim)
 
         # If we are using learned attention, then just do it the same way as multi-headed attention
         if attn_type == 'learned' or learned:
