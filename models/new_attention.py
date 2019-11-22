@@ -267,22 +267,22 @@ class NewAttention(nn.Module):
             attended = []
             for i, p, in enumerate(attn_position):
                 if p == "center":
-                    attended.append(values[:, i, max_padding + indices_q ].squeeze(2))
+                    attended.append(values[:, i, max_padding + indices_q ].squeeze())
 
                 elif p == "left":
-                    attended.append(values[:, i, max_padding + indices_q - attn_displacement[i]].squeeze(2))
+                    attended.append(values[:, i, max_padding + indices_q - attn_displacement[i]].squeeze())
 
                 elif p == "right":
-                    attended.append(values[:, i, max_padding + indices_q + attn_displacement[i]].squeeze(2))
+                    attended.append(values[:, i, max_padding + indices_q + attn_displacement[i]].squeeze())
 
                 elif p == "first":
                     try:
-                        attended.append(values[:, i, max_padding].squeeze(2))
+                        attended.append(values[:, i, max_padding].squeeze())
                     except:
                         pdb.set_trace()
 
                 elif p == "last":
-                    attended.append(values[:, i, max_padding + indices_last].squeeze(2))
+                    attended.append(values[:, i, max_padding + indices_last].squeeze())
 
                 else:
                     print("unknown position")
