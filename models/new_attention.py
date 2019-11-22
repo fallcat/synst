@@ -269,16 +269,16 @@ class NewAttention(nn.Module):
                     attended.append(values[:, i, indices_q + max_padding])
 
                 elif p == "left":
-                    attended.append(values[:, i, indices_q])
+                    attended.append(values[:, i, indices_q + max_padding - attn_displacement[i]])
 
                 elif p == "right":
-                    attended.append(values[:, i, indices_q + max_padding + 1])
+                    attended.append(values[:, i, indices_q + max_padding + attn_displacement[i]])
 
                 elif p == "first":
                     attended.append(values[:, i, max_padding])
 
                 elif p == "last":
-                    attended.append(values[:, i, indices_last])
+                    attended.append(values[:, i, indices_last + max_padding])
 
                 else:
                     print("unknown position")
