@@ -240,7 +240,7 @@ class NewAttention(nn.Module):
 
                 max_last_index = last_indices[0]
 
-            assert max_last_index != -1
+            assert max_last_index != -1 and attn_position == 'last'
 
             # omitting the branch of not having list
             attn_config = []
