@@ -252,43 +252,43 @@ class NewAttention(nn.Module):
 
             values = values.view(batch_size, self.num_heads, values_shape[1], values_shape[2]) # bs x num_heads x vlen x proj_dim
 
-            # append zeros at vlen+1
             max_padding = max(attn_displacement)
             values = F.pad(values, (0, 0, max_padding, max_padding), "constant", 0)
             
             if decoder_position == -1:
-                indices_last = torch.arange(max_last_index + 1).type_as(values).long()
+                indices_last = torch.arange(max_last_index + 1).view(-1, 1).type_as(values).long()
             else:
-                indices_last = torch.round(torch.arange(decoder_position + 1).type_as(values) * self.word_count_ratio).long()
+                indices_last = torch.round(torch.arange(decoder_position + 1).view(-1, 1).type_as(values) * self.word_count_ratio).long()
 
             indices_q = torch.round(torch.arange(queries_shape[1]).view(-1, 1).type_as(values) * self.word_count_ratio).long()
             indices_q[indices_q >= values_shape[1]] = values_shape[1] - 1
 
-            attended = []
+            attended_indices = torch.zeros(1, self.num_heads, values_shape[1], 1).type_as(values).long() # 1 x num_heads x vlen x 1
+
             for i, p, in enumerate(attn_position):
                 if p == "center":
-                    attended.append(values[:, i, max_padding + indices_q ].squeeze(2))
+                    attended_indices[:, i] += max_padding + indices_q
 
                 elif p == "left":
-                    attended.append(values[:, i, max_padding + indices_q - attn_displacement[i]].squeeze(2))
+                    attended_indices[:, i] += max_padding + indices_q - attn_displacement[i]
 
                 elif p == "right":
-                    attended.append(values[:, i, max_padding + indices_q + attn_displacement[i]].squeeze(2))
+                    attended_indices[:, i] += max_padding + indices_q + attn_displacement[i]
 
                 elif p == "first":
-                    attended.append(values[:, i, [max_padding]*queries_shape[1]])
+                    attended_indices[:, i] += max_padding
 
                 elif p == "last":
-                    attended.append(values[:, i, max_padding + indices_last].squeeze(2))
+                    attended_indices[:, i] += max_padding + indices_last
 
                 else:
                     print("unknown position")
                     exit(-1)
 
-            attended = torch.stack(attended, dim=2) # bs x vlen x num_heads x proj_dim
+            attended_indices = b.expand_as(values[:, :, max_padding:-max_padding, :])
 
             # return
-            return attended.contiguous().view(batch_size, -1, self.num_heads * self.projection_dim)
+            return torch.gather(values[:, :, max_padding:-max_padding,:], 2, attended_indices)
 
         # If we are using learned attention, then just do it the same way as multi-headed attention
         if attn_type == 'learned' or learned:
