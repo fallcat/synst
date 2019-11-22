@@ -177,8 +177,8 @@ class Trainer(object):
 
                         experiment.log_metric('num_tokens', num_tokens_per_update)
                         experiment.log_metric('nll', neg_log_likelihood.last_value)
-                        experiment.log_metric('max_memory', torch.cuda.max_memory_allocated()//1024//1024)
-                        experiment.log_metric('max_memory', torch.cuda.max_memory_cached()//1024//1024)
+                        experiment.log_metric('max_memory_alloc', torch.cuda.max_memory_allocated()//1024//1024)
+                        experiment.log_metric('max_memory_cache', torch.cuda.max_memory_cached()//1024//1024)
 
                         nll_per_update = 0.
                         length_per_update = 0

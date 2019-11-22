@@ -253,43 +253,43 @@ class NewAttention(nn.Module):
 
             values = values.view(batch_size, self.num_heads, values_shape[1], values_shape[2]) # bs x num_heads x vlen x proj_dim
 
+            # append zeros at vlen+1
             max_padding = max(attn_displacement)
             values = F.pad(values, (0, 0, max_padding, max_padding), "constant", 0)
             
             if decoder_position == -1:
-                indices_last = torch.arange(max_last_index + 1).view(-1, 1).type_as(values).long()
+                indices_last = torch.arange(max_last_index + 1).type_as(values).long()
             else:
-                indices_last = torch.round(torch.arange(decoder_position + 1).view(-1, 1).type_as(values) * self.word_count_ratio).long()
+                indices_last = torch.round(torch.arange(decoder_position + 1).type_as(values) * self.word_count_ratio).long()
 
             indices_q = torch.round(torch.arange(queries_shape[1]).view(-1, 1).type_as(values) * self.word_count_ratio).long()
             indices_q[indices_q >= values_shape[1]] = values_shape[1] - 1
 
-            attended_indices = torch.zeros(1, self.num_heads, queries_shape[1], 1).type_as(values).long() # 1 x num_heads x vlen x 1
-
+            attended = []
             for i, p, in enumerate(attn_position):
                 if p == "center":
-                    attended_indices[:, i] += max_padding + indices_q
+                    attended.append(values[:, i, max_padding + indices_q ].squeeze(2))
 
                 elif p == "left":
-                    attended_indices[:, i] += max_padding + indices_q - attn_displacement[i]
+                    attended.append(values[:, i, max_padding + indices_q - attn_displacement[i]].squeeze(2))
 
                 elif p == "right":
-                    attended_indices[:, i] += max_padding + indices_q + attn_displacement[i]
+                    attended.append(values[:, i, max_padding + indices_q + attn_displacement[i]].squeeze(2))
 
                 elif p == "first":
-                    attended_indices[:, i] += max_padding
+                    attended.append(values[:, i, [max_padding]*queries_shape[1]])
 
                 elif p == "last":
-                    attended_indices[:, i] += max_padding + indices_last
+                    attended.append(values[:, i, max_padding + indices_last].squeeze(2))
 
                 else:
                     print("unknown position")
                     exit(-1)
 
-            attended_indices = attended_indices.expand(batch_size, self.num_heads, queries_shape[1], self.projection_dim)
+            attended = torch.stack(attended, dim=2) # bs x vlen x num_heads x proj_dim
 
             # return
-            return torch.gather(values, 2, attended_indices).transpose(2,1).contiguous().view(batch_size, -1, self.num_heads * self.projection_dim)
+            return attended.contiguous().view(batch_size, -1, self.num_heads * self.projection_dim)
 
         # If we are using learned attention, then just do it the same way as multi-headed attention
         if attn_type == 'learned' or learned:
@@ -854,29 +854,6 @@ class NewAttention(nn.Module):
 
         attended = torch.bmm(attn_weights,
                              values)
-
-        # print("self.which_attn", self.which_attn)
-        # print("same", torch.sum(same == 0))
-        # if torch.sum(same == 0).item() != 0:
-        # # #     torch.set_printoptions(profile='full')
-        #     print("which", self.which_attn)
-        #     print("conv_attended", conv_attended.shape)
-        #     print("attended", a.shape)
-        #     print("conv_attended", conv_attended)
-        #     print("attended", a)
-        #     print("---------------------------------------------------------------")
-        #
-        # print("==================================================================")
-
-        # torch.set_printoptions(profile='full')
-        # print("values", values)
-        # print("values shape", values.shape)
-        # torch.set_printoptions(profile="full")
-        # if self.which_attn == 'source':
-        #     print("attn_weights", attn_weights)
-        #     print("attn_weights shape", attn_weights.shape)
-        # print("attended", attended)
-        # print("attended shape", attended.shape)
 
         return attended.view(
             batch_size,
