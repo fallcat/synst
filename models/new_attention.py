@@ -240,15 +240,16 @@ class NewAttention(nn.Module):
 
             attn_type, attn_position, attn_param, attn_displacement = attn_config
 
-            values = values.view(batch_size, self.num_heads, values_shape[1], values_shape[2]) # bs x num_heads x vlen x proj_dim
+            # bs x num_heads x vlen x proj_dim
+            values = values.view(batch_size, self.num_heads, values_shape[1], values_shape[2]) 
 
             max_padding = max(attn_displacement)
             values = F.pad(values, (0, 0, max_padding, max_padding), "constant", 0)
 
-            indices_q = torch.round(torch.arange(queries_shape[1]).view(-1, 1).type_as(values) * self.word_count_ratio).byte()
+            indices_q = torch.round(torch.arange(queries_shape[1]).view(-1, 1).type_as(values) * self.word_count_ratio).long()
             indices_q[indices_q >= values_shape[1]] = values_shape[1] - 1
 
-            attended_indices = torch.zeros(1, self.num_heads, queries_shape[1], 1).type_as(values).byte() # 1 x num_heads x vlen x 1
+            attended_indices = torch.zeros(1, self.num_heads, queries_shape[1], 1).type_as(values).long() # 1 x num_heads x vlen x 1
 
             for i, p, in enumerate(attn_position):
                 if p == "center":
@@ -267,7 +268,7 @@ class NewAttention(nn.Module):
                     print("unknown position")
                     exit(-1)
 
-            attended_indices = attended_indices.expand(batch_size, self.num_heads, queries_shape[1], self.projection_dim).long()
+            attended_indices = attended_indices.expand(batch_size, self.num_heads, queries_shape[1], self.projection_dim)
 
             # return
             return torch.gather(values, 2, attended_indices).transpose(2,1).contiguous().view(batch_size, -1, self.num_heads * self.projection_dim)
