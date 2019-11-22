@@ -254,6 +254,10 @@ class NewAttention(nn.Module):
 
             values = values.view(batch_size, self.num_heads, values_shape[1], values_shape[2]) # bs x num_heads x vlen x proj_dim
 
+            # append zeros at vlen+1
+            padding = torch.zeros(batch_size, self.num_heads, 1, values_shape[2])
+            values = torch.cat((values, padding), dim=2)
+
             pdb.set_trace()
             # for each head, get corresponding indice_q
             indice_q_lst = []
@@ -266,25 +270,30 @@ class NewAttention(nn.Module):
 
                 if attn_position[i] == "left":
                     indices_q -= attn_displacement[i]
+                    indices_q[indices_q < 0] = -1
 
                 elif attn_position[i] == "right":
                     indices_q += attn_displacement[i]
+                    indices_q[indices_q > values_shape[1]-1] = -1
 
                 elif attn_position[i] == "first":
                     indices_q = torch.tensor(0.0).type_as(values)
 
                 elif attn_position[i] == "last":
                     indices_q = torch.arange(max_last_index + 1).type_as(values) 
+
                 else:
                     print('wrong attn position')
                     exit(-1)
 
                 indice_q_lst.append(indices_q)
-            pdb.set_trace()
+                
             # stack
             indice_q_lst = torch.stack(indice_q_lst, dim=0) # num_heads x vlen
 
             attended = values[:, :, indice_q_lst[range(self.num_heads), :]] # bs x num_heads x vlen x proj_dim
+
+            attended[:, :, indice_q_lst[range(self.num_heads), :]]
 
             attended = attended.transpose(2, 1).view(batch_size, -1, self.num_heads * self.projection_dim)
 
