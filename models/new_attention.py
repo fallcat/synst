@@ -130,8 +130,9 @@ class NewAttention(nn.Module):
 
             for i, attn_config_i in enumerate(
                     [self.attn_type, self.attn_position, self.attn_param, self.attn_displacement]):
-                len_attn_config_i = len(attn_config_i)
+                
                 if type(attn_config_i) is list:
+                    len_attn_config_i = len(attn_config_i)
                     if len_attn_config_i == 1:
                         attn_configs.append(attn_config_i[0])
                     elif len_attn_config_i == self.num_heads:
