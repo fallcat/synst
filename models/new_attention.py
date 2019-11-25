@@ -269,9 +269,9 @@ class NewAttention(nn.Module):
                     exit(-1)
 
             # bs x nh x qlen x proj_dim
+            pdb.set_trace()
             attended_indices = attended_indices.expand(batch_size, self.num_heads, queries_shape[1], self.projection_dim)
             selected_by_indexing = torch.gather(values, 2, attended_indices).transpose(2,1).contiguous().view(batch_size, -1, self.num_heads * self.projection_dim)
-            pdb.set_trace()
 
         # If we are using learned attention, then just do it the same way as multi-headed attention
         if attn_type == 'learned' or learned:
@@ -807,12 +807,14 @@ class NewAttention(nn.Module):
                         logits = logits.expand(batch_size, 1, queries_shape[1], values_shape[1])  # .type_as(values)
 
                     logits_list.append(logits)
+
+                pdb.set_trace()
                 attn_weights = torch.stack(logits_list, dim=1)
                 attn_weights = attn_weights.view(values_shape[0],
                                                  queries_shape[1],
                                                  values_shape[1])
 
-        pdb.set_trace()
+        
 
         if mask is not None:
             try:
