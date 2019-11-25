@@ -227,53 +227,51 @@ class NewAttention(nn.Module):
         # print("attn_type, attn_position, attn_param, attn_displacement", attn_type, attn_position, attn_param, attn_displacement)
 
         # simple indexing - fix window size 1
-        if self.attn_indexing:
             
-            with torch.no_grad():
+        with torch.no_grad():
 
-                # omitting the branch of not having list
-                attn_config = []
-                for attn_config_i in [attn_type, attn_position, attn_param, attn_displacement]:
-                    if type(attn_config_i) is not list:
-                        attn_config.append([attn_config_i] * self.num_heads)
-                    else:
-                        attn_config.append(attn_config_i)
+            # omitting the branch of not having list
+            attn_config = []
+            for attn_config_i in [attn_type, attn_position, attn_param, attn_displacement]:
+                if type(attn_config_i) is not list:
+                    attn_config.append([attn_config_i] * self.num_heads)
+                else:
+                    attn_config.append(attn_config_i)
 
-                attn_type, attn_position, attn_param, attn_displacement = attn_config
+            attn_type, attn_position, attn_param, attn_displacement = attn_config
 
-                # bs x num_heads x vlen x proj_dim
-                values = values.view(batch_size, self.num_heads, values_shape[1], values_shape[2]) 
+            # bs x num_heads x vlen x proj_dim
+            values = values.view(batch_size, self.num_heads, values_shape[1], values_shape[2]) 
 
-                max_padding = max(attn_displacement)
-                values = F.pad(values, (0, 0, max_padding, max_padding), "constant", 0)
+            max_padding = max(attn_displacement)
+            values = F.pad(values, (0, 0, max_padding, max_padding), "constant", 0)
 
-                indices_q = torch.round(torch.arange(queries_shape[1]).view(-1, 1).type_as(values) * self.word_count_ratio).long()
-                indices_q[indices_q >= values_shape[1]] = values_shape[1] - 1
+            indices_q = torch.round(torch.arange(queries_shape[1]).view(-1, 1).type_as(values) * self.word_count_ratio).long()
+            indices_q[indices_q >= values_shape[1]] = values_shape[1] - 1
 
-                attended_indices = torch.zeros(1, self.num_heads, queries_shape[1], 1).type_as(values).long() # 1 x num_heads x vlen x 1
+            attended_indices = torch.zeros(1, self.num_heads, queries_shape[1], 1).type_as(values).long() # 1 x num_heads x vlen x 1
 
-                for i, p, in enumerate(attn_position):
-                    if p == "center":
-                        attended_indices[:, i] += max_padding + indices_q
+            for i, p, in enumerate(attn_position):
+                if p == "center":
+                    attended_indices[:, i] += max_padding + indices_q
 
-                    elif p == "left":
-                        attended_indices[:, i] += max_padding + indices_q - attn_displacement[i]
+                elif p == "left":
+                    attended_indices[:, i] += max_padding + indices_q - attn_displacement[i]
 
-                    elif p == "right":
-                        attended_indices[:, i] += max_padding + indices_q + attn_displacement[i]
+                elif p == "right":
+                    attended_indices[:, i] += max_padding + indices_q + attn_displacement[i]
 
-                    elif p == "first":
-                        attended_indices[:, i] += max_padding
+                elif p == "first":
+                    attended_indices[:, i] += max_padding
 
-                    else:
-                        print("unknown position")
-                        exit(-1)
+                else:
+                    print("unknown position")
+                    exit(-1)
 
-                # bs x nh x qlen x proj_dim
-                attended_indices = attended_indices.expand(batch_size, self.num_heads, queries_shape[1], self.projection_dim)
-                pdb.set_trace()
-                # return
-                return torch.gather(values, 2, attended_indices).transpose(2,1).contiguous().view(batch_size, -1, self.num_heads * self.projection_dim)
+            # bs x nh x qlen x proj_dim
+            attended_indices = attended_indices.expand(batch_size, self.num_heads, queries_shape[1], self.projection_dim)
+            selected_by_indexing = torch.gather(values, 2, attended_indices).transpose(2,1).contiguous().view(batch_size, -1, self.num_heads * self.projection_dim)
+            pdb.set_trace()
 
         # If we are using learned attention, then just do it the same way as multi-headed attention
         if attn_type == 'learned' or learned:
