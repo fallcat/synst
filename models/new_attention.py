@@ -227,54 +227,52 @@ class NewAttention(nn.Module):
         # print("attn_type, attn_position, attn_param, attn_displacement", attn_type, attn_position, attn_param, attn_displacement)
 
         # simple indexing - fix window size 1
-        old_values = values.clone()
-        with torch.no_grad():
+        if self.attn_indexing:
+            
+            with torch.no_grad():
 
-            # omitting the branch of not having list
-            attn_config = []
-            for attn_config_i in [attn_type, attn_position, attn_param, attn_displacement]:
-                if type(attn_config_i) is not list:
-                    attn_config.append([attn_config_i] * self.num_heads)
-                else:
-                    attn_config.append(attn_config_i)
+                # omitting the branch of not having list
+                attn_config = []
+                for attn_config_i in [attn_type, attn_position, attn_param, attn_displacement]:
+                    if type(attn_config_i) is not list:
+                        attn_config.append([attn_config_i] * self.num_heads)
+                    else:
+                        attn_config.append(attn_config_i)
 
-            attn_type, attn_position, attn_param, attn_displacement = attn_config
+                attn_type, attn_position, attn_param, attn_displacement = attn_config
 
-            # bs x num_heads x vlen x proj_dim
-            values = values.view(batch_size, self.num_heads, values_shape[1], values_shape[2]) 
+                # bs x num_heads x vlen x proj_dim
+                values = values.view(batch_size, self.num_heads, values_shape[1], values_shape[2]) 
 
-            # max_padding = max(attn_displacement)
-            max_padding = 1
-            values = F.pad(values, (0, 0, max_padding, max_padding), "constant", 0)
+                max_padding = max(attn_displacement)
+                values = F.pad(values, (0, 0, max_padding, max_padding), "constant", 0)
 
-            indices_q = torch.round(torch.arange(queries_shape[1]).view(-1, 1).type_as(values) * self.word_count_ratio).long()
-            indices_q[indices_q >= values_shape[1]] = values_shape[1] - 1
+                indices_q = torch.round(torch.arange(queries_shape[1]).view(-1, 1).type_as(values) * self.word_count_ratio).long()
+                indices_q[indices_q >= values_shape[1]] = values_shape[1] - 1
 
-            attended_indices = torch.zeros(1, self.num_heads, queries_shape[1], 1).type_as(values).long() # 1 x num_heads x vlen x 1
+                attended_indices = torch.zeros(1, self.num_heads, queries_shape[1], 1).type_as(values).long() # 1 x num_heads x vlen x 1
 
-            for i, p, in enumerate(attn_position):
-                if p == "center":
-                    attended_indices[:, i] += max_padding + indices_q
+                for i, p, in enumerate(attn_position):
+                    if p == "center":
+                        attended_indices[:, i] += max_padding + indices_q
 
-                elif p == "left":
-                    attended_indices[:, i] += max_padding + indices_q - attn_displacement[i]
+                    elif p == "left":
+                        attended_indices[:, i] += max_padding + indices_q - attn_displacement[i]
 
-                elif p == "right":
-                    attended_indices[:, i] += max_padding + indices_q + attn_displacement[i]
+                    elif p == "right":
+                        attended_indices[:, i] += max_padding + indices_q + attn_displacement[i]
 
-                elif p == "first":
-                    attended_indices[:, i] += max_padding
+                    elif p == "first":
+                        attended_indices[:, i] += max_padding
 
-                else:
-                    print("unknown position")
-                    exit(-1)
+                    else:
+                        print("unknown position")
+                        exit(-1)
 
-            # bs x nh x qlen x proj_dim
-            pdb.set_trace()
-            attended_indices = attended_indices.expand(batch_size, self.num_heads, queries_shape[1], self.projection_dim)
-            selected_by_indexing = torch.gather(values, 2, attended_indices).transpose(2,1).contiguous().view(batch_size, -1, self.num_heads * self.projection_dim)
-
-        values = old_values
+                # bs x nh x qlen x proj_dim
+                attended_indices = attended_indices.expand(batch_size, self.num_heads, queries_shape[1], self.projection_dim)
+                # return
+                return torch.gather(values, 2, attended_indices).transpose(2,1).contiguous().view(batch_size, -1, self.num_heads * self.projection_dim)
 
         # If we are using learned attention, then just do it the same way as multi-headed attention
         if attn_type == 'learned' or learned:
@@ -810,50 +808,47 @@ class NewAttention(nn.Module):
                         logits = logits.expand(batch_size, 1, queries_shape[1], values_shape[1])  # .type_as(values)
 
                     logits_list.append(logits)
-
-                pdb.set_trace()
                 attn_weights = torch.stack(logits_list, dim=1)
                 attn_weights = attn_weights.view(values_shape[0],
                                                  queries_shape[1],
                                                  values_shape[1])
 
-        
+        with torch.no_grad():
+            if mask is not None:
+                try:
+                    attn_weights = attn_weights * (mask == 0).to(dtype=torch.float32)
+                except:
+                    attn_weights = attn_weights.to(mask.device)
+                    attn_weights = attn_weights * (mask == 0).to(dtype=torch.float32)
+            if key_mask is not None:
+                attn_weights_shape = attn_weights.shape
+                # print("previous implementation")
+                # print("attn_weights_shape", attn_weights_shape)
+                # print("key_mask", key_mask.shape)
+                # print("key_mask[:, None, None]", key_mask[:, None, None].shape)
+                batch_size = attn_weights_shape[0] // self.num_heads
+                attn_weights = attn_weights.view(batch_size, self.num_heads, attn_weights_shape[1], attn_weights_shape[2])
+                try:
+                    attn_weights.masked_fill_(key_mask[:, None, None], float(0))
+                except:
+                    attn_weights = attn_weights.to(key_mask.device)
+                    
+                    attn_weights.masked_fill_(key_mask[:, None, None], float(0))
+                attn_weights = attn_weights.view(attn_weights_shape)
 
-        if mask is not None:
-            try:
-                attn_weights = attn_weights * (mask == 0).to(dtype=torch.float32)
-            except:
-                attn_weights = attn_weights.to(mask.device)
-                attn_weights = attn_weights * (mask == 0).to(dtype=torch.float32)
-        if key_mask is not None:
-            attn_weights_shape = attn_weights.shape
-            # print("previous implementation")
-            # print("attn_weights_shape", attn_weights_shape)
-            # print("key_mask", key_mask.shape)
-            # print("key_mask[:, None, None]", key_mask[:, None, None].shape)
-            batch_size = attn_weights_shape[0] // self.num_heads
-            attn_weights = attn_weights.view(batch_size, self.num_heads, attn_weights_shape[1], attn_weights_shape[2])
-            try:
-                attn_weights.masked_fill_(key_mask[:, None, None], float(0))
-            except:
-                attn_weights = attn_weights.to(key_mask.device)
-                
-                attn_weights.masked_fill_(key_mask[:, None, None], float(0))
-            attn_weights = attn_weights.view(attn_weights_shape)
+            attended = torch.bmm(attn_weights,
+                                 values)
 
-        attended = torch.bmm(attn_weights,
-                             values)
-
-        return attended.view(
-            batch_size,
-            self.num_heads,
-            -1,
-            self.projection_dim
-        ).transpose(2, 1).contiguous().view(
-            batch_size,
-            -1,
-            self.num_heads * self.projection_dim
-        )
+            return attended.view(
+                batch_size,
+                self.num_heads,
+                -1,
+                self.projection_dim
+            ).transpose(2, 1).contiguous().view(
+                batch_size,
+                -1,
+                self.num_heads * self.projection_dim
+            )
 
     def forward(self, values, keys, queries, # pylint:disable=arguments-differ
                 key_mask=None, attention_mask=None, num_queries=0, layer_i=0, decoder_position=-1, input_lens=None,
