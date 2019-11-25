@@ -227,7 +227,7 @@ class NewAttention(nn.Module):
         # print("attn_type, attn_position, attn_param, attn_displacement", attn_type, attn_position, attn_param, attn_displacement)
 
         # simple indexing - fix window size 1
-            
+        old_values = values.clone()
         with torch.no_grad():
 
             # omitting the branch of not having list
@@ -273,6 +273,8 @@ class NewAttention(nn.Module):
             pdb.set_trace()
             attended_indices = attended_indices.expand(batch_size, self.num_heads, queries_shape[1], self.projection_dim)
             selected_by_indexing = torch.gather(values, 2, attended_indices).transpose(2,1).contiguous().view(batch_size, -1, self.num_heads * self.projection_dim)
+
+        values = old_values
 
         # If we are using learned attention, then just do it the same way as multi-headed attention
         if attn_type == 'learned' or learned:
