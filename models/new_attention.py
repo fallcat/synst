@@ -271,8 +271,9 @@ class NewAttention(nn.Module):
 
                 # bs x nh x qlen x proj_dim
                 attended_indices = attended_indices.expand(batch_size, self.num_heads, queries_shape[1], self.projection_dim)
-                # return
-                return torch.gather(values, 2, attended_indices).transpose(2,1).contiguous().view(batch_size, -1, self.num_heads * self.projection_dim)
+            
+            # return
+            return torch.gather(values, 2, attended_indices).transpose(2,1).contiguous().view(batch_size, -1, self.num_heads * self.projection_dim)
 
         # If we are using learned attention, then just do it the same way as multi-headed attention
         if attn_type == 'learned' or learned:
@@ -812,43 +813,42 @@ class NewAttention(nn.Module):
                 attn_weights = attn_weights.view(values_shape[0],
                                                  queries_shape[1],
                                                  values_shape[1])
+     
+        if mask is not None:
+            try:
+                attn_weights = attn_weights * (mask == 0).to(dtype=torch.float32)
+            except:
+                attn_weights = attn_weights.to(mask.device)
+                attn_weights = attn_weights * (mask == 0).to(dtype=torch.float32)
+        if key_mask is not None:
+            attn_weights_shape = attn_weights.shape
+            # print("previous implementation")
+            # print("attn_weights_shape", attn_weights_shape)
+            # print("key_mask", key_mask.shape)
+            # print("key_mask[:, None, None]", key_mask[:, None, None].shape)
+            batch_size = attn_weights_shape[0] // self.num_heads
+            attn_weights = attn_weights.view(batch_size, self.num_heads, attn_weights_shape[1], attn_weights_shape[2])
+            try:
+                attn_weights.masked_fill_(key_mask[:, None, None], float(0))
+            except:
+                attn_weights = attn_weights.to(key_mask.device)
+                
+                attn_weights.masked_fill_(key_mask[:, None, None], float(0))
+            attn_weights = attn_weights.view(attn_weights_shape)
 
-        with torch.no_grad():
-            if mask is not None:
-                try:
-                    attn_weights = attn_weights * (mask == 0).to(dtype=torch.float32)
-                except:
-                    attn_weights = attn_weights.to(mask.device)
-                    attn_weights = attn_weights * (mask == 0).to(dtype=torch.float32)
-            if key_mask is not None:
-                attn_weights_shape = attn_weights.shape
-                # print("previous implementation")
-                # print("attn_weights_shape", attn_weights_shape)
-                # print("key_mask", key_mask.shape)
-                # print("key_mask[:, None, None]", key_mask[:, None, None].shape)
-                batch_size = attn_weights_shape[0] // self.num_heads
-                attn_weights = attn_weights.view(batch_size, self.num_heads, attn_weights_shape[1], attn_weights_shape[2])
-                try:
-                    attn_weights.masked_fill_(key_mask[:, None, None], float(0))
-                except:
-                    attn_weights = attn_weights.to(key_mask.device)
-                    
-                    attn_weights.masked_fill_(key_mask[:, None, None], float(0))
-                attn_weights = attn_weights.view(attn_weights_shape)
+        attended = torch.bmm(attn_weights,
+                             values)
 
-            attended = torch.bmm(attn_weights,
-                                 values)
-
-            return attended.view(
-                batch_size,
-                self.num_heads,
-                -1,
-                self.projection_dim
-            ).transpose(2, 1).contiguous().view(
-                batch_size,
-                -1,
-                self.num_heads * self.projection_dim
-            )
+        return attended.view(
+            batch_size,
+            self.num_heads,
+            -1,
+            self.projection_dim
+        ).transpose(2, 1).contiguous().view(
+            batch_size,
+            -1,
+            self.num_heads * self.projection_dim
+        )
 
     def forward(self, values, keys, queries, # pylint:disable=arguments-differ
                 key_mask=None, attention_mask=None, num_queries=0, layer_i=0, decoder_position=-1, input_lens=None,
