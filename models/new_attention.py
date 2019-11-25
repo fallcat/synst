@@ -271,7 +271,7 @@ class NewAttention(nn.Module):
 
                 # bs x nh x qlen x proj_dim
                 attended_indices = attended_indices.expand(batch_size, self.num_heads, queries_shape[1], self.projection_dim)
-
+                pdb.set_trace()
                 # return
                 return torch.gather(values, 2, attended_indices).transpose(2,1).contiguous().view(batch_size, -1, self.num_heads * self.projection_dim)
 
@@ -813,6 +813,8 @@ class NewAttention(nn.Module):
                 attn_weights = attn_weights.view(values_shape[0],
                                                  queries_shape[1],
                                                  values_shape[1])
+
+        pdb.set_trace()
 
         if mask is not None:
             try:
