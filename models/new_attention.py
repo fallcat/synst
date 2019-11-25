@@ -228,24 +228,23 @@ class NewAttention(nn.Module):
 
         # simple indexing - fix window size 1
         if self.attn_indexing:
+
+            # bs x num_heads x vlen x proj_dim
+            values = values.view(batch_size, self.num_heads, values_shape[1], values_shape[2]) 
+
+            max_padding = max(attn_displacement)
+            values = F.pad(values, (0, 0, max_padding, max_padding), "constant", 0)
+            # omitting the branch of not having list
+            attn_config = []
+            for attn_config_i in [attn_type, attn_position, attn_param, attn_displacement]:
+                if type(attn_config_i) is not list:
+                    attn_config.append([attn_config_i] * self.num_heads)
+                else:
+                    attn_config.append(attn_config_i)
+
+            attn_type, attn_position, attn_param, attn_displacement = attn_config
             
             with torch.no_grad():
-
-                # omitting the branch of not having list
-                attn_config = []
-                for attn_config_i in [attn_type, attn_position, attn_param, attn_displacement]:
-                    if type(attn_config_i) is not list:
-                        attn_config.append([attn_config_i] * self.num_heads)
-                    else:
-                        attn_config.append(attn_config_i)
-
-                attn_type, attn_position, attn_param, attn_displacement = attn_config
-
-                # bs x num_heads x vlen x proj_dim
-                values = values.view(batch_size, self.num_heads, values_shape[1], values_shape[2]) 
-
-                max_padding = max(attn_displacement)
-                values = F.pad(values, (0, 0, max_padding, max_padding), "constant", 0)
 
                 indices_q = torch.round(torch.arange(queries_shape[1]).view(-1, 1).type_as(values) * self.word_count_ratio).long()
                 indices_q[indices_q >= values_shape[1]] = values_shape[1] - 1
