@@ -243,7 +243,8 @@ class NewAttention(nn.Module):
             # bs x num_heads x vlen x proj_dim
             values = values.view(batch_size, self.num_heads, values_shape[1], values_shape[2]) 
 
-            max_padding = max(attn_displacement)
+            # max_padding = max(attn_displacement)
+            max_padding = 1
             values = F.pad(values, (0, 0, max_padding, max_padding), "constant", 0)
 
             indices_q = torch.round(torch.arange(queries_shape[1]).view(-1, 1).type_as(values) * self.word_count_ratio).long()
