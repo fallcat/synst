@@ -1431,7 +1431,7 @@ Commit your changes first, then try again.''')
     if args.action_type == 'evaluate':
         args.action_config.average_checkpoints = args.average_checkpoints
 
-    if (args.action_type == 'translate' or args.action_type == 'probe_new_translate') and args.num_devices > 1:
+    if (args.action_type in ['translate', 'probe_new_translate', 'probe_off_diagonal']) and args.num_devices > 1:
         # Caching is currently not thread-safe
         args.action_config.disable_cache = True
 
