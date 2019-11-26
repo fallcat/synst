@@ -253,8 +253,10 @@ class NewAttention(nn.Module):
                     attended_indices = torch.zeros(1, self.num_heads, queries_shape[1], 1).type_as(values).long() # 1 x num_heads x qlen x 1
 
                 else:
-                    indices_q = torch.round(torch.arange(decoder_position+1).view(-1, 1).type_as(values) * self.word_count_ratio).long()
-                    attended_indices = torch.zeros(1, self.num_heads, decoder_position+1, 1).type_as(values).long() # 1 x num_heads x gen_len x 1
+                    # pdb.set_trace()
+                    indices_q = torch.round(torch.arange(decoder_position, decoder_position+1).view(-1, 1).type_as(values) * self.word_count_ratio).long()
+                    attended_indices = torch.zeros(1, self.num_heads, 1, 1).type_as(values).long() # 1 x num_heads x 1 x 1
+                    indices_q[indices_q >= values_shape[1]] = values_shape[1] - 1
                     
 
                 for i, p, in enumerate(attn_position):
@@ -279,9 +281,8 @@ class NewAttention(nn.Module):
                     attended_indices = attended_indices.expand(batch_size, self.num_heads, queries_shape[1], self.projection_dim)
 
                 else:
-                    # bs x nh x qlen x proj_dim
-                    pdb.set_trace()
-                    attended_indices = attended_indices.expand(batch_size, self.num_heads, decoder_position+1, self.projection_dim)
+                    # bs x nh x 1 x proj_dim
+                    attended_indices = attended_indices.expand(batch_size, self.num_heads, 1, self.projection_dim)
             
             # return
             return torch.gather(values, 2, attended_indices).transpose(2,1).contiguous().view(batch_size, -1, self.num_heads * self.projection_dim)
@@ -951,6 +952,7 @@ class NewAttention(nn.Module):
         )
 
         if self.attn_score:
+            
             projected_queries = F.linear(queries, self.attn_score_project_in_weights).view(-1,
                                                                                            1,
                                                                                            self.projection_dim)
@@ -961,6 +963,7 @@ class NewAttention(nn.Module):
             scores = torch.bmm(projected_queries, attended.transpose(1, 2)).softmax(dim=-1)
             attended = F.linear(torch.bmm(scores, attended).squeeze(1),
                                 self.attn_score_project_out_weights).view(attended_shape)
+        
 
         if 'learned' not in self.attn_type and 'learned' != self.attn_type and self.attn_concat_weights is not None:
             if self.attn_concat == 1:
