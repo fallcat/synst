@@ -1053,18 +1053,18 @@ def add_probe_off_diagonal_args(parser):
     group.add_argument(
         '--off-diagonal-threshold-type',
         type=str,
-        default='argmax_offset',
-        choices=['argmax_offset', 'argmax_prob', 'argmax_number'],
+        default='offset',
+        choices=['offset', 'prob', 'number'],
         help='The type of threshold to determine if the attention of this sentence is considered off-diagonal.'
-             'argmax_offset puts sentences whose argmax offset exceed threshold number into off-diagonal category,'
-             'argmax_prob puts sentences whose argmax prob among off diagonal words exceed threshould number into off-diagonal category,'
-             'argmax_number puts sentences whose number of argmax that is off diagonal exceed the threshold into off-diagonal category.'
+             'offset puts sentences whose argmax offset exceed threshold number into off-diagonal category,'
+             'prob puts sentences whose argmax prob among off diagonal words exceed threshould number into off-diagonal category,'
+             'number puts sentences whose number of argmax that is off diagonal exceed the threshold into off-diagonal category.'
              'Only for source attention.'
     )
     group.add_argument(
-        '--off-diagonal-threshold-num',
+        '--off-diagonal-threshold-param',
         type=float,
-        default=1,
+        default=3,
         help='The type of threshold to determine if the attention of this sentence is considered off-diagonal.'
              'Only for source attention'
     )

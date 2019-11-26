@@ -39,6 +39,9 @@ class ProbeOffDiagonal(object):
             'model': model
         }
 
+        self.off_diagonal = []
+        self.non_off_diagonal = []
+
     @property
     def dataset(self):
         ''' Get the dataset '''
@@ -131,6 +134,41 @@ class ProbeOffDiagonal(object):
                 # print("saving decoder heatmap")
                 for i, example_id in enumerate(batch['example_ids']):
                     print("result['enc_dec_attn_weights_tensor']", result['enc_dec_attn_weights_tensor'].shape)
+                    attn_weights_shape = result['enc_dec_attn_weights_tensor'].shape
+                    attn_weights = result['enc_dec_attn_weights_tensor'].view(-1,
+                                                                              attn_weights_shape[2],
+                                                                              attn_weights_shape[3])
+                    indices_q = torch.arange(attn_weights_shape[2], dtype=torch.float32,
+                                             device=attn_weights.get_device()) * self.dataset.word_count_ratio.view(1,
+                                                                                                                    -1)
+                    argmax_weights = torch.argmax(attn_weights, dim=2).type_as(indices_q)
+                    distance = torch.abs(argmax_weights - indices_q)
+                    print("attn_weights[distance >= 1]", attn_weights[distance >= 1].shape)
+                    max_prob = torch.max(attn_weights[distance >= 1])
+                    argmax_offset = torch.max(distance)
+                    number = torch.sum(distance >= 1)
+                    #self.config.off_diagonal_threshold_param
+
+                    if self.config.off_diagonal_threshold_type == "number":
+                        if 1 <= self.config.off_diagonal_threshold_param <= number \
+                                or self.config.off_diagonal_threshold_param < 1 \
+                                and number / float(attn_weights_shape[2]) >= self.config.off_diagonal_threshold_param:
+                            self.off_diagonal.append(example_id)
+                        else:
+                            self.non_off_diagonal.append(example_id)
+                    elif self.config.off_diagonal_threshold_type == "offset":
+                        if argmax_offset >= self.config.off_diagonal_threshold_param:
+                            self.off_diagonal.append(example_id)
+                        else:
+                            self.non_off_diagonal.append(example_id)
+                    else:  # prob
+                        if max_prob >= self.config.off_diagonal_threshold_param:
+                            self.off_diagonal.append(example_id)
+                        else:
+                            self.non_off_diagonal.append(example_id)
+
+                    #self.dataset.word_count_ratio
+
                     # for j in range(result['decoder_attn_weights_tensor'].shape[0]):
                     #     for k in range(result['decoder_attn_weights_tensor'].shape[1]):
                     #         attn_filename = f'decoder_attn_weights{example_id}_l{j}_h{k}.png'

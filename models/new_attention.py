@@ -803,7 +803,7 @@ class NewAttention(nn.Module):
             self.num_heads * self.projection_dim
         )
 
-        same = (a == conv_attended)
+        # same = (a == conv_attended)
 
         # print("self.which_attn", self.which_attn)
         # print("same", torch.sum(same == 0))
