@@ -141,7 +141,8 @@ class ProbeOffDiagonal(object):
                     indices_q = torch.arange(attn_weights_shape[2], dtype=torch.float32,
                                              device=attn_weights.get_device()).view(1, -1) * self.dataset.word_count_ratio
                     argmax_weights = torch.argmax(attn_weights, dim=2).type_as(indices_q)
-                    max_weights = attn_weights[argmax_weights]
+                    print("argmax_weights", argmax_weights)
+                    max_weights = attn_weights * argmax_weights
                     print("max_weights", max_weights.shape)
                     distance = torch.abs(argmax_weights - indices_q)
                     print("attn_weights", attn_weights.shape)
