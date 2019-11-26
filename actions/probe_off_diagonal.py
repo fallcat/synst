@@ -150,18 +150,23 @@ class ProbeOffDiagonal(object):
                     #self.config.off_diagonal_threshold_param
 
                     if self.config.off_diagonal_threshold_type == "number":
+                        print("number")
                         if 1 <= self.config.off_diagonal_threshold_param <= number \
                                 or self.config.off_diagonal_threshold_param < 1 \
                                 and number / float(attn_weights_shape[2]) >= self.config.off_diagonal_threshold_param:
                             self.off_diagonal.append(example_id)
+                            print("in")
                         else:
                             self.non_off_diagonal.append(example_id)
+                            print("out")
                     elif self.config.off_diagonal_threshold_type == "offset":
+                        print("offset")
                         if argmax_offset >= self.config.off_diagonal_threshold_param:
                             self.off_diagonal.append(example_id)
                         else:
                             self.non_off_diagonal.append(example_id)
                     else:  # prob
+                        print("prob")
                         if max_prob >= self.config.off_diagonal_threshold_param:
                             self.off_diagonal.append(example_id)
                         else:
@@ -179,6 +184,9 @@ class ProbeOffDiagonal(object):
                     #         attn_path = os.path.join(self.config.output_directory, attn_filename)
                     #         save_attention(source_sentences[i], '<PAD>' + output_sentences[i],
                     #                        result['enc_dec_attn_weights_tensor'][j][k].cpu().numpy(), attn_path)
+
+            print("num off diagonal", len(self.off_diagonal))
+            print("num non off diagonal", len(self.non_off_diagonal))
 
             for _, outputs in sorted(ordered_outputs, key=lambda x: x[0]): # pylint:disable=consider-using-enumerate
                 output_file.writelines(outputs)
