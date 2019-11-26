@@ -207,14 +207,14 @@ class ProbeBeamSearchDecoder(object):
             else:
                 self.update_greedy(scores, indices, beam, hypothesis_map, cache=cache)
 
-    def decode(self, encoded, beams, target_lens=None):
+    def decode(self, encoded, beams):
         ''' Decodes the given inputs '''
         self.model.eval()
         decoder_attn_weights_tensors = []
         enc_dec_attn_weights_tensors = []
         with torch.no_grad():
             encoded = utils.split_or_chunk(encoded, len(beams))
-            target_lens = utils.split_or_chunk(target_lens, len(beams))
+            target_lens = utils.split_or_chunk(len(beams))
             while not self.all_done(beams):
                 encoded_batch, target_lens_batch, batch, beam_map, cache, sequences = self.collate(encoded, target_lens,
                                                                                                    beams)
