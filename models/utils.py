@@ -454,13 +454,13 @@ class ProbeNewTranslator(object):
                 [[self.sos_idx] * self.span for _ in range(len(batch['inputs']))],
                 [l + self.config.max_decode_length + self.span + 1 for l in length_basis]
             )
-            # targets = [
-            #     beam.best_hypothesis.sequence[self.span - 1:]
-            #     for beam, decoder_attn_weights_tensors, enc_dec_attn_weights_tensors in decoder.decode(encoded, beams)
-            # ]
+            targets = [
+                beam.best_hypothesis.sequence[self.span - 1:]
+                for beam, decoder_attn_weights_tensors, enc_dec_attn_weights_tensors in decoder.decode(encoded, beams)
+            ]
 
-            decoder_results = decoder.decode(encoded, beams)
-            targets = [beam.best_hypothesis.sequence[self.span - 1:] for beam in decoder_results['beams']]
+            # decoder_results = decoder.decode(encoded, beams)
+            # targets = [beam.best_hypothesis.sequence[self.span - 1:] for beam in decoder_results['beams']]
 
             gold_targets = []
             gold_target_lens = batch['target_lens']
@@ -477,9 +477,10 @@ class ProbeNewTranslator(object):
             return OrderedDict([
                 ('targets', targets),
                 ('gold_targets', gold_targets)
-            ]), {'encoder_attn_weights_tensor': encoder_attn_weights_tensor,
-                 'decoder_attn_weights_tensors': decoder_results['decoder_attn_weights_tensors'],
-                 'enc_dec_attn_weights_tensors': decoder_results['enc_dec_attn_weights_tensors']}
+            ])
+                 #   {'encoder_attn_weights_tensor': encoder_attn_weights_tensor,
+                 # 'decoder_attn_weights_tensors': decoder_results['decoder_attn_weights_tensors'],
+                 # 'enc_dec_attn_weights_tensors': decoder_results['enc_dec_attn_weights_tensors']}
 
 
 def get_final_state(x, mask, dim=1):

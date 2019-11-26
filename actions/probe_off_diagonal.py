@@ -82,13 +82,12 @@ class ProbeOffDiagonal(object):
                 # print("in probe new translate", flush=True)
                 # run the data through the model
                 batches.set_description_str(get_description())
-                sequences, attn_weights_tensors_dict = self.translator.translate(batch)
+                sequences = self.translator.translate(batch)
 
                 if self.config.timed:
                     continue
 
                 target_sequences = next(iter(sequences.values()))
-                encoder_attn_weights_tensor = attn_weights_tensors_dict['encoder_attn_weights_tensor']
                 new_targets = []
                 output_sentences = []
                 source_sentences = []
