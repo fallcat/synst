@@ -144,6 +144,7 @@ class ProbeOffDiagonal(object):
                     distance = torch.abs(argmax_weights - indices_q)
                     print("attn_weights", attn_weights.shape)
                     print("distance", distance.shape)
+                    print("distance >= 1", (distance >= 1).shape)
                     print("attn_weights[distance >= 1]", attn_weights[distance >= 1].shape)
                     max_prob = torch.max(attn_weights[distance >= 1])
                     argmax_offset = torch.max(distance)
