@@ -441,7 +441,7 @@ class ProbeNewTranslator(object):
             else:
                 length_basis = [0] * len(batch['inputs'])
 
-            decoder = ProbeBeamSearchDecoder(
+            decoder = BeamSearchDecoder(
                 self.decoder,
                 self.eos_idx,
                 self.config,
