@@ -454,9 +454,14 @@ class ProbeNewTranslator(object):
                 [[self.sos_idx] * self.span for _ in range(len(batch['inputs']))],
                 [l + self.config.max_decode_length + self.span + 1 for l in length_basis]
             )
+            # targets = [
+            #     beam.best_hypothesis.sequence[self.span - 1:]
+            #     for beam, decoder_attn_weights_tensors, enc_dec_attn_weights_tensors in decoder.decode(encoded, beams)
+            # ]
+
             targets = [
                 beam.best_hypothesis.sequence[self.span - 1:]
-                for beam, decoder_attn_weights_tensors, enc_dec_attn_weights_tensors in decoder.decode(encoded, beams)
+                for beam in decoder.decode(encoded, beams)
             ]
 
             # decoder_results = decoder.decode(encoded, beams)
