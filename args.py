@@ -1310,7 +1310,7 @@ def parse_args(argv=None):
 
     probe_off_diagonal_parser = subparsers.add_parser('probe_off_diagonal', help='Probe the performance of sentences where learned attention looks off diagonal')
     groups['probe_off_diagonal'] = add_probe_off_diagonal_args(probe_off_diagonal_parser)
-    probe_new_translate_parser.set_defaults(
+    probe_off_diagonal_parser.set_defaults(
         action=ProbeOffDiagonal,
         action_type='probe_off_diagonal',
         action_config=groups['probe_off_diagonal'],
