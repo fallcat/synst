@@ -142,14 +142,14 @@ class ProbeOffDiagonal(object):
                                              device=attn_weights.get_device()).view(1, -1) * self.dataset.word_count_ratio
                     argmax_weights = torch.argmax(attn_weights, dim=2)
                     print("argmax_weights", argmax_weights)
-                    max_weights = attn_weights[argmax_weights]
+                    max_weights = torch.max(attn_weights, dim=2)  #attn_weights[argmax_weights]
                     print("max_weights", max_weights.shape)
                     distance = torch.abs(argmax_weights.type_as(indices_q) - indices_q)
                     print("attn_weights", attn_weights.shape)
                     print("distance", distance.shape)
                     print("distance >= 1", (distance >= 1).shape)
-                    print("attn_weights[distance >= 1]", argmax_weights[distance >= 1].shape)
-                    max_prob = torch.max(argmax_weights[distance >= 1])
+                    print("attn_weights[distance >= 1]", max_weights[distance >= 1].shape)
+                    max_prob = torch.max(max_weights[distance >= 1])
                     argmax_offset = torch.max(distance)
                     number = torch.sum(distance >= 1)
                     #self.config.off_diagonal_threshold_param
