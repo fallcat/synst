@@ -274,14 +274,13 @@ class NewAttention(nn.Module):
                         print("unknown position")
                         exit(-1)
 
-                pdb.set_trace()
-
                 if decoder_position == -1:
                     # bs x nh x qlen x proj_dim
                     attended_indices = attended_indices.expand(batch_size, self.num_heads, queries_shape[1], self.projection_dim)
 
                 else:
                     # bs x nh x qlen x proj_dim
+                    pdb.set_trace()
                     attended_indices = attended_indices.expand(batch_size, self.num_heads, decoder_position+1, self.projection_dim)
             
             # return
