@@ -1053,7 +1053,7 @@ def add_probe_off_diagonal_args(parser):
     group.add_argument(
         '--off-diagonal-threshold-type',
         type=str,
-        default='offset',
+        default='number',
         choices=['offset', 'prob', 'number'],
         help='The type of threshold to determine if the attention of this sentence is considered off-diagonal.'
              'offset puts sentences whose argmax offset exceed threshold number into off-diagonal category,'
