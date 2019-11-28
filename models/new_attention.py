@@ -268,7 +268,7 @@ class NewAttention(nn.Module):
                     print("round((max_query_len - 1) * self.word_count_ratio) + 1 + 2 * max_padding", round((max_query_len - 1) * self.word_count_ratio) + 1 + 2 * max_padding)
                     new_values = values.new_zeros(
                         (batch_size, self.num_heads, round((max_query_len - 1) * self.word_count_ratio) + 1 + 2 * max_padding, values_shape[2]))
-                    new_values[:, :, max_padding:values_shape[1] + max_padding] = values
+                    new_values[:, :, :values.shape[2]] = values
                     values = new_values
 
                 for i, p, in enumerate(attn_position):
