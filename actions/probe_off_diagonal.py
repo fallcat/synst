@@ -147,8 +147,11 @@ class ProbeOffDiagonal(object):
                     distance = torch.abs(argmax_weights.type_as(indices_q) - indices_q)
                     print("attn_weights", attn_weights.shape)
                     print("distance", distance.shape)
+                    print(distance)
                     print("distance >= 1", (distance >= 1).shape)
-                    print("attn_weights[distance >= 1]", max_weights[distance >= 1].shape)
+                    print(distance >= 1, torch.sum(distance >= 1))
+                    print("max_weights[distance >= 1]", max_weights[distance >= 1].shape, max_weights[distance >= 1])
+
                     max_prob = torch.max(max_weights[distance >= 1])
                     argmax_offset = torch.max(distance)
                     number = torch.sum(distance >= 1)
@@ -160,10 +163,10 @@ class ProbeOffDiagonal(object):
                                 or self.config.off_diagonal_threshold_param < 1 \
                                 and number / float(attn_weights_shape[2]) >= self.config.off_diagonal_threshold_param:
                             self.off_diagonal.append(example_id)
-                            print("in")
+                            print("in", number)
                         else:
                             self.non_off_diagonal.append(example_id)
-                            print("out")
+                            print("out", number)
                     elif self.config.off_diagonal_threshold_type == "offset":
                         print("offset")
                         if argmax_offset >= self.config.off_diagonal_threshold_param:
