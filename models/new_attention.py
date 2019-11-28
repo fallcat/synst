@@ -457,7 +457,7 @@ class NewAttention(nn.Module):
                     #     new_attended = values.new_zeros(queries_shape)
                     #     new_attended[:, :values_shape[1]] = attended
                     #     conv_attended = new_attended
-                # return conv_attended
+                return conv_attended
 
         # If we want to look at last token of the sentence, or different bins of the sentence,
         # we would need sentence length to compute the focused position. If we have input_lens,
