@@ -263,6 +263,9 @@ class NewAttention(nn.Module):
 
                 if round((max_query_len - 1) * self.word_count_ratio) + 1 > values_shape[1]:
                     print("values", values.shape)
+                    print("values_shape[1]", values_shape[1])
+                    print("round((max_query_len - 1) * self.word_count_ratio) + 1 ", round((max_query_len - 1) * self.word_count_ratio) + 1 )
+                    print("round((max_query_len - 1) * self.word_count_ratio) + 1 + 2 * max_padding", round((max_query_len - 1) * self.word_count_ratio) + 1 + 2 * max_padding)
                     new_values = values.new_zeros(
                         (batch_size, self.num_heads, round((max_query_len - 1) * self.word_count_ratio) + 1 + 2 * max_padding, values_shape[2]))
                     new_values[:, :, max_padding:values_shape[1] + max_padding] = values
