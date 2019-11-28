@@ -227,6 +227,7 @@ class NewAttention(nn.Module):
         # print("attn_type, attn_position, attn_param, attn_displacement", attn_type, attn_position, attn_param, attn_displacement)
 
         # simple indexing - fix window size 1
+        old_values = values
         if self.attn_indexing:
 
             # omitting the branch of not having list
@@ -285,8 +286,10 @@ class NewAttention(nn.Module):
                     attended_indices = attended_indices.expand(batch_size, self.num_heads, 1, self.projection_dim)
             
             # return
-            return torch.gather(values, 2, attended_indices).transpose(2,1).contiguous().view(batch_size, -1, self.num_heads * self.projection_dim)
+            index_attended = torch.gather(values, 2, attended_indices).transpose(2,1).contiguous().view(batch_size, -1, self.num_heads * self.projection_dim)
+            # return torch.gather(values, 2, attended_indices).transpose(2,1).contiguous().view(batch_size, -1, self.num_heads * self.projection_dim)
 
+        values = old_values
         # If we are using learned attention, then just do it the same way as multi-headed attention
         if attn_type == 'learned' or learned:
             logits = self.scale * torch.bmm(queries, keys.transpose(2, 1))
@@ -348,6 +351,7 @@ class NewAttention(nn.Module):
         # but can just use conv filter
         # conv_filter = None
         # old_values = values
+        conv_filter = None
         if conv_filter is not None:
             # print("hi")
             with torch.no_grad():
@@ -850,6 +854,29 @@ class NewAttention(nn.Module):
 
         attended = torch.bmm(attn_weights,
                              values)
+
+        a = attended.view(
+            batch_size,
+            self.num_heads,
+            -1,
+            self.projection_dim
+        ).transpose(2, 1).contiguous().view(
+            batch_size,
+            -1,
+            self.num_heads * self.projection_dim
+        )
+
+        same = (a == index_attended)
+
+        if torch.sum(same == 0).item() != 0:
+            # # #     torch.set_printoptions(profile='full')
+            print("which", self.which_attn)
+            print("index_attended", index_attended.shape)
+            print("attended", a.shape)
+            print("index_attended", index_attended)
+            print("attended", a)
+        else:
+            print("SAME!", self.which_attn)
 
         return attended.view(
             batch_size,
