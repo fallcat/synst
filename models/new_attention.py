@@ -875,6 +875,8 @@ class NewAttention(nn.Module):
             print("attended", a.shape)
             print("index_attended", index_attended)
             print("attended", a)
+            print("decoder_position", decoder_position)
+            print("values len", values_shape[1])
         else:
             print("SAME!", self.which_attn)
 
