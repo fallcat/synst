@@ -244,7 +244,12 @@ class NewAttention(nn.Module):
             values = values.view(batch_size, self.num_heads, values_shape[1], values_shape[2]) 
 
             max_padding = max(attn_displacement)
-            values = F.pad(values, (0, 0, max_padding, max_padding), "constant", 0)
+            max_query_len = queries_shape[1] if decoder_position == -1 else decoder_position + 1
+            if round((max_query_len - 1) * self.word_count_ratio) + 1 > values_shape[1]:
+                more_padding = round((max_query_len - 1) * self.word_count_ratio) + 1 - values_shape[1]
+                values = F.pad(values, (0, 0, max_padding, max_padding + more_padding), "constant", 0)
+            else:
+                values = F.pad(values, (0, 0, max_padding, max_padding), "constant", 0)
             
             with torch.no_grad():
                 max_query_len = queries_shape[1] if decoder_position == -1 else decoder_position + 1
@@ -261,15 +266,15 @@ class NewAttention(nn.Module):
                     attended_indices = torch.zeros(1, self.num_heads, 1, 1).type_as(values).long() # 1 x num_heads x 1 x 1
                     # indices_q[indices_q >= values_shape[1]] = values_shape[1] - 1
 
-                if round((max_query_len - 1) * self.word_count_ratio) + 1 > values_shape[1]:
+                # if round((max_query_len - 1) * self.word_count_ratio) + 1 > values_shape[1]:
                     # print("values", values.shape)
                     # print("values_shape[1]", values_shape[1])
                     # print("round((max_query_len - 1) * self.word_count_ratio) + 1 ", round((max_query_len - 1) * self.word_count_ratio) + 1 )
                     # print("round((max_query_len - 1) * self.word_count_ratio) + 1 + 2 * max_padding", round((max_query_len - 1) * self.word_count_ratio) + 1 + 2 * max_padding)
-                    new_values = values.new_zeros(
-                        (batch_size, self.num_heads, round((max_query_len - 1) * self.word_count_ratio) + 1 + 2 * max_padding, values_shape[2]))
-                    new_values[:, :, :values.shape[2]] = values
-                    values = new_values
+                    # new_values = values.new_zeros(
+                    #     (batch_size, self.num_heads, round((max_query_len - 1) * self.word_count_ratio) + 1 + 2 * max_padding, values_shape[2]))
+                    # new_values[:, :, :values.shape[2]] = values
+                    # values = new_values
 
                 for i, p, in enumerate(attn_position):
                     if p == "center":
