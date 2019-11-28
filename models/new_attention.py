@@ -253,7 +253,7 @@ class NewAttention(nn.Module):
                     # indices_q[indices_q >= values_shape[1]] = values_shape[1] - 1
                     if indices_q[-1] > values_shape[1]:
                         print("values", values.shape)
-                        new_values = values.new_zeros((batch_size, self.num_heads, values_shape[1] + 2 * max_padding, values_shape[2]))
+                        new_values = values.new_zeros((batch_size, self.num_heads, values_shape[1] + 1 + 2 * max_padding, values_shape[2]))
                         new_values[:, :, max_padding:values_shape[1] + max_padding] = values
                         values = new_values
                     attended_indices = torch.zeros(1, self.num_heads, queries_shape[1], 1).type_as(values).long() # 1 x num_heads x qlen x 1
@@ -263,7 +263,7 @@ class NewAttention(nn.Module):
                     indices_q = torch.round(torch.arange(decoder_position, decoder_position+1).view(-1, 1).type_as(values) * self.word_count_ratio).long()
                     if indices_q[-1] > values_shape[1]:
                         print("values", values.shape)
-                        new_values = values.new_zeros((batch_size, self.num_heads, values_shape[1] + 2 * max_padding, values_shape[2]))
+                        new_values = values.new_zeros((batch_size, self.num_heads, indices_q[-1] + 1 + 2 * max_padding, values_shape[2]))
                         new_values[:, :, max_padding:values_shape[1] + max_padding] = values
                         values = new_values
                     attended_indices = torch.zeros(1, self.num_heads, 1, 1).type_as(values).long() # 1 x num_heads x 1 x 1
