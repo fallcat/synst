@@ -283,7 +283,7 @@ class NewAttention(nn.Module):
         # If we have conv filter, then we don't need to go through the huge amount of calculation
         # but can just use conv filter
         # conv_filter = None
-        # old_values = values
+        old_values = values
         if conv_filter is not None:
             # print("hi")
             if list not in [type(x) for x in [attn_param, attn_displacement]]:
@@ -344,34 +344,54 @@ class NewAttention(nn.Module):
                                          self.projection_dim,
                                          -1).transpose(2, 3).contiguous()
                 if self.word_count_ratio == 1:
-                    if attended.shape[2] < queries_shape[1] + 2 * attn_displacement:
+                    current_len = queries_shape[1] if decoder_position == -1 else decoder_position + 1
+                    if attended.shape[2] < current_len + 2 * attn_displacement:
                         new_attended = values.new_zeros((batch_size,
                                                          self.num_heads,
-                                                         queries_shape[1] + 2 * attn_displacement,
+                                                         current_len + 2 * attn_displacement,
                                                          queries_shape[2]))
                         new_attended[:, :, :attended.shape[2]] = attended
                         attended = new_attended
 
                     if type(attn_position) is not list:
                         if attn_position == "center":
-                            conv_attended = attended[:, :, attn_displacement:queries_shape[1] + attn_displacement]
+                            if decoder_position == -1:
+                                conv_attended = attended[:, :, attn_displacement:queries_shape[1] + attn_displacement]
+                            else:
+                                conv_attended = attended[:, :, decoder_position + attn_displacement].unsqueeze(-1)
                         elif attn_position == "left":
-                            conv_attended = attended[:, :, :queries_shape[1]]
+                            if decoder_position == -1:
+                                conv_attended = attended[:, :, :queries_shape[1]]
+                            else:
+                                conv_attended = attended[:, :, decoder_position].unsqueeze(-1)
                         elif attn_position == "right":
-                            conv_attended = attended[:, :, 2*attn_displacement:queries_shape[1] + 2*attn_displacement]
+                            if decoder_position == -1:
+                                conv_attended = attended[:, :, 2*attn_displacement:queries_shape[1] + 2*attn_displacement]
+                            else:
+                                conv_attended = attended[:, :, decoder_position + 2 * attn_displacement].unsqueeze(-1)
                         else:
                             conv_attended = attended[:, :, attn_displacement:attn_displacement+1].expand(batch_size, self.num_heads, queries_shape[1], self.projection_dim)
                     else:
                         conv_attended = []
                         for i, p in enumerate(attn_position):
                             if p == "center":
-                                conv_attended.append(attended[:, i,
-                                                attn_displacement:queries_shape[1] + attn_displacement])
+                                if decoder_position == -1:
+                                    conv_attended.append(attended[:, i,
+                                                         attn_displacement:queries_shape[1] + attn_displacement])
+                                else:
+                                    conv_attended.append(
+                                        attended[:, i, decoder_position + attn_displacement].unsqueeze(-2))
                             elif p == "left":
-                                conv_attended.append(attended[:, i, :queries_shape[1]])
+                                if decoder_position == -1:
+                                    conv_attended.append(attended[:, i, :queries_shape[1]])
+                                else:
+                                    conv_attended.append(attended[:, i, decoder_position].unsqueeze(-2))
                             elif p == "right":
-                                conv_attended.append(attended[:, i,
-                                                     2 * attn_displacement:queries_shape[1] + 2 * attn_displacement])
+                                if decoder_position == -1:
+                                    conv_attended.append(attended[:, i,
+                                                        2 * attn_displacement:queries_shape[1] + 2 * attn_displacement])
+                                else:
+                                    conv_attended.append(attended[:, i, decoder_position + 2 * attn_displacement].unsqueeze(-2))
                             else:
                                 conv_attended.append(attended[:, i, attn_displacement:attn_displacement+1].expand(batch_size,
                                                                                               queries_shape[1],
@@ -386,15 +406,16 @@ class NewAttention(nn.Module):
                                                                                            self.num_heads * self.projection_dim
                                                                                            )
                 else:
-                    if attended.shape[2] < round((queries_shape[1] - 1) * self.word_count_ratio) + 1 + 2 * attn_displacement:
+                    current_len = queries_shape[1] if decoder_position == -1 else decoder_position + 1
+                    if attended.shape[2] < round((current_len - 1) * self.word_count_ratio) + 1 + 2 * attn_displacement:
                         new_attended = values.new_zeros((batch_size,
                                                          self.num_heads,
-                                                         round(queries_shape[1] * self.word_count_ratio)
+                                                         round(current_len * self.word_count_ratio)
                                                          + 2 * attn_displacement,
                                                          queries_shape[2]))
                         new_attended[:, :, :attended.shape[2]] = attended
                         attended = new_attended
-                    indices_q = torch.round(torch.arange(queries_shape[1],
+                    indices_q = torch.round(torch.arange(current_len,
                                                          device=values.get_device(),
                                                          dtype=torch.float32) * self.word_count_ratio).long()
                     if type(attn_position) is not list:
@@ -421,6 +442,8 @@ class NewAttention(nn.Module):
                                                                                               self.projection_dim))
                         conv_attended = torch.stack(conv_attended, dim=1)
 
+                    if decoder_position != -1:
+                        conv_attended = conv_attended[:, :, -1].unsqueeze(-2)
                     conv_attended = conv_attended.view(batch_size,
                                                        self.num_heads,
                                                        -1,
@@ -434,7 +457,7 @@ class NewAttention(nn.Module):
                     #     new_attended = values.new_zeros(queries_shape)
                     #     new_attended[:, :values_shape[1]] = attended
                     #     conv_attended = new_attended
-                return conv_attended
+                # return conv_attended
 
         # If we want to look at last token of the sentence, or different bins of the sentence,
         # we would need sentence length to compute the focused position. If we have input_lens,
@@ -442,7 +465,7 @@ class NewAttention(nn.Module):
         # we can use key_mask to compute it, but it's a bit slower. At test time, we simply use the length
         # of the whole sentence.
 
-        # values = old_values
+        values = old_values
 
         with torch.no_grad():
 
@@ -803,17 +826,19 @@ class NewAttention(nn.Module):
             self.num_heads * self.projection_dim
         )
 
-        # same = (a == conv_attended)
+        same = (a == conv_attended)
 
         # print("self.which_attn", self.which_attn)
         # print("same", torch.sum(same == 0))
-        # if torch.sum(same == 0).item() != 0:
+        if torch.sum(same == 0).item() != 0:
         # # #     torch.set_printoptions(profile='full')
-        #     print("which", self.which_attn)
-        #     print("conv_attended", conv_attended.shape)
-        #     print("attended", a.shape)
-        #     print("conv_attended", conv_attended)
-        #     print("attended", a)
+            print("which", self.which_attn)
+            print("conv_attended", conv_attended.shape)
+            print("attended", a.shape)
+            print("conv_attended", conv_attended)
+            print("attended", a)
+        else:
+            print("SAME!", self.which_attn)
         #     print("---------------------------------------------------------------")
         #
         # print("==================================================================")
