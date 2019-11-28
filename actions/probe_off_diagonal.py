@@ -138,8 +138,8 @@ class ProbeOffDiagonal(object):
                     attn_weights = result['enc_dec_attn_weights_tensor'].view(-1,
                                                                               attn_weights_shape[2],
                                                                               attn_weights_shape[3])
-                    indices_q = torch.arange(attn_weights_shape[2], dtype=torch.float32,
-                                             device=attn_weights.get_device()).view(1, -1) * self.dataset.word_count_ratio
+                    indices_q = torch.round(torch.arange(attn_weights_shape[2], dtype=torch.float32,
+                                             device=attn_weights.get_device()).view(1, -1) * self.dataset.word_count_ratio)
                     argmax_weights = torch.argmax(attn_weights, dim=2)
                     print("argmax_weights", argmax_weights)
                     max_weights = torch.max(attn_weights, dim=2)[0]  #attn_weights[argmax_weights]
