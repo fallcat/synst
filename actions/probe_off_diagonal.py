@@ -62,7 +62,7 @@ class ProbeOffDiagonal(object):
         ''' Get the padding index '''
         return self.dataset.padding_idx
 
-    def translate_all(self, output_file, epoch, experiment, verbose=0):
+    def translate_all(self, output_file, off_diagonal_output_file, epoch, experiment, verbose=0):
         ''' Generate all predictions from the dataset '''
         def get_description():
             description = f'Generate #{epoch}'
@@ -196,6 +196,8 @@ class ProbeOffDiagonal(object):
 
             print("num off diagonal", len(self.off_diagonal))
             print("num non off diagonal", len(self.non_off_diagonal))
+            off_diagonal_output_file.write(str(len(self.off_diagonal)) + "\t" + " ".join(self.off_diagonal) + "\n")
+            off_diagonal_output_file.write(str(len(self.non_off_diagonal)) + "\t" + " ".join(self.non_off_diagonal) + "\n")
 
             for _, outputs in sorted(ordered_outputs, key=lambda x: x[0]): # pylint:disable=consider-using-enumerate
                 output_file.writelines(outputs)
@@ -224,7 +226,11 @@ class ProbeOffDiagonal(object):
                 output_path = os.path.join(self.config.output_directory, output_filename)
                 output_file = stack.enter_context(open(output_path, 'wt'))
 
+                off_diagonal_output_filename = f'off_diagonal_pairs_{step}.txt'
+                off_diagonal_output_path = os.path.join(self.config.output_directory, off_diagonal_output_filename)
+                off_diagonal_output_file = stack.enter_context(open(off_diagonal_output_path, 'wt'))
+
                 if verbose:
                     print(f'Outputting to {output_path}')
 
-                self.translate_all(output_file, epoch, experiment, verbose)
+                self.translate_all(output_file, off_diagonal_output_file, epoch, experiment, verbose)
