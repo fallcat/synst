@@ -209,8 +209,8 @@ class ProbeOffDiagonal(object):
 
             print([self.number_dict[k] for k in sorted(self.number_dict.keys())])
             print([self.number_frac_dict[k] for k in sorted(self.number_frac_dict.keys())])
-            off_diagonal_output_file.write(str(len(self.off_diagonal)) + "\t" + " ".join(self.off_diagonal) + "\n")
-            off_diagonal_output_file.write(str(len(self.non_off_diagonal)) + "\t" + " ".join(self.non_off_diagonal) + "\n")
+            off_diagonal_output_file.write(str(len(self.off_diagonal)) + "\t" + " ".join([str(x) for x in self.off_diagonal]) + "\n")
+            off_diagonal_output_file.write(str(len(self.non_off_diagonal)) + "\t" + " ".join([str(x) for x in self.non_off_diagonal]) + "\n")
 
             for _, outputs in sorted(ordered_outputs, key=lambda x: x[0]): # pylint:disable=consider-using-enumerate
                 output_file.writelines(outputs)
