@@ -133,9 +133,9 @@ class ProbeOffDiagonal(object):
                 # Decoder heatmap
                 # print("saving decoder heatmap")
                 for i, example_id in enumerate(batch['example_ids']):
-                    print("result['enc_attn_weights_tensor']", result['enc_attn_weights_tensor'].shape)
-                    attn_weights_shape = result['enc_attn_weights_tensor'].shape
-                    attn_weights = result['enc_attn_weights_tensor'].view(-1,
+                    print("result['attn_weights_tensor']", result['attn_weights_tensor'].shape)
+                    attn_weights_shape = result['attn_weights_tensor'].shape
+                    attn_weights = result['attn_weights_tensor'].view(-1,
                                                                               attn_weights_shape[2],
                                                                               attn_weights_shape[3])
                     indices_q = torch.round(torch.arange(attn_weights_shape[2], dtype=torch.float32,
