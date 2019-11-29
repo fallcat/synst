@@ -169,12 +169,12 @@ class ProbeOffDiagonal(object):
                                 or self.config.off_diagonal_threshold_param < 1 \
                                 and number / float(attn_weights_shape[1] * attn_weights_shape[2]) >= self.config.off_diagonal_threshold_param:
                             self.off_diagonal.append(example_id)
-                            self.number_dict[number] += 1
+                            self.number_dict[number.cpu().item()] += 1
                             self.number_frac_dict[round(number / float(attn_weights_shape[1] * attn_weights_shape[2]) >= self.config.off_diagonal_threshold_param * 5)] += 1
                             print("in", number)
                         else:
                             self.non_off_diagonal.append(example_id)
-                            self.number_dict[number] += 1
+                            self.number_dict[number.cpu().item()] += 1
                             self.number_frac_dict[round(number / float(attn_weights_shape[1] * attn_weights_shape[
                                 2]) >= self.config.off_diagonal_threshold_param * 5)] += 1
                             print("out", number)
@@ -206,8 +206,9 @@ class ProbeOffDiagonal(object):
 
             print("num off diagonal", len(self.off_diagonal))
             print("num non off diagonal", len(self.non_off_diagonal))
-            print(sorted(self.number_dict))
-            print(sorted(self.number_frac_dict))
+
+            print([self.number_dict[k] for k in sorted(self.number_dict.keys())])
+            print([self.number_frac_dict[k] for k in sorted(self.number_frac_dict.keys())])
             off_diagonal_output_file.write(str(len(self.off_diagonal)) + "\t" + " ".join(self.off_diagonal) + "\n")
             off_diagonal_output_file.write(str(len(self.non_off_diagonal)) + "\t" + " ".join(self.non_off_diagonal) + "\n")
 
