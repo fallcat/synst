@@ -1068,6 +1068,12 @@ def add_probe_off_diagonal_args(parser):
         help='The type of threshold to determine if the attention of this sentence is considered off-diagonal.'
              'Only for source attention'
     )
+    group.add_argument(
+        '--off-diagonal-distance-threshold',
+        type=float,
+        default=2,
+        help='How far away from the diagonal do we consider it as off-diagonal'
+    )
 
     group.set_defaults(gold_p=0)
     group.set_defaults(dropout_p=0)
