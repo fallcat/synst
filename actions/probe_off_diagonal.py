@@ -19,6 +19,7 @@ from tqdm import tqdm
 from utils import profile
 from utils import tqdm_wrap_stdout
 from models.utils import save_attention
+from collections import defaultdict
 
 
 class ProbeOffDiagonal(object):
@@ -41,6 +42,9 @@ class ProbeOffDiagonal(object):
 
         self.off_diagonal = []
         self.non_off_diagonal = []
+        self.number_dict = defaultdict(int)
+        self.offset_dict = defaultdict(int)
+        self.prob_dict = defaultdict(int)
 
     @property
     def dataset(self):
@@ -149,9 +153,9 @@ class ProbeOffDiagonal(object):
                     print("attn_weights", attn_weights.shape)
                     print("distance", distance.shape)
                     print(distance)
-                    print("distance >= 1", (distance >= self.config.off_diagonal_distance_threshold).shape)
+                    print("distance >= threshold", (distance >= self.config.off_diagonal_distance_threshold).shape)
                     print(distance >= self.config.off_diagonal_distance_threshold, torch.sum(distance >= self.config.off_diagonal_distance_threshold))
-                    print("max_weights[distance >= 1]", max_weights[distance >= 1].shape, max_weights[distance >= 1])
+                    print("max_weights[distance >= threshold]", max_weights[distance >= self.config.off_diagonal_distance_threshold].shape, max_weights[distance >= 1])
 
                     max_prob = torch.max(max_weights[distance >= self.config.off_diagonal_distance_threshold])
                     argmax_offset = torch.max(distance)
@@ -164,9 +168,11 @@ class ProbeOffDiagonal(object):
                                 or self.config.off_diagonal_threshold_param < 1 \
                                 and number / float(attn_weights_shape[2]) >= self.config.off_diagonal_threshold_param:
                             self.off_diagonal.append(example_id)
+                            self.number_dict[number] += 1
                             print("in", number)
                         else:
                             self.non_off_diagonal.append(example_id)
+                            self.number_dict[number] += 1
                             print("out", number)
                     elif self.config.off_diagonal_threshold_type == "offset":
                         print("offset")
@@ -196,6 +202,7 @@ class ProbeOffDiagonal(object):
 
             print("num off diagonal", len(self.off_diagonal))
             print("num non off diagonal", len(self.non_off_diagonal))
+            print(sorted(self.number_dict))
             off_diagonal_output_file.write(str(len(self.off_diagonal)) + "\t" + " ".join(self.off_diagonal) + "\n")
             off_diagonal_output_file.write(str(len(self.non_off_diagonal)) + "\t" + " ".join(self.non_off_diagonal) + "\n")
 
