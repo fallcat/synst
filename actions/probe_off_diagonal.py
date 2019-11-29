@@ -171,12 +171,12 @@ class ProbeOffDiagonal(object):
                                 and number / float(attn_weights_shape[1] * attn_weights_shape[2]) >= self.config.off_diagonal_threshold_param:
                             self.off_diagonal.append(example_id)
                             self.number_dict[number.cpu().item()] += 1
-                            self.number_frac_dict[torch.round(number.to(torch.float32) / float(attn_weights_shape[0] * attn_weights_shape[1]) * 5).cpu().item()] += 1
+                            self.number_frac_dict[torch.round(number.to(torch.float32) / float(attn_weights.shape[0] * attn_weights.shape[1]) * 5).cpu().item()] += 1
                             print("in", number)
                         else:
                             self.non_off_diagonal.append(example_id)
                             self.number_dict[number.cpu().item()] += 1
-                            self.number_frac_dict[torch.round(number.to(torch.float32) / float(attn_weights_shape[0] * attn_weights_shape[
+                            self.number_frac_dict[torch.round(number.to(torch.float32) / float(attn_weights.shape[0] * attn_weights.shape[
                                 1]) * 5).cpu().item()] += 1
                             print("out", number)
                     elif self.config.off_diagonal_threshold_type == "offset":
