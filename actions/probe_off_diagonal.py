@@ -226,7 +226,7 @@ class ProbeOffDiagonal(object):
                 output_path = os.path.join(self.config.output_directory, output_filename)
                 output_file = stack.enter_context(open(output_path, 'wt'))
 
-                off_diagonal_output_filename = f'off_diagonal_pairs_{step}.txt'
+                off_diagonal_output_filename = f'off_diagonal_pairs_{step}_{self.config.off_diagonal_distance_threshold}_{self.config.off_diagonal_threshold_type}_{self.config.off_diagonal_threshold_param}.txt'
                 off_diagonal_output_path = os.path.join(self.config.output_directory, off_diagonal_output_filename)
                 off_diagonal_output_file = stack.enter_context(open(off_diagonal_output_path, 'wt'))
 
