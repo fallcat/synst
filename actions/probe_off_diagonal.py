@@ -10,6 +10,7 @@ from __future__ import print_function
 import os
 import sys
 import timeit
+import pprint
 from contextlib import ExitStack
 
 import torch
@@ -170,13 +171,13 @@ class ProbeOffDiagonal(object):
                                 and number / float(attn_weights_shape[1] * attn_weights_shape[2]) >= self.config.off_diagonal_threshold_param:
                             self.off_diagonal.append(example_id)
                             self.number_dict[number.cpu().item()] += 1
-                            self.number_frac_dict[torch.round(number.to(torch.float32) / float(attn_weights_shape[1] * attn_weights_shape[2]) * 5).cpu().item()] += 1
+                            self.number_frac_dict[torch.round(number.to(torch.float32) / float(attn_weights_shape[0] * attn_weights_shape[1]) * 5).cpu().item()] += 1
                             print("in", number)
                         else:
                             self.non_off_diagonal.append(example_id)
                             self.number_dict[number.cpu().item()] += 1
-                            self.number_frac_dict[torch.round(number.to(torch.float32) / float(attn_weights_shape[1] * attn_weights_shape[
-                                2])  * 5).cpu().item()] += 1
+                            self.number_frac_dict[torch.round(number.to(torch.float32) / float(attn_weights_shape[0] * attn_weights_shape[
+                                1]) * 5).cpu().item()] += 1
                             print("out", number)
                     elif self.config.off_diagonal_threshold_type == "offset":
                         print("offset")
@@ -207,8 +208,11 @@ class ProbeOffDiagonal(object):
             print("num off diagonal", len(self.off_diagonal))
             print("num non off diagonal", len(self.non_off_diagonal))
 
-            print([self.number_dict[k] for k in sorted(self.number_dict.keys())])
-            print([self.number_frac_dict[k] for k in sorted(self.number_frac_dict.keys())])
+            pp = pprint.PrettyPrinter()
+            print("number_dict")
+            pp.pprint([(k, self.number_dict[k]) for k in sorted(self.number_dict.keys())])
+            print("number_frac_dict")
+            pp.pprint([(k, self.number_frac_dict[k]) for k in sorted(self.number_frac_dict.keys())])
             off_diagonal_output_file.write(str(len(self.off_diagonal)) + "\t" + " ".join([str(x) for x in self.off_diagonal]) + "\n")
             off_diagonal_output_file.write(str(len(self.non_off_diagonal)) + "\t" + " ".join([str(x) for x in self.non_off_diagonal]) + "\n")
 
