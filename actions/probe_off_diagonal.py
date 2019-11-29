@@ -43,6 +43,7 @@ class ProbeOffDiagonal(object):
         self.off_diagonal = []
         self.non_off_diagonal = []
         self.number_dict = defaultdict(int)
+        self.number_frac_dict = defaultdict(int)
         self.offset_dict = defaultdict(int)
         self.prob_dict = defaultdict(int)
 
@@ -166,13 +167,16 @@ class ProbeOffDiagonal(object):
                         print("number")
                         if 1 <= self.config.off_diagonal_threshold_param <= number \
                                 or self.config.off_diagonal_threshold_param < 1 \
-                                and number / float(attn_weights_shape[2]) >= self.config.off_diagonal_threshold_param:
+                                and number / float(attn_weights_shape[1] * attn_weights_shape[2]) >= self.config.off_diagonal_threshold_param:
                             self.off_diagonal.append(example_id)
                             self.number_dict[number] += 1
+                            self.number_frac_dict[round(number / float(attn_weights_shape[1] * attn_weights_shape[2]) >= self.config.off_diagonal_threshold_param * 5)] += 1
                             print("in", number)
                         else:
                             self.non_off_diagonal.append(example_id)
                             self.number_dict[number] += 1
+                            self.number_frac_dict[round(number / float(attn_weights_shape[1] * attn_weights_shape[
+                                2]) >= self.config.off_diagonal_threshold_param * 5)] += 1
                             print("out", number)
                     elif self.config.off_diagonal_threshold_type == "offset":
                         print("offset")
@@ -203,6 +207,7 @@ class ProbeOffDiagonal(object):
             print("num off diagonal", len(self.off_diagonal))
             print("num non off diagonal", len(self.non_off_diagonal))
             print(sorted(self.number_dict))
+            print(sorted(self.number_frac_dict))
             off_diagonal_output_file.write(str(len(self.off_diagonal)) + "\t" + " ".join(self.off_diagonal) + "\n")
             off_diagonal_output_file.write(str(len(self.non_off_diagonal)) + "\t" + " ".join(self.non_off_diagonal) + "\n")
 
