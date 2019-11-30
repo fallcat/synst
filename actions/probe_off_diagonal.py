@@ -69,7 +69,7 @@ class ProbeOffDiagonal(object):
         ''' Get the padding index '''
         return self.dataset.padding_idx
 
-    def translate_all(self, output_file, off_diagonal_output_file, epoch, experiment, verbose=0):
+    def translate_all(self, output_file, enc_off_diagonal_output_file, dec_off_diagonal_output_file, epoch, experiment, verbose=0):
         ''' Generate all predictions from the dataset '''
         def get_description():
             description = f'Generate #{epoch}'
@@ -207,7 +207,7 @@ class ProbeOffDiagonal(object):
             print("number_frac_dict")
             pp.pprint([(k, self.number_frac_dict[k]) for k in sorted(self.number_frac_dict.keys())])
             for k in sorted(self.number_frac_dict.keys()):
-                off_diagonal_output_file.write(str(k) + "\t" + " ".join(str(x) for x in self.number_frac_list_dict[k]) + "\n")
+                enc_off_diagonal_output_file.write(str(k) + "\t" + " ".join(str(x) for x in self.number_frac_list_dict[k]) + "\n")
             # off_diagonal_output_file.write(str(len(self.off_diagonal)) + "\t" + " ".join([str(x) for x in self.off_diagonal]) + "\n")
             # off_diagonal_output_file.write(str(len(self.non_off_diagonal)) + "\t" + " ".join([str(x) for x in self.non_off_diagonal]) + "\n")
 
@@ -238,11 +238,15 @@ class ProbeOffDiagonal(object):
                 output_path = os.path.join(self.config.output_directory, output_filename)
                 output_file = stack.enter_context(open(output_path, 'wt'))
 
-                off_diagonal_output_filename = f'off_diagonal_pairs_{step}_{self.config.off_diagonal_distance_threshold}_{self.config.off_diagonal_threshold_type}_{self.config.off_diagonal_threshold_param}.txt'
-                off_diagonal_output_path = os.path.join(self.config.output_directory, off_diagonal_output_filename)
-                off_diagonal_output_file = stack.enter_context(open(off_diagonal_output_path, 'wt'))
+                enc_off_diagonal_output_filename = f'off_diagonal_pairs_{step}_enc_{self.config.off_diagonal_distance_threshold}_{self.config.off_diagonal_threshold_type}_{self.config.off_diagonal_threshold_param}.txt'
+                enc_off_diagonal_output_path = os.path.join(self.config.output_directory, enc_off_diagonal_output_filename)
+                enc_off_diagonal_output_file = stack.enter_context(open(enc_off_diagonal_output_path, 'wt'))
+
+                dec_off_diagonal_output_filename = f'off_diagonal_pairs_{step}_dec_{self.config.off_diagonal_distance_threshold}_{self.config.off_diagonal_threshold_type}_{self.config.off_diagonal_threshold_param}.txt'
+                dec_off_diagonal_output_path = os.path.join(self.config.output_directory, dec_off_diagonal_output_filename)
+                dec_off_diagonal_output_file = stack.enter_context(open(dec_off_diagonal_output_path, 'wt'))
 
                 if verbose:
                     print(f'Outputting to {output_path}')
 
-                self.translate_all(output_file, off_diagonal_output_file, epoch, experiment, verbose)
+                self.translate_all(output_file, enc_off_diagonal_output_file, dec_off_diagonal_output_file, epoch, experiment, verbose)
