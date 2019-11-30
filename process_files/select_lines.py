@@ -32,7 +32,7 @@ def main():
         new_files = defaultdict(str)
         for line in split_file.readlines():
             line_list = line.split('\t')
-            split_dict[int(line_list[0])] = [int(x) for x in line_list[1].split()]
+            split_dict[int(float(line_list[0]))] = [int(x) for x in line_list[1].split()]
             for x in line_list[1].split():
                 split_reverse_dict[int(x)] = int(line_list[0])
         if type(args.translated_files) is not list:
