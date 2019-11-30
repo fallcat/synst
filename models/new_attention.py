@@ -815,30 +815,30 @@ class NewAttention(nn.Module):
         # print("conv_attended", conv_attended.shape)
         # print("attended", attended.shape)
 
-        a = attended.view(
-            batch_size,
-            self.num_heads,
-            -1,
-            self.projection_dim
-        ).transpose(2, 1).contiguous().view(
-            batch_size,
-            -1,
-            self.num_heads * self.projection_dim
-        )
+        # a = attended.view(
+        #     batch_size,
+        #     self.num_heads,
+        #     -1,
+        #     self.projection_dim
+        # ).transpose(2, 1).contiguous().view(
+        #     batch_size,
+        #     -1,
+        #     self.num_heads * self.projection_dim
+        # )
 
-        same = (a == conv_attended)
-
-        # print("self.which_attn", self.which_attn)
-        # print("same", torch.sum(same == 0))
-        if torch.sum(same == 0).item() != 0:
-        # # #     torch.set_printoptions(profile='full')
-            print("which", self.which_attn)
-            print("conv_attended", conv_attended.shape)
-            print("attended", a.shape)
-            print("conv_attended", conv_attended)
-            print("attended", a)
-        else:
-            print("SAME!", self.which_attn)
+        # same = (a == conv_attended)
+        #
+        # # print("self.which_attn", self.which_attn)
+        # # print("same", torch.sum(same == 0))
+        # if torch.sum(same == 0).item() != 0:
+        # # # #     torch.set_printoptions(profile='full')
+        #     print("which", self.which_attn)
+        #     print("conv_attended", conv_attended.shape)
+        #     print("attended", a.shape)
+        #     print("conv_attended", conv_attended)
+        #     print("attended", a)
+        # else:
+        #     print("SAME!", self.which_attn)
         #     print("---------------------------------------------------------------")
         #
         # print("==================================================================")
