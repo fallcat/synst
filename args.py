@@ -1074,6 +1074,12 @@ def add_probe_off_diagonal_args(parser):
         default=2,
         help='How far away from the diagonal do we consider it as off-diagonal'
     )
+    group.add_argument(
+        '--off-diagonal-bins',
+        type=int,
+        default=5,
+        help='Bins for off-diagonal analysis'
+    )
 
     group.set_defaults(gold_p=0)
     group.set_defaults(dropout_p=0)

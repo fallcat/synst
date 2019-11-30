@@ -45,6 +45,7 @@ class ProbeOffDiagonal(object):
         self.non_off_diagonal = []
         self.number_dict = defaultdict(int)
         self.number_frac_dict = defaultdict(int)
+        self.number_frac_list_dict = defaultdict(list)
         self.offset_dict = defaultdict(int)
         self.prob_dict = defaultdict(int)
 
@@ -166,19 +167,11 @@ class ProbeOffDiagonal(object):
 
                     if self.config.off_diagonal_threshold_type == "number":
                         print("number")
-                        if 1 <= self.config.off_diagonal_threshold_param <= number \
-                                or self.config.off_diagonal_threshold_param < 1 \
-                                and number / float(attn_weights_shape[1] * attn_weights_shape[2]) >= self.config.off_diagonal_threshold_param:
-                            self.off_diagonal.append(example_id)
-                            self.number_dict[number.cpu().item()] += 1
-                            self.number_frac_dict[torch.round(number.to(torch.float32) / float(attn_weights.shape[0] * attn_weights.shape[1]) * 5).cpu().item()] += 1
-                            print("in", number)
-                        else:
-                            self.non_off_diagonal.append(example_id)
-                            self.number_dict[number.cpu().item()] += 1
-                            self.number_frac_dict[torch.round(number.to(torch.float32) / float(attn_weights.shape[0] * attn_weights.shape[
-                                1]) * 5).cpu().item()] += 1
-                            print("out", number)
+                        idx = torch.round(number.to(torch.float32) / float(attn_weights.shape[0] *
+                                                                                           attn_weights.shape[1]) *
+                                                          self.config.off_diagonal_bins).cpu().item()
+                        self.number_frac_dict[idx] += 1
+                        self.number_frac_list_dict[idx].append(example_id)
                     elif self.config.off_diagonal_threshold_type == "offset":
                         print("offset")
                         if argmax_offset >= self.config.off_diagonal_threshold_param:
@@ -205,16 +198,18 @@ class ProbeOffDiagonal(object):
                     #         save_attention(source_sentences[i], '<PAD>' + output_sentences[i],
                     #                        result['enc_dec_attn_weights_tensor'][j][k].cpu().numpy(), attn_path)
 
-            print("num off diagonal", len(self.off_diagonal))
-            print("num non off diagonal", len(self.non_off_diagonal))
+            # print("num off diagonal", len(self.off_diagonal))
+            # print("num non off diagonal", len(self.non_off_diagonal))
 
             pp = pprint.PrettyPrinter()
             print("number_dict")
             pp.pprint([(k, self.number_dict[k]) for k in sorted(self.number_dict.keys())])
             print("number_frac_dict")
             pp.pprint([(k, self.number_frac_dict[k]) for k in sorted(self.number_frac_dict.keys())])
-            off_diagonal_output_file.write(str(len(self.off_diagonal)) + "\t" + " ".join([str(x) for x in self.off_diagonal]) + "\n")
-            off_diagonal_output_file.write(str(len(self.non_off_diagonal)) + "\t" + " ".join([str(x) for x in self.non_off_diagonal]) + "\n")
+            for k in sorted(self.number_frac_dict.keys()):
+                off_diagonal_output_file.write(str(k) + "\t" + " ".join(str(x) for x in self.number_frac_list_dict[k]) + "\n")
+            # off_diagonal_output_file.write(str(len(self.off_diagonal)) + "\t" + " ".join([str(x) for x in self.off_diagonal]) + "\n")
+            # off_diagonal_output_file.write(str(len(self.non_off_diagonal)) + "\t" + " ".join([str(x) for x in self.non_off_diagonal]) + "\n")
 
             for _, outputs in sorted(ordered_outputs, key=lambda x: x[0]): # pylint:disable=consider-using-enumerate
                 output_file.writelines(outputs)
