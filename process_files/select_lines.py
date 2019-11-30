@@ -29,7 +29,6 @@ def main():
     with open(args.split_file, 'rt') as split_file:
         split_dict = {}
         split_reverse_dict = {}
-        new_files = defaultdict(str)
         for line in split_file.readlines():
             line_list = line.split('\t')
             split_dict[int(float(line_list[0]))] = [int(x) for x in line_list[1].split()]
@@ -42,6 +41,7 @@ def main():
         for file in translated_files:
             basename = str(os.path.basename(file)).split('.')[0]
             dirname = os.path.dirname(file)
+            new_files = defaultdict(str)
             with open(file, 'rt') as input_file:
                 for i, line in enumerate(input_file.readlines()):
                     new_files[split_reverse_dict[i]] += line
