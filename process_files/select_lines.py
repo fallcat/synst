@@ -34,7 +34,7 @@ def main():
             line_list = line.split('\t')
             split_dict[int(float(line_list[0]))] = [int(x) for x in line_list[1].split()]
             for x in line_list[1].split():
-                split_reverse_dict[int(x)] = int(line_list[0])
+                split_reverse_dict[int(x)] = int(float(line_list[0]))
         if type(args.translated_files) is not list:
             translated_files = [args.translated_files]
         else:
