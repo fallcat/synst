@@ -39,14 +39,15 @@ def main():
         else:
             translated_files = args.translated_files
         for file in translated_files:
-            basename = str(os.path.basename(file)).split('.')[0]
+            split_names = str(os.path.basename(file)).split('.')
+            basename = split_names[0]
             dirname = os.path.dirname(file)
             new_files = defaultdict(str)
             with open(file, 'rt') as input_file:
                 for i, line in enumerate(input_file.readlines()):
                     new_files[split_reverse_dict[i]] += line
             for k in new_files.keys():
-                new_file_path = os.path.join(dirname, basename + '_bin' + str(k) + '.txt')
+                new_file_path = os.path.join(dirname, basename + '_bin' + str(k) + split_names[1])
                 with open(new_file_path, 'wt') as output_file:
                     output_file.write(new_files[k])
 
