@@ -346,7 +346,7 @@ class NewAttention(nn.Module):
                         exit(-1)
 
             attended = torch.stack(attended, dim=1)
-            if key_mask not None:
+            if key_mask is not None:
                 try:
                     attended.masked_fill_(key_mask[:, None, :, None], float(0))
                 except:
