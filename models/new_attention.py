@@ -346,6 +346,12 @@ class NewAttention(nn.Module):
                         exit(-1)
 
             attended = torch.stack(attended, dim=1)
+            if key_mask not None:
+                try:
+                    attended.masked_fill_(key_mask[:, None, :, None], float(0))
+                except:
+                    attended = attended.to(key_mask.device)
+                    attended.masked_fill_(key_mask[:, None, :, None], float(0))
             attended_by_indexing = attended.transpose(2, 1).contiguous().view(batch_size, -1, self.num_heads * self.projection_dim)
             # return attended
         values = old_values
