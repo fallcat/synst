@@ -327,6 +327,7 @@ class NewAttention(nn.Module):
                     indices_q = torch.round(torch.arange(decoder_position, decoder_position+1).view(-1, 1).type_as(values) * self.word_count_ratio).long()
 
                 attended = []
+                pdb.set_trace()
                 for i, p, in enumerate(attn_position):
                     if p == "center":
                         attended.append(values[:, i, max_padding + indices_q])
