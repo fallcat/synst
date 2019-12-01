@@ -345,7 +345,7 @@ class NewAttention(nn.Module):
                         print("unknown position")
                         exit(-1)
 
-            attended = torch.cat(attended, dim=1)
+            attended = torch.stack(attended, dim=1)
             attended_by_indexing = attended.transpose(2, 1).contiguous().view(batch_size, -1, self.num_heads * self.projection_dim)
             # return attended
         values = old_values
