@@ -291,7 +291,6 @@ class NewAttention(nn.Module):
             # index_attended = torch.gather(values, 2, attended_indices).transpose(2,1).contiguous().view(batch_size, -1, self.num_heads * self.projection_dim)
             return torch.gather(values, 2, attended_indices).transpose(2,1).contiguous().view(batch_size, -1, self.num_heads * self.projection_dim)
 
-        old_values = values.clone()
         # simple indexing - fix window size 1 - implementation: stacking values
         if self.attn_indexing:
 
@@ -352,9 +351,9 @@ class NewAttention(nn.Module):
                 except:
                     attended = attended.to(key_mask.device)
                     attended.masked_fill_(key_mask[:, None, :, None], float(0))
-            attended_by_indexing = attended.transpose(2, 1).contiguous().view(batch_size, -1, self.num_heads * self.projection_dim)
-            # return attended
-        values = old_values
+            return attended.transpose(2, 1).contiguous().view(batch_size, -1, self.num_heads * self.projection_dim)
+            
+        # values = old_values
         # If we are using learned attention, then just do it the same way as multi-headed attention
         if attn_type == 'learned' or learned:
             logits = self.scale * torch.bmm(queries, keys.transpose(2, 1))
@@ -930,9 +929,9 @@ class NewAttention(nn.Module):
             self.num_heads * self.projection_dim
         )
 
-        pdb.set_trace()
+        # pdb.set_trace()
 
-        assert attended == attended_by_indexing
+        # assert attended == attended_by_indexing
 
         return attended
 
