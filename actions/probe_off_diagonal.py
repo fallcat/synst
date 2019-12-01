@@ -167,7 +167,7 @@ class ProbeOffDiagonal(object):
                         #self.config.off_diagonal_threshold_param
 
                         if self.config.off_diagonal_threshold_type == "number":
-                            print("number")
+                            # print("number")
                             idx = int(torch.round(number.to(torch.float32) / float(attn_weights.shape[0] *
                                                                                attn_weights.shape[1]) *
                                               self.config.off_diagonal_bins).cpu().item())
