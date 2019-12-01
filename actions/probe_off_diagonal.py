@@ -41,11 +41,11 @@ class ProbeOffDiagonal(object):
             'model': model
         }
 
-        self.off_diagonal = []
-        self.non_off_diagonal = []
-        self.number_dict = defaultdict(int)
-        self.number_frac_dict = defaultdict(int)
-        self.number_frac_list_dict = defaultdict(list)
+        # self.off_diagonal = []
+        # self.non_off_diagonal = []
+        self.number_dict = {'encoder': defaultdict(int), 'decoder': defaultdict(int)}
+        self.number_frac_dict = {'encoder': defaultdict(int), 'decoder': defaultdict(int)}
+        self.number_frac_list_dict = {'encoder': defaultdict(list), 'decoder': defaultdict(list)}
         self.offset_dict = defaultdict(int)
         self.prob_dict = defaultdict(int)
 
@@ -140,50 +140,51 @@ class ProbeOffDiagonal(object):
                 # Decoder heatmap
                 # print("saving decoder heatmap")
                 for i, example_id in enumerate(batch['example_ids']):
-                    print("result.keys()", result.keys())
-                    print("result['encoder_attn_weights_tensor']", result['encoder_attn_weights_tensor'].shape)
-                    attn_weights_shape = result['encoder_attn_weights_tensor'].shape
-                    attn_weights = result['encoder_attn_weights_tensor'].view(-1,
-                                                                              attn_weights_shape[2],
-                                                                              attn_weights_shape[3])
-                    indices_q = torch.round(torch.arange(attn_weights_shape[2], dtype=torch.float32,
-                                             device=attn_weights.get_device()).view(1, -1) * self.dataset.word_count_ratio)
-                    argmax_weights = torch.argmax(attn_weights, dim=2)
-                    print("argmax_weights", argmax_weights)
-                    max_weights = torch.max(attn_weights, dim=2)[0]  #attn_weights[argmax_weights]
-                    print("max_weights", max_weights.shape)
-                    distance = torch.abs(argmax_weights.type_as(indices_q) - indices_q)
-                    print("attn_weights", attn_weights.shape)
-                    print("distance", distance.shape)
-                    print(distance)
-                    print("distance >= threshold", (distance >= self.config.off_diagonal_distance_threshold).shape)
-                    print(distance >= self.config.off_diagonal_distance_threshold, torch.sum(distance >= self.config.off_diagonal_distance_threshold))
-                    print("max_weights[distance >= threshold]", max_weights[distance >= self.config.off_diagonal_distance_threshold].shape, max_weights[distance >= 1])
+                    # print("result.keys()", result.keys())
+                    # print("result['encoder_attn_weights_tensor']", result['encoder_attn_weights_tensor'].shape)
+                    for coder in ['encoder', 'decoder']:
+                        attn_weights_shape = result[coder + '_attn_weights_tensor'].shape
+                        attn_weights = result[coder + '_attn_weights_tensor'].view(-1,
+                                                                                  attn_weights_shape[2],
+                                                                                  attn_weights_shape[3])
+                        indices_q = torch.round(torch.arange(attn_weights_shape[2], dtype=torch.float32,
+                                                 device=attn_weights.get_device()).view(1, -1) * self.dataset.word_count_ratio)
+                        argmax_weights = torch.argmax(attn_weights, dim=2)
+                        # print("argmax_weights", argmax_weights)
+                        max_weights = torch.max(attn_weights, dim=2)[0]  #attn_weights[argmax_weights]
+                        # print("max_weights", max_weights.shape)
+                        distance = torch.abs(argmax_weights.type_as(indices_q) - indices_q)
+                        # print("attn_weights", attn_weights.shape)
+                        # print("distance", distance.shape)
+                        # print(distance)
+                        # print("distance >= threshold", (distance >= self.config.off_diagonal_distance_threshold).shape)
+                        # print(distance >= self.config.off_diagonal_distance_threshold, torch.sum(distance >= self.config.off_diagonal_distance_threshold))
+                        # print("max_weights[distance >= threshold]", max_weights[distance >= self.config.off_diagonal_distance_threshold].shape, max_weights[distance >= 1])
 
-                    max_prob = torch.max(max_weights[distance >= self.config.off_diagonal_distance_threshold])
-                    argmax_offset = torch.max(distance)
-                    number = torch.sum(distance >= self.config.off_diagonal_distance_threshold)
-                    #self.config.off_diagonal_threshold_param
+                        max_prob = torch.max(max_weights[distance >= self.config.off_diagonal_distance_threshold])
+                        argmax_offset = torch.max(distance)
+                        number = torch.sum(distance >= self.config.off_diagonal_distance_threshold)
+                        #self.config.off_diagonal_threshold_param
 
-                    if self.config.off_diagonal_threshold_type == "number":
-                        print("number")
-                        idx = torch.round(number.to(torch.float32) / float(attn_weights.shape[0] *
-                                                                                           attn_weights.shape[1]) *
-                                                          self.config.off_diagonal_bins).cpu().item()
-                        self.number_frac_dict[idx] += 1
-                        self.number_frac_list_dict[idx].append(example_id)
-                    elif self.config.off_diagonal_threshold_type == "offset":
-                        print("offset")
-                        if argmax_offset >= self.config.off_diagonal_threshold_param:
-                            self.off_diagonal.append(example_id)
-                        else:
-                            self.non_off_diagonal.append(example_id)
-                    else:  # prob
-                        print("prob")
-                        if max_prob >= self.config.off_diagonal_threshold_param:
-                            self.off_diagonal.append(example_id)
-                        else:
-                            self.non_off_diagonal.append(example_id)
+                        if self.config.off_diagonal_threshold_type == "number":
+                            print("number")
+                            idx = int(torch.round(number.to(torch.float32) / float(attn_weights.shape[0] *
+                                                                               attn_weights.shape[1]) *
+                                              self.config.off_diagonal_bins).cpu().item())
+                            self.number_frac_dict[coder][idx] += 1
+                            self.number_frac_list_dict[coder][idx].append(example_id)
+                        # elif self.config.off_diagonal_threshold_type == "offset":
+                        #     print("offset")
+                        #     if argmax_offset >= self.config.off_diagonal_threshold_param:
+                        #         self.off_diagonal.append(example_id)
+                        #     else:
+                        #         self.non_off_diagonal.append(example_id)
+                        # else:  # prob
+                        #     print("prob")
+                        #     if max_prob >= self.config.off_diagonal_threshold_param:
+                        #         self.off_diagonal.append(example_id)
+                        #     else:
+                        #         self.non_off_diagonal.append(example_id)
 
                     #self.dataset.word_count_ratio
 
@@ -201,13 +202,15 @@ class ProbeOffDiagonal(object):
             # print("num off diagonal", len(self.off_diagonal))
             # print("num non off diagonal", len(self.non_off_diagonal))
 
-            pp = pprint.PrettyPrinter()
-            print("number_dict")
-            pp.pprint([(k, self.number_dict[k]) for k in sorted(self.number_dict.keys())])
-            print("number_frac_dict")
-            pp.pprint([(k, self.number_frac_dict[k]) for k in sorted(self.number_frac_dict.keys())])
+            # pp = pprint.PrettyPrinter()
+            # print("number_dict")
+            # pp.pprint([(k, self.number_dict[k]) for k in sorted(self.number_dict.keys())])
+            # print("number_frac_dict")
+            # pp.pprint([(k, self.number_frac_dict[k]) for k in sorted(self.number_frac_dict.keys())])
             for k in sorted(self.number_frac_dict.keys()):
-                enc_off_diagonal_output_file.write(str(k) + "\t" + " ".join(str(x) for x in self.number_frac_list_dict[k]) + "\n")
+                enc_off_diagonal_output_file.write(str(k) + "\t" + " ".join(str(x) for x in self.number_frac_list_dict['encoder'][k]) + "\n")
+                dec_off_diagonal_output_file.write(
+                    str(k) + "\t" + " ".join(str(x) for x in self.number_frac_list_dict['decoder'][k]) + "\n")
             # off_diagonal_output_file.write(str(len(self.off_diagonal)) + "\t" + " ".join([str(x) for x in self.off_diagonal]) + "\n")
             # off_diagonal_output_file.write(str(len(self.non_off_diagonal)) + "\t" + " ".join([str(x) for x in self.non_off_diagonal]) + "\n")
 
@@ -234,15 +237,17 @@ class ProbeOffDiagonal(object):
                 print(f'Translation timing={timing/self.config.timed}')
             else:
                 step = experiment.curr_step
-                output_filename = self.config.output_filename or f'translated_{step}.txt'
+                output_filename = self.config.output_filename or f'translated_{step}_all.txt'
                 output_path = os.path.join(self.config.output_directory, output_filename)
                 output_file = stack.enter_context(open(output_path, 'wt'))
 
-                enc_off_diagonal_output_filename = f'off_diagonal_pairs_{step}_enc_{self.config.off_diagonal_distance_threshold}_{self.config.off_diagonal_threshold_type}_{self.config.off_diagonal_threshold_param}.txt'
+                enc_off_diagonal_output_filename = f'off_diagonal_pairs_{step}_enc_th{self.config.off_diagonal_distance_threshold}_' \
+                                                   f'ty{self.config.off_diagonal_threshold_type}_bins{self.config.off_diagonal_bins}.txt'
                 enc_off_diagonal_output_path = os.path.join(self.config.output_directory, enc_off_diagonal_output_filename)
                 enc_off_diagonal_output_file = stack.enter_context(open(enc_off_diagonal_output_path, 'wt'))
 
-                dec_off_diagonal_output_filename = f'off_diagonal_pairs_{step}_dec_{self.config.off_diagonal_distance_threshold}_{self.config.off_diagonal_threshold_type}_{self.config.off_diagonal_threshold_param}.txt'
+                dec_off_diagonal_output_filename = f'off_diagonal_pairs_{step}_dec_th{self.config.off_diagonal_distance_threshold}_' \
+                                                   f'ty{self.config.off_diagonal_threshold_type}_bins{self.config.off_diagonal_bins}.txt'
                 dec_off_diagonal_output_path = os.path.join(self.config.output_directory, dec_off_diagonal_output_filename)
                 dec_off_diagonal_output_file = stack.enter_context(open(dec_off_diagonal_output_path, 'wt'))
 
