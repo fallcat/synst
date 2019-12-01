@@ -320,11 +320,11 @@ class NewAttention(nn.Module):
                 max_query_len = queries_shape[1] if decoder_position == -1 else decoder_position + 1
 
                 if decoder_position == -1:
-                    indices_q = torch.round(torch.arange(queries_shape[1]).view(-1, 1).type_as(values) * self.word_count_ratio).long()
+                    indices_q = torch.round(torch.arange(queries_shape[1]).type_as(values) * self.word_count_ratio).long()
 
                 else:
                     # pdb.set_trace()
-                    indices_q = torch.round(torch.arange(decoder_position, decoder_position+1).view(-1, 1).type_as(values) * self.word_count_ratio).long()
+                    indices_q = torch.round(torch.arange(decoder_position, decoder_position+1).type_as(values) * self.word_count_ratio).long()
 
                 attended = []
                 pdb.set_trace()
