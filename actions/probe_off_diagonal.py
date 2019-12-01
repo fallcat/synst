@@ -202,11 +202,19 @@ class ProbeOffDiagonal(object):
             # print("num off diagonal", len(self.off_diagonal))
             # print("num non off diagonal", len(self.non_off_diagonal))
 
-            # pp = pprint.PrettyPrinter()
-            # print("number_dict")
-            # pp.pprint([(k, self.number_dict[k]) for k in sorted(self.number_dict.keys())])
-            # print("number_frac_dict")
-            # pp.pprint([(k, self.number_frac_dict[k]) for k in sorted(self.number_frac_dict.keys())])
+            pp = pprint.PrettyPrinter()
+            print("---------Encoder---------")
+            print("number_dict")
+            pp.pprint([(k, self.number_dict['encoder'][k]) for k in sorted(self.number_dict['encoder'].keys())])
+            print("number_frac_dict")
+            pp.pprint([(k, self.number_frac_dict['encoder'][k]) for k in sorted(self.number_frac_dict['encoder'].keys())])
+            print("---------Decoder---------")
+            print("number_dict")
+            pp.pprint([(k, self.number_dict['decoder'][k]) for k in sorted(self.number_dict['decoder'].keys())])
+            print("number_frac_dict")
+            pp.pprint(
+                [(k, self.number_frac_dict['decoder'][k]) for k in sorted(self.number_frac_dict['decoder'].keys())])
+
             for k in sorted(self.number_frac_dict.keys()):
                 enc_off_diagonal_output_file.write(str(k) + "\t" + " ".join(str(x) for x in self.number_frac_list_dict['encoder'][k]) + "\n")
                 dec_off_diagonal_output_file.write(
