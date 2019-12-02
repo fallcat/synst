@@ -215,8 +215,9 @@ class ProbeOffDiagonal(object):
             pp.pprint(
                 [(k, self.number_frac_dict['decoder'][k]) for k in sorted(self.number_frac_dict['decoder'].keys())])
 
-            for k in sorted(self.number_frac_dict.keys()):
+            for k in sorted(self.number_frac_dict['encoder'].keys()):
                 enc_off_diagonal_output_file.write(str(k) + "\t" + " ".join(str(x) for x in self.number_frac_list_dict['encoder'][k]) + "\n")
+            for k in sorted(self.number_frac_dict['decoder'].keys()):
                 dec_off_diagonal_output_file.write(
                     str(k) + "\t" + " ".join(str(x) for x in self.number_frac_list_dict['decoder'][k]) + "\n")
             # off_diagonal_output_file.write(str(len(self.off_diagonal)) + "\t" + " ".join([str(x) for x in self.off_diagonal]) + "\n")
