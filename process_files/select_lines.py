@@ -58,7 +58,7 @@ def main():
                 for i, line in enumerate(input_file.readlines()):
                     new_files[split_reverse_dict[i]] += line
             for k in new_files.keys():
-                new_file_path = os.path.join(dirname, basename + '_bin' + str(k) + '_' + args.coder + split_names[1])
+                new_file_path = os.path.join(dirname, basename + '_bin' + str(k) + '_' + args.coder + '.' + split_names[1])
                 with open(new_file_path, 'wt') as output_file:
                     output_file.write(new_files[k])
 
