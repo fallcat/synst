@@ -11,6 +11,7 @@ def main():
 
     parser.add_argument(
             '--translated-files',
+            '-t',
             type=str,
             nargs='+',
             default='/mnt/nfs/work1/miyyer/wyou/synst/experiments/iwslt01/translated_100000.txt',
@@ -19,10 +20,20 @@ def main():
 
     parser.add_argument(
             '--split-file',
+            '-s',
             type=str,
             default='/mnt/nfs/work1/miyyer/wyou/synst/experiments/iwslt01/off_diagonal_pairs_100000_2_number_3.txt',
-            help='Store'
+            help='The file that contains which lines are from which bin'
         )
+
+    parser.add_argument(
+        '--coder',
+        '-c',
+        type=str,
+        choices=['encoder', 'decoder'],
+        default='encoder',
+        help='Store if it is from encoder or decoder'
+    )
 
     args = parser.parse_args()
 
@@ -47,7 +58,7 @@ def main():
                 for i, line in enumerate(input_file.readlines()):
                     new_files[split_reverse_dict[i]] += line
             for k in new_files.keys():
-                new_file_path = os.path.join(dirname, basename + '_bin' + str(k) + split_names[1])
+                new_file_path = os.path.join(dirname, basename + '_bin' + str(k) + '_' + args.coder + split_names[1])
                 with open(new_file_path, 'wt') as output_file:
                     output_file.write(new_files[k])
 
