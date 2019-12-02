@@ -337,7 +337,7 @@ class NewAttention(nn.Module):
                         attended.append(values[:, i, max_padding + indices_q + attn_displacement[i]])
 
                     elif p == "first":
-                        attended.append(values[:, i, max_padding])
+                        attended.append(values[:, 0, [max_padding]*indices_q.shape[0]])
 
                     else:
                         print("unknown position")
