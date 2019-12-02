@@ -324,7 +324,7 @@ class NewAttention(nn.Module):
                     indices_q = torch.round(torch.arange(queries_shape[1]).type_as(values) * self.word_count_ratio).long()
 
                 else:
-                    pdb.set_trace()
+                    #pdb.set_trace()
                     indices_q = torch.round(torch.arange(decoder_position, decoder_position+1).type_as(values) * self.word_count_ratio).long()
 
             attended = []
