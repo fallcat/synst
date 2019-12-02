@@ -342,8 +342,10 @@ class NewAttention(nn.Module):
                     else:
                         print("unknown position")
                         exit(-1)
-
-            attended = torch.stack(attended, dim=1)
+            try:
+                attended = torch.stack(attended, dim=1)
+            except:
+                pdb.set_trace()
             if key_mask is not None:
                 try:
                     attended.masked_fill_(key_mask[:, None, :, None], float(0))
