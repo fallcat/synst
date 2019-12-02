@@ -337,7 +337,7 @@ class NewAttention(nn.Module):
                         attended.append(values[:, i, max_padding + indices_q + attn_displacement[i]])
 
                     elif p == "first":
-                        attended.append(values[:, 0, [max_padding]*indices_q.shape[0]])
+                        attended.append(values[:, i, [max_padding]*indices_q.shape[0]])
 
                     else:
                         print("unknown position")
@@ -350,6 +350,7 @@ class NewAttention(nn.Module):
                 try:
                     attended.masked_fill_(key_mask[:, None, :, None], float(0))
                 except:
+                    pdb.set_trace()
                     attended = attended.to(key_mask.device)
                     attended.masked_fill_(key_mask[:, None, :, None], float(0))
             return attended.transpose(2, 1).contiguous().view(batch_size, -1, self.num_heads * self.projection_dim)
