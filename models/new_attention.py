@@ -293,6 +293,19 @@ class NewAttention(nn.Module):
                         print("unknown position")
                         exit(-1)
 
+                def indices_map(i, p):
+                    return{
+                        "center": max_padding + indices_q,
+                        "left": max_padding + indices_q - attn_displacement[i],
+                        "right": max_padding + indices_q + attn_displacement[i],
+                        "first": max_padding
+                    }[p]
+
+                attended_indices2 = torch.stack([indices_map(i, p).view(1, indices_q.shape[0], 1)
+                                                for i, p in enumerate(attn_position)], dim=1)
+
+                print("same attended_indices", attended_indices == attended_indices2)
+
                 if decoder_position == -1:
                     # bs x nh x qlen x proj_dim
                     attended_indices = attended_indices.expand(batch_size, self.num_heads, queries_shape[1], self.projection_dim)
