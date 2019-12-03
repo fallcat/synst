@@ -8,6 +8,8 @@ from torch.utils.data import Sampler
 
 from utils import ceildiv
 
+np.random.seed(42)
+
 
 class TokenBucket(object):
     ''' A bucket of sequence ids '''
@@ -115,3 +117,4 @@ class SequenceLengthSampler(Sampler):
 
         # Update the batch estimate
         self.num_batches = num_batches
+
