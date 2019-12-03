@@ -389,7 +389,7 @@ class NewAttention(nn.Module):
             indices_q.share_memory_()
             values.share_memory_()
 
-            def indice(q, i, p, offset):
+            def indice(q, i, values, max_padding, indices_q, p, offset):
                 if p == "center":
                     q.put((i, values[:, i, max_padding + indices_q]))
 
@@ -408,7 +408,7 @@ class NewAttention(nn.Module):
             attended_q = mp.Queue()
             processes = []
             for i, pos in enumerate(attn_position):
-                p = mp.Process(target=indice, args=(attended_q, i, pos, attn_displacement[i]))
+                p = mp.Process(target=indice, args=(attended_q, i, values, max_padding, indices_q, pos, attn_displacement[i]))
                 p.start()
                 processes.append(p)
 
