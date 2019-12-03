@@ -212,7 +212,7 @@ def add_new_transformer_args(parser):
     group.add_argument(
         '--attn-window',
         type=int,
-        default=3,
+        default=-1,
         help='The window to do convolution at'
     )
     group.add_argument(
@@ -289,7 +289,7 @@ def add_new_transformer_args(parser):
     group.add_argument(
         '--dec-attn-window',
         type=int,
-        default=3,
+        default=-1,
         help='The window to do convolution at'
     )
     group.add_argument(
@@ -366,7 +366,7 @@ def add_new_transformer_args(parser):
     group.add_argument(
         '--enc-dec-attn-window',
         type=int,
-        default=3,
+        default=-1,
         help='The window to do convolution at'
     )
     group.add_argument(
@@ -429,6 +429,27 @@ def add_new_transformer_args(parser):
         help="number of heads for enc-dec-attn at each layer; length of list should be equal to the number of layers. "
              "if a layer does not have source attention, it should be 0."
              "If the number of heads is same as encoder/decoder self attentions, then use -1 to specify that."
+    )
+
+    group.add_argument(
+        '--enc-attn-indexing',
+        type=bool,
+        default=False,
+        help="flag indicating whether use indexing(window-size=1) or not. if use, center+displacement word will be selected directly from values."
+    )
+
+    group.add_argument(
+        '--dec-attn-indexing',
+        type=bool,
+        default=False,
+        help="flag indicating whether use indexing(window-size=1) or not. if use, center+displacement word will be selected directly from values."
+    )
+
+    group.add_argument(
+        '--enc-dec-attn-indexing',
+        type=bool,
+        default=False,
+        help="flag indicating whether use indexing(window-size=1) or not. if use, center+displacement word will be selected directly from values."
     )
 
     return group
@@ -726,6 +747,13 @@ def add_train_args(parser):
         type=int,
         default=4000,
         help='Number of warmup steps for the Transformer learning rate'
+    )
+    group.add_argument(
+        '--optimizer',
+        type=str,
+        default='adam',
+        choices=['adam', 'sgd', 'adam-fixed'],
+        help='add optimizer'
     )
 
     return group
@@ -1389,7 +1417,7 @@ Commit your changes first, then try again.''')
 
     args.experiment = experiment_type(
         *experiment_args,
-        project_name=args.project_name,
+        project_name='transformer-attn',
         workspace='umass-nlp',
         disabled=not args.track,
         auto_metric_logging=False,

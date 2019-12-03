@@ -25,6 +25,10 @@ from data.utils import get_dataloader
 from models.utils import restore
 from utils import profile
 
+# import comet_ml in the top of your file
+from comet_ml import Experiment
+import pdb   
+# Add the following code anywhere in your machine learning file
 
 def main(argv=None):
     ''' Main entry point '''
@@ -40,6 +44,7 @@ def main(argv=None):
     print(dataloader.dataset.stats)
 
     model = args.model(args.config.model, dataloader.dataset)
+    #pdb.set_trace()
     action = args.action(args.action_config, model, dataloader, args.device)
     if args.action_type == 'train' and args.action_config.early_stopping:
         args.config.data.split = 'valid'
@@ -67,6 +72,7 @@ def main(argv=None):
             for module_name, module in action.modules.items()
             if module_name not in args.reset_parameters
         }
+        #pdb.set_trace()
 
         epoch, step = restore(
             args.restore,

@@ -192,6 +192,16 @@ class WarmupLRSchedule(object):
         return min(step ** -0.5, step * self.warmup_steps ** -1.5)
 
 
+class DummyLRSchedule(object):
+    def __init__(self, lr):
+        ''' Initialize the learning rate schedule '''
+        self.lr = lr
+
+    def __call__(self, step):
+        ''' The actual learning rate schedule '''
+        return self.lr
+
+
 class ModuleWrapper(nn.Module):
     ''' A wrapper module that calls a particular method in it's forward pass '''
     def __init__(self, module, method_name):
@@ -295,8 +305,8 @@ class ProbeTranslator(object):
             'model': model
         }
 
-        self.num_layers = model.num_layers
-        self.num_heads = model.num_heads
+        self.num_layers = sum(model.decoders[0].enc_dec_attn_config['enc_dec_attn_layer'])
+        self.num_heads = 4
 
     def to(self, device):
         ''' Move the translator to the specified device '''
@@ -356,8 +366,6 @@ class ProbeTranslator(object):
             decoder_results = decoder.decode(encoded, beams)
             targets = [beam.best_hypothesis.sequence[self.span - 1:] for beam in decoder_results['beams']]
 
-            decoder_stats = [probe(decoder_attn_weights_tensor)
-                             for decoder_attn_weights_tensor in decoder_results['decoder_attn_weights_tensors']]
             enc_dec_stats = [probe(enc_dec_attn_weights_tensor)
                              for enc_dec_attn_weights_tensor in decoder_results['enc_dec_attn_weights_tensors']]
 
@@ -376,16 +384,7 @@ class ProbeTranslator(object):
             return OrderedDict([
                 ('targets', targets),
                 ('gold_targets', gold_targets),
-            ]), {'encoder_stats': {stats_type: encoder_stats[stats_type].view(self.num_layers,
-                                                                              self.num_heads,
-                                                                              -1)
-                                   for stats_type in STATS_TYPES},
-                 'decoder_stats': {stats_type: torch.cat([decoder_stat[stats_type].view(self.num_layers,
-                                                                                        self.num_heads,
-                                                                                        -1)
-                                                          for decoder_stat in decoder_stats], dim=-1)
-                                   for stats_type in STATS_TYPES},
-                 'enc_dec_stats': {stats_type: torch.cat([enc_dec_stat[stats_type].view(self.num_layers,
+            ]), {'enc_dec_stats': {stats_type: torch.cat([enc_dec_stat[stats_type].view(self.num_layers,
                                                                                         self.num_heads,
                                                                                         -1)
                                                           for enc_dec_stat in enc_dec_stats], dim=-1)
@@ -542,10 +541,6 @@ def save_attention(input_sentence, output_words, attentions, file_path):
     fig.colorbar(cax)
 
     # Set up axes
-    # print("input_sentence: ", input_sentence)
-    # print("input_sentence len: ", len(input_sentence.split(' ')))
-    # print("output_words: ", output_words)
-    # print("output_words len:", len(output_words.split(' ')))
     ax.set_xticklabels([''] + input_sentence.split(' ') +
                        ['<EOS>'], rotation=90)
     ax.set_yticklabels([''] + output_words.split(' ') + ['<EOS>'])
@@ -556,3 +551,4 @@ def save_attention(input_sentence, output_words, attentions, file_path):
 
     plt.savefig(file_path)
     plt.close('all')
+

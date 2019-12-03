@@ -3,6 +3,7 @@ Data loader for annotated text datasets.
 '''
 import os
 import re
+import pdb
 import enum
 import glob
 import array
@@ -396,6 +397,7 @@ class AnnotatedTextDataset(TextDataset):
 
     def preprocess(self):
         ''' Do any data preprocessing if needed '''
+        #pdb.set_trace()
         if (
                 all(os.path.exists(p) for p in self.data_paths) and
                 all(os.path.exists(p) for p in self.vocab_paths)
@@ -617,5 +619,7 @@ class AnnotatedTextDataset(TextDataset):
                 ):
                     example['source_annotation'] = source_annotation_data_file.readline()
                     example['target_annotation'] = target_annotation_data_file.readline()
-
+                
+                if example == {}:
+                    return
                 self.add_datum(example)

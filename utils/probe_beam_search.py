@@ -68,14 +68,12 @@ class ProbeBeamSearchDecoder(object):
             for beam in beams
         )
 
-    def collate(self, encoded, target_lens, beams):
+    def collate(self, encoded, beams):
         ''' Collate beams into a batch '''
         batch = []
         cache = []
         beam_map = {}
         encoded_batch = []
-        target_lens_batch = []
-        sequences = []
         for i, beam in enumerate(beams):
             hypothesis_map = {}
             for hypothesis in beam.hypotheses:
@@ -84,9 +82,7 @@ class ProbeBeamSearchDecoder(object):
 
                 batch_idx = len(batch)
                 cache.append(hypothesis.cache)
-                sequences.append(hypothesis.sequence[-self.span:])
                 encoded_batch.append(encoded[i])
-                target_lens_batch.append(target_lens[i])
                 hypothesis_map[hypothesis] = batch_idx
                 batch.append(hypothesis.sequence)
 
@@ -95,9 +91,8 @@ class ProbeBeamSearchDecoder(object):
 
         batch = torch.LongTensor(batch)
         encoded_batch = utils.cat(encoded_batch)
-        target_lens_batch = utils.cat(target_lens_batch)
         cache = utils.cat(cache) if not self.config.disable_cache else None
-        return encoded_batch, target_lens_batch, batch, beam_map, cache, sequences
+        return encoded_batch, batch, beam_map, cache
 
     def initialize_search(self, start_sequences, max_lengths=0, initial_scores=0):
         ''' Initialize a batch of beams '''
@@ -214,19 +209,16 @@ class ProbeBeamSearchDecoder(object):
         enc_dec_attn_weights_tensors = []
         with torch.no_grad():
             encoded = utils.split_or_chunk(encoded, len(beams))
-            target_lens = utils.split_or_chunk(len(beams))
             while not self.all_done(beams):
-                encoded_batch, target_lens_batch, batch, beam_map, cache, sequences = self.collate(encoded, target_lens,
-                                                                                                   beams)
+                encoded_batch, batch, beam_map, cache = self.collate(encoded, beams)
 
                 logits = []
                 updated_cache = []
-                chunks = [(encoded_batch, target_lens_batch, batch, sequences)]
+                chunks = [(encoded_batch, batch)]
                 while chunks:
                     try:
-                        encoded_batch, target_lens_batch, batch, sequences = chunks.pop()
-                        result = self.model(encoded_batch, batch, cache=cache, target_lens=target_lens_batch,
-                                            sequences=sequences)
+                        encoded_batch, batch = chunks.pop()
+                        result = self.model(encoded_batch, batch, cache=cache)
 
                         new_cache = result.get('cache')
                         # print("new_cache", len(new_cache))
@@ -252,9 +244,7 @@ class ProbeBeamSearchDecoder(object):
                             # current batch into two chunks and try again.
                             chunks.extend(zip(
                                 utils.split_or_chunk(encoded_batch, 2),
-                                utils.split_or_chunk(target_lens_batch, 2),
-                                utils.split_or_chunk(batch, 2),
-                                utils.split_or_chunk(sequences, 2)
+                                utils.split_or_chunk(batch, 2)
                             ))
 
                             # Additionally clear the cache in case the issue is related to allocator
@@ -269,3 +259,4 @@ class ProbeBeamSearchDecoder(object):
             return {'beams': beams,
                     'decoder_attn_weights_tensors': decoder_attn_weights_tensors,
                     'enc_dec_attn_weights_tensors': enc_dec_attn_weights_tensors}
+
