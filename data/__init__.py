@@ -14,3 +14,4 @@ DATASETS = {
     for _annotation in TextAnnotation
     for _swap in [False, True]
 }
+

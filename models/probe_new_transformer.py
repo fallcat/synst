@@ -235,7 +235,7 @@ class TransformerDecoderLayer(nn.Module):
                 'enc_dec_attn_weights': enc_dec_attn_weights}
         else:
             return {'state': state, 'mask': mask, 'cache': cache,
-                'decoder_attn_weights': decoder_attn_weights}
+                'decoder_attn_weights': decoder_attn_weights} 
 
     _masks = threading.local()
     def mask(self, inputs):
@@ -418,7 +418,7 @@ class ProbeNewTransformer(nn.Module):
             encoder_attn_weights_list.append(encoded['encoder_attn_weights'])
 
         encoder_attn_weights_tensor = torch.stack(encoder_attn_weights_list)
-
+            
         return encoded, encoder_attn_weights_tensor
 
     def decode(self, encoded, targets, decoders=None, embedding=None, cache=None, mask=None, input_lens=None):
