@@ -164,6 +164,11 @@ class Trainer(object):
                     start_event.record()
                     nll, length = self.calculate_gradient(batch)
                     did_optimize = try_optimize(i)
+                    end_event.record()
+                    torch.cuda.synchronize()
+                    elapsed_time_ms = start_event.elapsed_time(end_event)
+                    time_profile.update(elapsed_time_ms)
+                    experiment.log_metric('elapsed_time_per_batch', elapsed_time_ms)
 
                     # record the effective number of tokens
                     num_tokens_per_update += int(sum(batch['input_lens']))
@@ -190,11 +195,7 @@ class Trainer(object):
                         length_per_update = 0
                         num_tokens_per_update = 0
 
-                    end_event.record()
-                    torch.cuda.synchronize()
-                    elapsed_time_ms = start_event.elapsed_time(end_event)
-                    time_profile.update(elapsed_time_ms)
-                    experiment.log_metric('elapsed_time_per_batch', elapsed_time_ms)
+                    
 
                 except RuntimeError as rte:
                     if 'out of memory' in str(rte):
