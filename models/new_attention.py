@@ -228,7 +228,7 @@ class NewAttention(nn.Module):
         # print("attn_type, attn_position, attn_param, attn_displacement", attn_type, attn_position, attn_param, attn_displacement)
 
         # simple indexing - fix window size 1 - implementation: saving indices
-        if False:
+        if self.attn_indexing:
 
             # omitting the branch of not having list
             attn_config = []
@@ -294,7 +294,7 @@ class NewAttention(nn.Module):
             return torch.gather(values, 2, attended_indices).transpose(2,1).contiguous().view(batch_size, -1, self.num_heads * self.projection_dim)
 
         # simple indexing - fix window size 1 - implementation: stacking values
-        if self.attn_indexing:
+        if False:
 
             # omitting the branch of not having list
             attn_config = []
