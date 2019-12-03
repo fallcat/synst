@@ -228,7 +228,7 @@ class NewAttention(nn.Module):
         # print("attn_type, attn_position, attn_param, attn_displacement", attn_type, attn_position, attn_param, attn_displacement)
 
         # simple indexing - fix window size 1 - implementation: saving indices
-        if False:
+        if self.attn_indexing:
 
             # omitting the branch of not having list
             attn_config = []
@@ -242,6 +242,8 @@ class NewAttention(nn.Module):
 
             # bs x num_heads x vlen x proj_dim
             values = values.view(batch_size, self.num_heads, values_shape[1], values_shape[2]) 
+            if key_mask is not None:
+                values.masked_fill_(key_mask[:, None, :, None], float(0))
 
             max_padding = max(attn_displacement)
             max_query_len = queries_shape[1] if decoder_position == -1 else decoder_position + 1
@@ -252,7 +254,6 @@ class NewAttention(nn.Module):
                 values = F.pad(values, (0, 0, max_padding, max_padding), "constant", 0)
             
             with torch.no_grad():
-                max_query_len = queries_shape[1] if decoder_position == -1 else decoder_position + 1
 
                 if decoder_position == -1:
                     indices_q = torch.round(torch.arange(queries_shape[1]).view(-1, 1).type_as(values) * self.word_count_ratio).long()
@@ -351,7 +352,7 @@ class NewAttention(nn.Module):
                 pdb.set_trace()
             return attended.transpose(2, 1).contiguous().view(batch_size, -1, self.num_heads * self.projection_dim)
 
-        if self.attn_indexing:
+        if False:
 
             # omitting the branch of not having list
             attn_config = []
