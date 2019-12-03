@@ -172,11 +172,12 @@ class Trainer(object):
                     torch.cuda.synchronize()
 
                     elapsed_time_ms = start_event.elapsed_time(end_event)
-                    
+
                     self.total_elapsed_time += elapsed_time_ms
                     time_profile.update(elapsed_time_ms)
                     total_time_profile.update(self.total_elapsed_time)
                     experiment.log_metric('elapsed_time_per_batch', elapsed_time_ms)
+                    experiment.log_metric('elapsed_time_total', self.total_elapsed_time)
 
                     # record the effective number of tokens
                     num_tokens_per_update += int(sum(batch['input_lens']))
