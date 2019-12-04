@@ -188,8 +188,14 @@ class WarmupLRSchedule(object):
         ''' The actual learning rate schedule '''
         # the schedule doesn't allow for step to be zero (it's raised to the negative power),
         # but the input step is zero-based so just do a max with 1
-        step = max(1, step)
-        return min(step ** -0.5, step * self.warmup_steps ** -1.5)
+
+        if step < self.warmup_steps:
+            print("step < self.warmup_steps", 1e-7 + (1e-3 - 1e-7) / self.warmup_steps * step)
+            return 1e-7 + (1e-3 - 1e-7) / self.warmup_steps * step
+        else:
+            return max(1e-3 * self.warmup_steps ** 0.5 * step ** -0.5, 1e-9)
+        # step = max(1, step)
+        # return min(step ** -0.5, step * self.warmup_steps ** -1.5)
 
 
 class DummyLRSchedule(object):
