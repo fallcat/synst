@@ -23,7 +23,7 @@ import args
 import metrics
 from actions.evaluate import Evaluator
 from data.parallel import chunked_scattering
-from models.utils import LinearLRSchedule, WarmupLRSchedule, DummyLRSchedule, checkpoint
+from models.utils import LinearLRSchedule, WarmupLRSchedule, WarmupLRSchedule2, DummyLRSchedule, checkpoint
 from utils import profile, tqdm_wrap_stdout, tqdm_unwrap_stdout
 
 
@@ -47,6 +47,13 @@ class Trainer(object):
                 self.lr_scheduler = LambdaLR(
                     self.optimizer,
                     WarmupLRSchedule(
+                        config.warmup_steps
+                    )
+                )
+            elif config.lr_scheduler == 'warmup2':
+                self.lr_scheduler = LambdaLR(
+                    self.optimizer,
+                    WarmupLRSchedule2(
                         config.warmup_steps
                     )
                 )
