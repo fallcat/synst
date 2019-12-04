@@ -269,8 +269,8 @@ class Trainer(object):
 
     def optimize(self):
         ''' Calculate an optimization step '''
-        self.lr_scheduler.step()
         self.optimizer.step()
+        self.lr_scheduler.step()
         self.optimizer.zero_grad()
 
         return self.lr_scheduler.get_lr()[0]
