@@ -42,8 +42,8 @@ class Trainer(object):
             self.model = nn.DataParallel(model.cuda())
 
         if self.config.optimizer == "adam":
-            # self.optimizer = optim.Adam(model.parameters(), config.base_lr, betas=(0.9, 0.98), eps=1e-9)
-            self.optimizer = optim.Adam(model.parameters(), 1e-7, betas=(0.9, 0.98), eps=1e-9)
+            self.optimizer = optim.Adam(model.parameters(), config.base_lr, betas=(0.9, 0.98), eps=1e-9)
+            #self.optimizer = optim.Adam(model.parameters(), 1e-7, betas=(0.9, 0.98), eps=1e-9)
             if config.lr_scheduler == 'warmup':
                 self.lr_scheduler = LambdaLR(
                     self.optimizer,
