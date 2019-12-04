@@ -1417,7 +1417,7 @@ Commit your changes first, then try again.''')
 
     args.experiment = experiment_type(
         *experiment_args,
-        project_name='transformer-attn',
+        project_name='probe-transformer',
         workspace='umass-nlp',
         disabled=not args.track,
         auto_metric_logging=False,
