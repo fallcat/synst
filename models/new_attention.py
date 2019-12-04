@@ -257,13 +257,13 @@ class NewAttention(nn.Module):
                 if decoder_position == -1:
                     indices_q = torch.round(torch.arange(queries_shape[1]).view(-1, 1).type_as(values) * self.word_count_ratio).long()
                     # indices_q[indices_q >= values_shape[1]] = values_shape[1] - 1
-                    attended_indices = torch.zeros(1, self.num_heads, queries_shape[1], 1).type_as(values).long() # 1 x num_heads x qlen x 1
+                    # attended_indices = torch.zeros(1, self.num_heads, queries_shape[1], 1).type_as(values).long() # 1 x num_heads x qlen x 1
 
                 else:
                     # pdb.set_trace()
                     indices_q = torch.round(torch.arange(decoder_position, decoder_position+1).view(-1, 1).type_as(values) * self.word_count_ratio).long()
 
-                    attended_indices = torch.zeros(1, self.num_heads, 1, 1).type_as(values).long() # 1 x num_heads x 1 x 1
+                    # attended_indices = torch.zeros(1, self.num_heads, 1, 1).type_as(values).long() # 1 x num_heads x 1 x 1
                     # indices_q[indices_q >= values_shape[1]] = values_shape[1] - 1
 
                 # if round((max_query_len - 1) * self.word_count_ratio) + 1 > values_shape[1]:
@@ -276,22 +276,22 @@ class NewAttention(nn.Module):
                     # new_values[:, :, :values.shape[2]] = values
                     # values = new_values
 
-                for i, p, in enumerate(attn_position):
-                    if p == "center":
-                        attended_indices[:, i] += max_padding + indices_q
-
-                    elif p == "left":
-                        attended_indices[:, i] += max_padding + indices_q - attn_displacement[i]
-
-                    elif p == "right":
-                        attended_indices[:, i] += max_padding + indices_q + attn_displacement[i]
-
-                    elif p == "first":
-                        attended_indices[:, i] += max_padding
-
-                    else:
-                        print("unknown position")
-                        exit(-1)
+                # for i, p, in enumerate(attn_position):
+                #     if p == "center":
+                #         attended_indices[:, i] += max_padding + indices_q
+                #
+                #     elif p == "left":
+                #         attended_indices[:, i] += max_padding + indices_q - attn_displacement[i]
+                #
+                #     elif p == "right":
+                #         attended_indices[:, i] += max_padding + indices_q + attn_displacement[i]
+                #
+                #     elif p == "first":
+                #         attended_indices[:, i] += max_padding
+                #
+                #     else:
+                #         print("unknown position")
+                #         exit(-1)
 
                 def indices_map(i, p):
                     return{
@@ -301,10 +301,10 @@ class NewAttention(nn.Module):
                         "first": max_padding
                     }[p]
 
-                attended_indices2 = torch.stack([indices_map(i, p).view(1, indices_q.shape[0], 1)
+                attended_indices = torch.stack([indices_map(i, p).view(1, indices_q.shape[0], 1)
                                                 for i, p in enumerate(attn_position)], dim=1)
 
-                print("same attended_indices", attended_indices == attended_indices2)
+                # print("same attended_indices", attended_indices == attended_indices2)
 
                 if decoder_position == -1:
                     # bs x nh x qlen x proj_dim
