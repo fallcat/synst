@@ -180,7 +180,7 @@ class WarmupLRSchedule(object):
     This needs to be a top-level class in order to pickle it, even though a nested function would
     otherwise work.
     '''
-    def __init__(self, warmup_steps=4000, initial_lr, warmup_end_lr):
+    def __init__(self, warmup_steps, initial_lr, warmup_end_lr):
         ''' Initialize the learning rate schedule '''
         self.warmup_steps = warmup_steps
         self.warmup_end_lr = warmup_end_lr
