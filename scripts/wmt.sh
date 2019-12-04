@@ -1,19 +1,19 @@
 #!/bin/bash
 #
-#SBATCH --job-name=wmt12
+#SBATCH --job-name=wmt15
 #SBATCH --partition=1080ti-long
 #SBATCH --gres=gpu:8
 #SBATCH --ntasks-per-node=24
 #SBATCH --mem=200GB
 #SBATCH -d singleton
 #SBATCH --open-mode append
-#SBATCH -o /mnt/nfs/work1/miyyer/wyou/synst/experiments/wmt12/output_train.txt
+#SBATCH -o /mnt/nfs/work1/miyyer/wyou/synst/experiments/wmt15/output_train.txt
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=wyou@cs.umass.edu
 
 BASE_PATH=/mnt/nfs/work1/miyyer
 PROJECT_PATH=$BASE_PATH/wyou/synst
-EXPERIMENT_PATH=$PROJECT_PATH/experiments/wmt12
+EXPERIMENT_PATH=$PROJECT_PATH/experiments/wmt15
 
 # Load in python3 and source the venv
 module load python3/3.6.6-1810
@@ -24,7 +24,9 @@ source $PROJECT_PATH/../py36/bin/activate
 PYTHONPATH=$BASE_PATH/wyou/py36/lib/python3.6/site-packages/:$PYTHONPATH
 
 env $(cat ~/.comet.ml | xargs) python main.py --track -b 3175 --dataset wmt_en_de --span 1 \
-  --model new_transformer --attn-param 2 --attn-type uniform uniform uniform uniform learned learned learned learned --attn-position last --attn-displacement 1 --embedding-size 512 --hidden-dim 2048 --num-heads 8 --num-layers 6 \
+  --model new_transformer --attn-param 1 --attn-type normal --attn-position left right --attn-weights 0 --attn-displacement 1 --embedding-size 512 --hidden-dim 2048 --num-heads 8 --num-layers 6 --attn-threshold 0.3 \
+  --dec-attn-param 1 --dec-attn-type normal --dec-attn-position left center --dec-attn-weights 0 --dec-attn-displacement 1 --dec-attn-threshold 0.3 \
+  --enc-dec-attn-param 1 --enc-dec-attn-type normal --enc-dec-attn-position left center right first --enc-dec-attn-score 1 --enc-dec-attn-displacement 1 --enc-dec-attn-threshold 0.3 \
   -d /mnt/nfs/work1/miyyer/wyou/wmt -p /mnt/nfs/work1/miyyer/wyou/wmt -v train \
   --checkpoint-interval 1200 --accumulate 2 --checkpoint-directory $EXPERIMENT_PATH
 
