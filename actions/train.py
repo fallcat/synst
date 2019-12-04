@@ -37,7 +37,6 @@ class Trainer(object):
         self.dataloader = dataloader
         self.validation_dataloader = dataloader
         self.last_checkpoint_time = time.time()
-        self.total_elapsed_time = 0
 
         if 'cuda' in device.type:
             self.model = nn.DataParallel(model.cuda())
@@ -100,8 +99,8 @@ class Trainer(object):
         self.metric_store.add(metrics.Metric('nll', metrics.format_float, max_history=1000))
         self.metric_store.add(metrics.Metric('lr', metrics.format_scientific, 'g', max_history=1))
         self.metric_store.add(metrics.Metric('num_tok', metrics.format_int, 'a', max_history=1000))
-        self.metric_store.add(metrics.Metric('time_per_batch', metrics.format_float, 'g', max_history=100000))
-        self.metric_store.add(metrics.Metric('time_total', metrics.format_float, 'g', max_history=1))
+        # self.metric_store.add(metrics.Metric('time_per_batch', metrics.format_float, 'g', max_history=100000))
+        # self.metric_store.add(metrics.Metric('time_total', metrics.format_float, 'g', max_history=1))
 
         if self.config.early_stopping:
             self.metric_store.add(metrics.Metric('vnll', metrics.format_float, 'g'))
@@ -123,8 +122,6 @@ class Trainer(object):
         learning_rate = self.metric_store['lr']
         num_tokens = self.metric_store['num_tok']
         neg_log_likelihood = self.metric_store['nll']
-        time_profile = self.metric_store['time_per_batch']
-        total_time_profile = self.metric_store['time_total']
 
         def try_optimize(i, last=False):
             # optimize if:
@@ -163,22 +160,10 @@ class Trainer(object):
             for i, batch in enumerate(batches, 1):
                 
                 try:
-                    start_event = torch.cuda.Event(enable_timing=True)
-                    end_event = torch.cuda.Event(enable_timing=True)
-
-                    start_event.record()
+                    
                     nll, length = self.calculate_gradient(batch)
                     did_optimize = try_optimize(i)
-                    end_event.record()
-                    torch.cuda.synchronize()
-
-                    elapsed_time_ms = start_event.elapsed_time(end_event)
-
-                    self.total_elapsed_time += elapsed_time_ms
-                    time_profile.update(elapsed_time_ms)
-                    total_time_profile.update(self.total_elapsed_time)
-                    experiment.log_metric('elapsed_time_per_batch', elapsed_time_ms)
-                    experiment.log_metric('elapsed_time_total', self.total_elapsed_time)
+                    
 
                     # record the effective number of tokens
                     num_tokens_per_update += int(sum(batch['input_lens']))
@@ -198,8 +183,8 @@ class Trainer(object):
 
                         experiment.log_metric('num_tokens', num_tokens_per_update)
                         experiment.log_metric('nll', neg_log_likelihood.last_value)
-                        experiment.log_metric('max_memory_alloc', torch.cuda.max_memory_allocated()//1024//1024)
-                        experiment.log_metric('max_memory_cache', torch.cuda.max_memory_cached()//1024//1024)
+                        # experiment.log_metric('max_memory_alloc', torch.cuda.max_memory_allocated()//1024//1024)
+                        # experiment.log_metric('max_memory_cache', torch.cuda.max_memory_cached()//1024//1024)
 
                         nll_per_update = 0.
                         length_per_update = 0
