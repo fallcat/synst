@@ -180,16 +180,26 @@ class WarmupLRSchedule(object):
     This needs to be a top-level class in order to pickle it, even though a nested function would
     otherwise work.
     '''
-    def __init__(self, warmup_steps=4000):
+    def __init__(self, warmup_steps=4000, initial_lr, warmup_end_lr):
         ''' Initialize the learning rate schedule '''
         self.warmup_steps = warmup_steps
+        self.warmup_end_lr = warmup_end_lr
+        self.initial_lr = initial_lr
+        self.lr_step = (warmup_end_lr - initial_lr) / warmup_steps
+        self.decay_factor = warmup_end_lr * warmup_steps**0.5
 
     def __call__(self, step):
         ''' The actual learning rate schedule '''
         # the schedule doesn't allow for step to be zero (it's raised to the negative power),
         # but the input step is zero-based so just do a max with 1
         step = max(1, step)
-        return min(step ** -0.5, step * self.warmup_steps ** -1.5)
+
+        if step < self.warmup_steps:
+            # warm up
+            return self.initial_lr + step * self.lr_step
+        else:
+            # decay
+            return self.decay_factor * step**-0.5
 
 
 class DummyLRSchedule(object):
