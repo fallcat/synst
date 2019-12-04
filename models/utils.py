@@ -190,7 +190,7 @@ class WarmupLRSchedule(object):
         # but the input step is zero-based so just do a max with 1
 
         if step < self.warmup_steps:
-            return 1e-7 + (1e-3 - 1e-7) / self.warmup_steps
+            return 1e-7 + (1e-3 - 1e-7) / self.warmup_steps * step
         else:
             return max(1e-3 * self.warmup_steps**0.5 * step**-0.5, 1e-9)
 
