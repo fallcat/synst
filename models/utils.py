@@ -191,9 +191,9 @@ class WarmupLRSchedule(object):
 
         if step < self.warmup_steps:
             print("step < self.warmup_steps", 1e-7 + (1e-3 - 1e-7) / self.warmup_steps * step)
-            return 1e-7 + (1e-3 - 1e-7) / self.warmup_steps * step
+            return 1e-7 + (1e-3 - 1e-7) / self.warmup_steps * (step + 1)
         else:
-            return max(1e-3 * self.warmup_steps ** 0.5 * step ** -0.5, 1e-9)
+            return max(1e-3 * self.warmup_steps ** 0.5 * (step + 1) ** -0.5, 1e-9)
         # step = max(1, step)
         # return min(step ** -0.5, step * self.warmup_steps ** -1.5)
 
