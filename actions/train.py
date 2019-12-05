@@ -43,7 +43,7 @@ class Trainer(object):
 
         if self.config.optimizer == "adam":
             self.optimizer = optim.Adam(model.parameters(), config.base_lr, betas=(0.9, 0.98), eps=1e-9)
-            #self.optimizer = optim.Adam(model.parameters(), 1e-7, betas=(0.9, 0.98), eps=1e-9)
+            # self.optimizer = optim.Adam(model.parameters(), 1e-7, betas=(0.9, 0.98), eps=1e-9)
             if config.lr_scheduler == 'warmup':
                 self.lr_scheduler = LambdaLR(
                     self.optimizer,
@@ -51,6 +51,15 @@ class Trainer(object):
                         config.warmup_steps
                     )
                 )
+
+            elif config.lr_scheduler == 'warmup2':
+                self.lr_scheduler = LambdaLR(
+                    self.optimizer,
+                    WarmupLRSchedule2(
+                        config.warmup_steps
+                    )
+                )
+
             elif config.lr_scheduler == 'linear':
                 self.lr_scheduler = LambdaLR(
                     self.optimizer,
@@ -198,6 +207,7 @@ class Trainer(object):
 
                         oom.update(1)
                         experiment.log_metric('oom', oom.total)
+                        exit(-1)
                     else:
                         batches.close()
                         raise rte
@@ -270,8 +280,9 @@ class Trainer(object):
     def optimize(self):
         ''' Calculate an optimization step '''
         self.optimizer.step()
-        self.lr_scheduler.step()
         self.optimizer.zero_grad()
+        self.lr_scheduler.step()
+        
 
         return self.lr_scheduler.get_lr()[0]
 
