@@ -207,7 +207,7 @@ class Trainer(object):
 
                         oom.update(1)
                         experiment.log_metric('oom', oom.total)
-                        exit(-1)
+                        #exit(-1)
                     else:
                         batches.close()
                         raise rte
