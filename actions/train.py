@@ -20,7 +20,7 @@ from torch.optim.lr_scheduler import LambdaLR, ExponentialLR
 from tqdm import tqdm
 
 import args
-import metrics, WarmupLRSchedule2,
+import metrics
 from actions.evaluate import Evaluator
 from data.parallel import chunked_scattering
 from models.utils import LinearLRSchedule, WarmupLRSchedule, WarmupLRSchedule2, DummyLRSchedule, checkpoint
