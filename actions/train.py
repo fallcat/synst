@@ -20,10 +20,10 @@ from torch.optim.lr_scheduler import LambdaLR, ExponentialLR
 from tqdm import tqdm
 
 import args
-import metrics
+import metrics, WarmupLRSchedule2,
 from actions.evaluate import Evaluator
 from data.parallel import chunked_scattering
-from models.utils import LinearLRSchedule, WarmupLRSchedule, DummyLRSchedule, checkpoint
+from models.utils import LinearLRSchedule, WarmupLRSchedule, WarmupLRSchedule2, DummyLRSchedule, checkpoint
 from utils import profile, tqdm_wrap_stdout, tqdm_unwrap_stdout
 
 
@@ -207,7 +207,7 @@ class Trainer(object):
 
                         oom.update(1)
                         experiment.log_metric('oom', oom.total)
-                        #exit(-1)
+                        exit(-1)
                     else:
                         batches.close()
                         raise rte
