@@ -734,6 +734,13 @@ def add_train_args(parser):
         help='For the linear annealing schedule'
     )
     group.add_argument(
+        '--peak-learning-rate',
+        dest='peak_lr',
+        type=float,
+        default=1e-3,
+        help='For the linear annealing schedule'
+    )
+    group.add_argument(
         '--learning-rate-scheduler',
         dest='lr_scheduler',
         type=str,

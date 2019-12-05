@@ -54,7 +54,10 @@ class Trainer(object):
                 self.lr_scheduler = LambdaLR(
                     self.optimizer,
                     WarmupLRSchedule2(
-                        config.warmup_steps
+                        initial_lr=config.base_lr,
+                        peak_lr=config.peak_lr,
+                        final_lr=config.final_lr,
+                        warmup_steps=config.warmup_steps
                     )
                 )
             elif config.lr_scheduler == 'linear':
