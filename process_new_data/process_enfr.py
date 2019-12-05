@@ -77,7 +77,7 @@ def binarize(fold, vocab):
 	"""
 	tgt_path = os.path.join(SAVE_PATH, f'{fold}.tok.bpe.32000.fr')
 	src_path = os.path.join(SAVE_PATH, f'{fold}.tok.bpe.32000.en')
-	out_path = os.path.join(SAVE_PATH, f'{fold}.tok.bpe.bin')
+	out_path = os.path.join(SAVE_PATH, f'{fold}.tok.bpe.32000.bin')
 
 	with open(src_path, 'r') as f_src, \
 			open(tgt_path, 'r') as f_tgt, \
@@ -104,5 +104,4 @@ if __name__ == "__main__":
 		binarize("train", vocab)
 		binarize("test", vocab)
 		binarize("valid", vocab)
-
 
