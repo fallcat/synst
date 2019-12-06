@@ -71,7 +71,7 @@ class TransformerEncoderLayer(nn.Module):
     def __init__(self, attn_config, num_heads, dim, hidden_dim, dropout_p=0.1):
         ''' Initialize the transformer layer '''
         super(TransformerEncoderLayer, self).__init__()
-        self.no_attn = attn_config['no_attn']
+        # self.no_attn = attn_config['no_attn']
 
         self.ffn = TransformerSublayer(
             TransformerFFN(dim, hidden_dim),
@@ -95,12 +95,12 @@ class TransformerEncoderLayer(nn.Module):
 
         # print("encoder self attention")
 
-        if not self.no_attn:
-            state = self.self_attention(
-                state,  # residual
-                state, state, state, mask,  # passed to multiheaded attention
-                layer_i=layer_i, word_embedding=word_embedding
-            )
+        # if not self.no_attn:
+        state = self.self_attention(
+            state,  # residual
+            state, state, state, mask,  # passed to multiheaded attention
+            layer_i=layer_i, word_embedding=word_embedding
+        )
 
         state = self.ffn(
             state, # residual
@@ -122,7 +122,7 @@ class TransformerDecoderLayer(nn.Module):
         self.uuid = uuid.uuid4()
 
         self.enc_dec_attn_config = enc_dec_attn_config
-        self.no_attn = dec_attn_config['no_attn']
+        # self.no_attn = dec_attn_config['no_attn']
 
         self.ffn = TransformerSublayer(
             TransformerFFN(dim, hidden_dim),
@@ -182,11 +182,10 @@ class TransformerDecoderLayer(nn.Module):
             kwargs['word_embedding'] = word_embedding
 
         # print("decoder self attention")
-        if not self.no_attn:
-            state = self.self_attention(
-                residual, # residual
-                state, state, state, **kwargs # passed to multiheaded attention
-            )
+        state = self.self_attention(
+            residual, # residual
+            state, state, state, **kwargs # passed to multiheaded attention
+        )
 
         source = sources['state']
         # print("source", source)

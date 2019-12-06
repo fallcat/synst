@@ -39,6 +39,7 @@ class NewAttention(nn.Module):
         self.half_window = int((self.attn_window - 1) / 2)
         self.attn_displacement = attn_config['attn_displacement']
         self.num_layers = attn_config['num_layers']
+        self.no_attn = attn_config['no_attn'] if 'no_attn' in attn_config else False
         self.word_count_ratio = attn_config['word_count_ratio'] if 'word_count_ratio' in attn_config else 1
         self.attn_concat = attn_config['attn_concat'] if 'attn_concat' in attn_config else 0
         if self.attn_concat in [1, 2]:
@@ -1025,8 +1026,11 @@ class NewAttention(nn.Module):
         if num_queries:
             queries = queries[:, -num_queries:]
 
-        attended = self.attention(values, keys, queries, key_mask, attention_mask, layer_i, decoder_position,
-                                  input_lens)
+        if not self.no_attn:
+            attended = self.attention(values, keys, queries, key_mask, attention_mask, layer_i, decoder_position,
+                                      input_lens)
+        else:
+            return self.output_projection(values)
 
         queries = queries.view(
             batch_size,
