@@ -1030,7 +1030,16 @@ class NewAttention(nn.Module):
             attended = self.attention(values, keys, queries, key_mask, attention_mask, layer_i, decoder_position,
                                       input_lens)
         else:
-            return self.output_projection(values)
+            return self.output_projection(values.view(
+                                                        batch_size,
+                                                        self.num_heads,
+                                                        -1,
+                                                        self.projection_dim
+                                                    ).transpose(2, 1).contiguous().view(
+                                                        batch_size,
+                                                        -1,
+                                                        self.num_heads * self.projection_dim
+                                                    ))
 
         queries = queries.view(
             batch_size,
