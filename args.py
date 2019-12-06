@@ -452,6 +452,20 @@ def add_new_transformer_args(parser):
         help="flag indicating whether use indexing(window-size=1) or not. if use, center+displacement word will be selected directly from values."
     )
 
+    group.add_argument(
+        '--enc-no-attn',
+        default=False,
+        action='store_true',
+        help="flag indicating not using attention for encoder self-attention"
+    )
+
+    group.add_argument(
+        '--dec-no-attn',
+        default=False,
+        action='store_true',
+        help="flag indicating not using attention for decoder self-attention"
+    )
+
     return group
 
 
