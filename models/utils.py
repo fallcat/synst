@@ -570,3 +570,58 @@ def save_attention(input_sentence, output_words, attentions, file_path):
     plt.savefig(file_path)
     plt.close('all')
 
+
+def init_indices_q(num_heads, max_len, device, attn_position):
+    if attn_position is not list:
+        attn_position = [attn_position]
+    if len(attn_position) < num_heads:
+        multiply = num_heads / len(attn_position)
+        attn_position = attn_position * multiply
+
+    indices_matq = torch.zeros((1, num_heads, max_len, max_len), device=device, dtype=torch.float32)
+
+    for i, p in enumerate(attn_position):
+        if p == "center":
+            indices_matq[0, i, range(max_len), range(max_len)] = 1
+        elif p == "left":
+            indices_matq[0, i, range(1, max_len), range(max_len - 1)] = 1
+        elif p == "right":
+            indices_matq[0, i, range(max_len - 1), range(1, max_len)] = 1
+
+        else:
+            print("unknown position")
+            exit(-1)
+    return indices_matq
+
+def init_attended_indices(num_heads, max_len, device, attn_position, attn_displacement):
+
+    if attn_position is not list:
+        attn_position = [attn_position]
+    if len(attn_position) < num_heads:
+        multiply = num_heads / len(attn_position)
+        attn_position = attn_position * multiply
+
+    indices_q = torch.arange(max_len, device=device, dtype=torch.long)
+    attended_indices = torch.zeros((1, num_heads, max_len, 1), device=device, dtype=torch.long)
+
+    even = [i for i in range(num_heads) if i % 2 == 0 ]
+    odd = [i for i in range(num_heads) if i % 2 != 0 ]
+
+    if attn_position[0] == 'left':
+        attended_indices[:, even] += indices_q
+
+    if attn_position[1] == 'right':
+        attended_indices[:, odd] += indices_q + 2 * attn_displacement
+    
+    if attn_position[1] == 'center':
+        attended_indices[:, odd] += indices_q + attn_displacement
+
+    if attn_position[1] == 'left':
+        attended_indices[:, odd] += indices_q
+
+    return attended_indices
+
+
+
+
+

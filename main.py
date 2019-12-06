@@ -22,17 +22,43 @@ from torch.autograd import profiler, set_detect_anomaly
 
 from args import parse_args
 from data.utils import get_dataloader
-from models.utils import restore
+from models.utils import restore, init_indices_q
 from utils import profile
 
 # import comet_ml in the top of your file
 from comet_ml import Experiment
-import pdb   
+    
 # Add the following code anywhere in your machine learning file
+
+
+encoder_indices_matq = None
+decoder_indices_matq = None
+
+encoder_attended_indices = None
+decoder_attended_indices = None
 
 def main(argv=None):
     ''' Main entry point '''
     args = parse_args(argv)
+
+    # initialize indices_matq
+    if args.action_config.max_decode_length is not None:
+        global encoder_indices_matq
+        global decoder_indices_matq
+
+        if False:
+            encoder_indices_matq = init_indices_q(args.config.model.num_heads, 
+                args.action_config.max_decode_length, args.device, args.config.model.attn_position)
+            decoder_indices_matq = init_indices_q(args.config.model.num_heads, 
+                args.action_config.max_decode_length, args.device, args.config.model.dec_attn_position)
+
+        if True:
+            encoder_attended_indices = init_attended_indices(args.config.model.num_heads, 
+                args.action_config.max_decode_length, args.device, args.config.model.attn_position,  args.config.model.attn_displacement)
+            decoder_attended_indices = init_attended_indices(args.config.model.num_heads, 
+                args.action_config.max_decode_length, args.device, args.config.model.dec_attn_position,  args.config.model.dec_attn_displacement)
+
+
     print(f'Running torch {torch.version.__version__}')
 
     profile_cuda_memory = args.config.cuda.profile_cuda_memory
@@ -44,7 +70,6 @@ def main(argv=None):
     print(dataloader.dataset.stats)
 
     model = args.model(args.config.model, dataloader.dataset)
-    #pdb.set_trace()
     action = args.action(args.action_config, model, dataloader, args.device)
     if args.action_type == 'train' and args.action_config.early_stopping:
         args.config.data.split = 'valid'
@@ -72,7 +97,6 @@ def main(argv=None):
             for module_name, module in action.modules.items()
             if module_name not in args.reset_parameters
         }
-        #pdb.set_trace()
 
         epoch, step = restore(
             args.restore,
@@ -97,3 +121,4 @@ def main(argv=None):
 
 if __name__ == '__main__':
     main()
+
