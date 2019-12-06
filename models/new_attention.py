@@ -228,7 +228,7 @@ class NewAttention(nn.Module):
         # print("attn_type, attn_position, attn_param, attn_displacement", attn_type, attn_position, attn_param, attn_displacement)
 
         # simple indexing 2 - fix window size 1 - implementation: saving indices
-        if self.attn_indexing:
+        if False:
 
             if self.which_attn == "encoder":
                 global encoder_attended_indices
@@ -343,7 +343,7 @@ class NewAttention(nn.Module):
             return attended.transpose(2, 1).contiguous().view(batch_size, -1, self.num_heads * self.projection_dim)
 
         # simple indexing 3 - fix window size 1 - implementation: stacking values
-        if False:
+        if self.attn_indexing:
             if self.which_attn == "encoder":
                 global encoder_indices_matq
                 indices_matq = encoder_indices_matq
@@ -382,7 +382,7 @@ class NewAttention(nn.Module):
                 attended = torch.bmm(indices_matq[:,:,:qlen,:qlen].expand(batch_size, self.num_heads, qlen, qlen).contiguous().view(-1, qlen, qlen), 
                                     values)
             else:
-                attended = torch.bmm(indices_matq[:,:,decoder_position,:qlen].expand(batch_size, self.num_heads, 1, :qlen).contiguous().view(-1, 1, :qlen), 
+                attended = torch.bmm(indices_matq[:,:,decoder_position,:qlen].expand(batch_size, self.num_heads, 1, qlen).contiguous().view(-1, 1, qlen), 
                                     values)
           
             return attended.view(batch_size, self.num_heads, -1, self.projection_dim).transpose(2,1).contiguous().view(batch_size, -1, self.embed_dim)
