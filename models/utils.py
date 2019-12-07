@@ -607,6 +607,7 @@ def init_attended_indices(num_heads, max_len, device, attn_position, attn_displa
 
     indices_q = torch.arange(max_len, device=device, dtype=torch.long).view(-1, 1)
     attended_indices = torch.zeros((1, num_heads, max_len, 1), device=device, dtype=torch.long)
+    offset = max(attn_displacement)
 
     even = [i for i in range(num_heads) if i % 2 == 0 ]
     odd = [i for i in range(num_heads) if i % 2 != 0 ]
@@ -617,10 +618,10 @@ def init_attended_indices(num_heads, max_len, device, attn_position, attn_displa
         attended_indices[:, even] += indices_q
 
     if attn_position[1] == 'right':
-        attended_indices[:, odd] += indices_q + 2 * attn_displacement
+        attended_indices[:, odd] += indices_q + 2 * offset
     
     if attn_position[1] == 'center':
-        attended_indices[:, odd] += indices_q + attn_displacement
+        attended_indices[:, odd] += indices_q + offset
 
     if attn_position[1] == 'left':
         attended_indices[:, odd] += indices_q
