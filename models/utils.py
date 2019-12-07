@@ -577,7 +577,7 @@ def save_attention(input_sentence, output_words, attentions, file_path):
 
 
 def init_indices_q(num_heads, max_len, device, attn_position):
-    if attn_position is not list:
+    if type(attn_position) is not list:
         attn_position = [attn_position]
     if len(attn_position) < num_heads:
         multiply = num_heads // len(attn_position)
@@ -599,7 +599,7 @@ def init_indices_q(num_heads, max_len, device, attn_position):
 
 def init_attended_indices(num_heads, max_len, device, attn_position, attn_displacement):
 
-    if attn_position is not list:
+    if type(attn_position) is not list:
         attn_position = [attn_position]
     if len(attn_position) < num_heads:
         multiply = num_heads // len(attn_position)
@@ -610,6 +610,8 @@ def init_attended_indices(num_heads, max_len, device, attn_position, attn_displa
 
     even = [i for i in range(num_heads) if i % 2 == 0 ]
     odd = [i for i in range(num_heads) if i % 2 != 0 ]
+
+    assert type(attn_position[0]) is str
 
     if attn_position[0] == 'left':
         attended_indices[:, even] += indices_q
