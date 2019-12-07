@@ -21,6 +21,11 @@ from utils.probe_beam_search import ProbeBeamSearchDecoder
 MODEL_STATS = ['encoder_stats', 'decoder_stats', 'enc_dec_stats']
 STATS_TYPES = ['entropies', 'argmax_probabilities', 'argmax_distances', 'abs_argmax_distances']
 
+encoder_indices_matq = None
+decoder_indices_matq = None
+
+encoder_attended_indices = None
+decoder_attended_indices = None
 
 def restore(path, modules, num_checkpoints=1, map_location=None, strict=True):
     '''

@@ -23,7 +23,7 @@ from torch.autograd import profiler, set_detect_anomaly
 from args import parse_args
 from data.utils import get_dataloader
 from models.utils import restore, init_indices_q
-from utils import profile
+from utils import profile, encoder_indices_matq, decoder_indices_matq, encoder_attended_indices, decoder_attended_indices
 
 # import comet_ml in the top of your file
 from comet_ml import Experiment
@@ -31,17 +31,12 @@ from comet_ml import Experiment
 # Add the following code anywhere in your machine learning file
 
 
-encoder_indices_matq = None
-decoder_indices_matq = None
-
-encoder_attended_indices = None
-decoder_attended_indices = None
-
 def main(argv=None):
     ''' Main entry point '''
     args = parse_args(argv)
 
     # initialize indices_matq
+
     if args.action_config.max_decode_length is not None:
         global encoder_indices_matq
         global decoder_indices_matq
