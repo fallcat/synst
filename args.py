@@ -746,7 +746,7 @@ def add_train_args(parser):
         dest='lr_scheduler',
         type=str,
         default='warmup',
-        choices=['exponential', 'warmup', 'linear'],
+        choices=['exponential', 'warmup', 'linear','warmup2'],
         help='The learning rate schedule of the optimizer'
     )
     group.add_argument(
