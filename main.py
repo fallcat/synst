@@ -22,8 +22,8 @@ from torch.autograd import profiler, set_detect_anomaly
 
 from args import parse_args
 from data.utils import get_dataloader
-from models.utils import restore, init_indices_q
-from utils import profile, encoder_indices_matq, decoder_indices_matq, encoder_attended_indices, decoder_attended_indices
+from models.utils import restore, init_indices_q, encoder_indices_matq, decoder_indices_matq, encoder_attended_indices, decoder_attended_indices
+from utils import profile
 
 # import comet_ml in the top of your file
 from comet_ml import Experiment
