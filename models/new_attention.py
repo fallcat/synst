@@ -266,7 +266,7 @@ class NewAttention(nn.Module):
                 # train all or test enc-self
                 if decoder_position == -1:
 
-                    if queries_shape[1] > attended_indices.shape[2]: # recompute
+                    if attended_indices is None or queries_shape[1] > attended_indices.shape[2]: # recompute
                         attended_indices = init_attended_indices(self.num_heads, queries_shape[1], values.device, attn_position, attn_displacement)
 
 
@@ -342,7 +342,7 @@ class NewAttention(nn.Module):
             
             return attended.transpose(2, 1).contiguous().view(batch_size, -1, self.num_heads * self.projection_dim)
 
-        # simple indexing 3 - fix window size 1 - implementation: stacking values
+        # simple indexing 3 - fix window size 1 - implementation: bmm
         if False:
             if self.which_attn == "encoder":
                 global encoder_indices_matq
