@@ -355,6 +355,16 @@ class NewAttention(nn.Module):
             bs_nh, qlen = queries_shape[0], queries_shape[1]
             # values = values.view(batch_size, num_head, -1, dim_proj)
 
+            # get attn config
+            attn_config = []
+            for attn_config_i in [attn_type, attn_position, attn_param, attn_displacement]:
+                if type(attn_config_i) is not list:
+                    attn_config.append([attn_config_i] * self.num_heads)
+                else:
+                    attn_config.append(attn_config_i)
+
+            attn_type, attn_position, attn_param, attn_displacement = attn_config
+
             # mask padding 
             if key_mask is not None:
                 # bs x num_heads x vlen x proj_dim
