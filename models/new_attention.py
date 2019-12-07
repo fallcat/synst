@@ -37,6 +37,7 @@ class NewAttention(nn.Module):
         self.attn_threshold = attn_config['attn_threshold']
         self.attn_window = attn_config['attn_window']
         self.attn_indexing = attn_config['attn_indexing']
+        self.indexing_type = attn_config['indexing_type']
         self.half_window = int((self.attn_window - 1) / 2)
         self.attn_displacement = attn_config['attn_displacement']
         self.num_layers = attn_config['num_layers']
@@ -228,7 +229,7 @@ class NewAttention(nn.Module):
         # print("attn_type, attn_position, attn_param, attn_displacement", attn_type, attn_position, attn_param, attn_displacement)
 
         # simple indexing 2 - fix window size 1 - implementation: saving indices
-        if False:
+        if self.attn_indexing and self.indexing_type == 'gather':
 
             if self.which_attn == "encoder":
                 global encoder_attended_indices
@@ -343,7 +344,7 @@ class NewAttention(nn.Module):
             return attended.transpose(2, 1).contiguous().view(batch_size, -1, self.num_heads * self.projection_dim)
 
         # simple indexing 3 - fix window size 1 - implementation: bmm
-        if self.attn_indexing:
+        if self.attn_indexing and self.indexing_type == 'bmm':
             if self.which_attn == "encoder":
                 global encoder_indices_matq
                 indices_matq = encoder_indices_matq

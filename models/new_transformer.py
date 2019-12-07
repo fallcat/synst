@@ -291,7 +291,8 @@ class NewTransformer(nn.Module):
                        'attn_bins': config.attn_bins,
                        'attn_threshold': config.attn_threshold,
                        'attn_window': config.attn_window,
-                       'attn_indexing': config.enc_attn_indexing}
+                       'attn_indexing': config.enc_attn_indexing
+                       'indexing_type': config.indexing_type}
         args = [attn_config, config.num_heads, config.embedding_size, config.hidden_dim]
         return nn.ModuleList([
             TransformerEncoderLayer(*args, **kwargs)
@@ -315,7 +316,8 @@ class NewTransformer(nn.Module):
                            'attn_bins': config.dec_attn_bins,
                            'attn_threshold': config.dec_attn_threshold,
                            'attn_window': config.dec_attn_window,
-                           'attn_indexing': config.dec_attn_indexing}
+                           'attn_indexing': config.dec_attn_indexing,
+                           'indexing_type': config.indexing_type}
         enc_dec_attn_config = {'attn_type': config.enc_dec_attn_type,
                                'attn_position': config.enc_dec_attn_position,
                                'attn_param': config.enc_dec_attn_param,
@@ -332,7 +334,8 @@ class NewTransformer(nn.Module):
                                'enc_dec_attn_num_heads': config.enc_dec_attn_num_heads,
                                'attn_threshold': config.enc_dec_attn_threshold,
                                'attn_window': config.enc_dec_attn_window,
-                               'attn_indexing': config.enc_dec_attn_indexing
+                               'attn_indexing': config.enc_dec_attn_indexing,
+                               'indexing_type': config.indexing_type
                                }
         args = [dec_attn_config, enc_dec_attn_config, config.num_heads, config.embedding_size, config.hidden_dim]
         return nn.ModuleList([

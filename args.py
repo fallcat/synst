@@ -452,6 +452,14 @@ def add_new_transformer_args(parser):
         help="flag indicating whether use indexing(window-size=1) or not. if use, center+displacement word will be selected directly from values."
     )
 
+    group.add_argument(
+        '--indexing-type',
+        type=str,
+        choices=['gather', 'bmm'],
+        default='bmm'
+    )
+
+
     return group
 
 
@@ -738,7 +746,7 @@ def add_train_args(parser):
         dest='lr_scheduler',
         type=str,
         default='warmup',
-        choices=['exponential', 'warmup', 'linear', 'warmup2'],
+        choices=['exponential', 'warmup', 'linear'],
         help='The learning rate schedule of the optimizer'
     )
     group.add_argument(
@@ -1405,7 +1413,7 @@ Commit your changes first, then try again.''')
 
     args.experiment = experiment_type(
         *experiment_args,
-        project_name='transformer-attn',
+        project_name=args.project_name,
         workspace='umass-nlp',
         disabled=not args.track,
         auto_metric_logging=False,
