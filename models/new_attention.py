@@ -11,7 +11,7 @@ from torch.nn import functional as F
 import torch.multiprocessing as mp
 
 from utils import same_tensor
-from models.utils import encoder_indices_matq, decoder_indices_matq, encoder_attended_indices, decoder_attended_indices
+from models.utils import init_indices_q, init_attended_indices, encoder_indices_matq, decoder_indices_matq, encoder_attended_indices, decoder_attended_indices
 
 class NewAttention(nn.Module):
     ''' Implement a hard-coded attention module '''
@@ -265,7 +265,6 @@ class NewAttention(nn.Module):
 
                 # train all or test enc-self
                 if decoder_position == -1:
-
                     if attended_indices is None or queries_shape[1] > attended_indices.shape[2]: # recompute
                         attended_indices = init_attended_indices(self.num_heads, queries_shape[1], values.device, attn_position, attn_displacement)
 
@@ -365,19 +364,7 @@ class NewAttention(nn.Module):
             # indices_matq
             if decoder_position == -1:
                 if indices_matq is None or indices_matq.shape[2] < qlen: # only consider self-attention
-                    indices_matq = torch.zeros((1, self.num_heads, qlen, qlen), device=values.device, dtype=torch.float32)
-
-                    for i, p in enumerate(attn_position):
-                        if p == "center":
-                            indices_matq[0, i, range(qlen), range(qlen)] = 1
-                        elif p == "left":
-                            indices_matq[0, i, range(1, qlen), range(qlen - 1)] = 1
-                        elif p == "right":
-                            indices_matq[0, i, range(qlen - 1), range(1, qlen)] = 1
-
-                        else:
-                            print("unknown position")
-                            exit(-1)
+                    indices_matq = init_indices_q(self.num_heads, qlen, values.device, attn_position)
                 # bmm
                 attended = torch.bmm(indices_matq[:,:,:qlen,:qlen].expand(batch_size, self.num_heads, qlen, qlen).contiguous().view(-1, qlen, qlen), 
                                     values)

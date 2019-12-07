@@ -22,7 +22,7 @@ from torch.autograd import profiler, set_detect_anomaly
 
 from args import parse_args
 from data.utils import get_dataloader
-from models.utils import restore, init_indices_q, encoder_indices_matq, decoder_indices_matq, encoder_attended_indices, decoder_attended_indices
+from models.utils import restore, init_indices_q, init_attended_indices, encoder_indices_matq, decoder_indices_matq, encoder_attended_indices, decoder_attended_indices
 from utils import profile
 
 # import comet_ml in the top of your file
@@ -44,13 +44,13 @@ def main(argv=None):
         global encoder_attended_indices
         global decoder_attended_indices
 
-        if False:
+        if False: # indexing-bmm
             encoder_indices_matq = init_indices_q(args.config.model.num_heads, 
                 args.action_config.max_decode_length, args.device, args.config.model.attn_position)
             decoder_indices_matq = init_indices_q(args.config.model.num_heads, 
                 args.action_config.max_decode_length, args.device, args.config.model.dec_attn_position)
 
-        if True:
+        if True: # indexing-torch gather
             encoder_attended_indices = init_attended_indices(args.config.model.num_heads, 
                 args.action_config.max_decode_length, args.device, args.config.model.attn_position,  args.config.model.attn_displacement)
             decoder_attended_indices = init_attended_indices(args.config.model.num_heads, 
