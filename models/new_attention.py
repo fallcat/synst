@@ -11,7 +11,7 @@ from torch.nn import functional as F
 import torch.multiprocessing as mp
 
 from utils import same_tensor
-from model.utils import encoder_indices_matq, decoder_indices_matq, encoder_attended_indices, decoder_attended_indices
+from models.utils import encoder_indices_matq, decoder_indices_matq, encoder_attended_indices, decoder_attended_indices
 
 class NewAttention(nn.Module):
     ''' Implement a hard-coded attention module '''
