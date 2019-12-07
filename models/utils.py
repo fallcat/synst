@@ -580,7 +580,7 @@ def init_indices_q(num_heads, max_len, device, attn_position):
     if attn_position is not list:
         attn_position = [attn_position]
     if len(attn_position) < num_heads:
-        multiply = num_heads / len(attn_position)
+        multiply = num_heads // len(attn_position)
         attn_position = attn_position * multiply
 
     indices_matq = torch.zeros((1, num_heads, max_len, max_len), device=device, dtype=torch.float32)
@@ -603,7 +603,7 @@ def init_attended_indices(num_heads, max_len, device, attn_position, attn_displa
     if attn_position is not list:
         attn_position = [attn_position]
     if len(attn_position) < num_heads:
-        multiply = num_heads / len(attn_position)
+        multiply = num_heads // len(attn_position)
         attn_position = attn_position * multiply
 
     indices_q = torch.arange(max_len, device=device, dtype=torch.long)
