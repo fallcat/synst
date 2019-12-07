@@ -44,13 +44,13 @@ def main(argv=None):
         global encoder_attended_indices
         global decoder_attended_indices
 
-        if False: # indexing-bmm
+        if True: # indexing-bmm
             encoder_indices_matq = init_indices_q(args.config.model.num_heads, 
                 args.action_config.max_decode_length, args.device, args.config.model.attn_position)
             decoder_indices_matq = init_indices_q(args.config.model.num_heads, 
                 args.action_config.max_decode_length, args.device, args.config.model.dec_attn_position)
 
-        if True: # indexing-torch gather
+        if False: # indexing-torch gather
             encoder_attended_indices = init_attended_indices(args.config.model.num_heads, 
                 args.action_config.max_decode_length, args.device, args.config.model.attn_position,  args.config.model.attn_displacement)
             decoder_attended_indices = init_attended_indices(args.config.model.num_heads, 

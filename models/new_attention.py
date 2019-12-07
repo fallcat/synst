@@ -228,7 +228,7 @@ class NewAttention(nn.Module):
         # print("attn_type, attn_position, attn_param, attn_displacement", attn_type, attn_position, attn_param, attn_displacement)
 
         # simple indexing 2 - fix window size 1 - implementation: saving indices
-        if self.attn_indexing:
+        if False:
 
             if self.which_attn == "encoder":
                 global encoder_attended_indices
@@ -343,7 +343,7 @@ class NewAttention(nn.Module):
             return attended.transpose(2, 1).contiguous().view(batch_size, -1, self.num_heads * self.projection_dim)
 
         # simple indexing 3 - fix window size 1 - implementation: bmm
-        if False:
+        if self.attn_indexing:
             if self.which_attn == "encoder":
                 global encoder_indices_matq
                 indices_matq = encoder_indices_matq
