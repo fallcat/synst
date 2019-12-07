@@ -41,6 +41,9 @@ def main(argv=None):
         global encoder_indices_matq
         global decoder_indices_matq
 
+        global encoder_attended_indices
+        global decoder_attended_indices
+
         if False:
             encoder_indices_matq = init_indices_q(args.config.model.num_heads, 
                 args.action_config.max_decode_length, args.device, args.config.model.attn_position)
