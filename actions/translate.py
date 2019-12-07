@@ -145,8 +145,8 @@ class Translator(object):
                 self.translate_all(output_file, epoch, experiment, verbose)
 
                 with open(os.path.join(self.config.output_directory, f'elapsed_time_{step}.txt'), 'w') as f:
-                    f.write('mean %0.2f std %0.2f\n' % (np.mean(self.time_profile), np.std(time_profile)))
+                    f.write('mean %0.2f std %0.2f\n' % (np.mean(self.time_profile), np.std(self.time_profile)))
                     for time in self.time_profile:
-                        f.write(time + '\n')
+                        f.write(str(time) + '\n')
 
 

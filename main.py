@@ -23,6 +23,7 @@ from torch.autograd import profiler, set_detect_anomaly
 from args import parse_args
 from data.utils import get_dataloader
 from models.utils import restore, init_indices_q, init_attended_indices, encoder_indices_matq, decoder_indices_matq, encoder_attended_indices, decoder_attended_indices
+from models.utils import init_indices
 from utils import profile
 
 # import comet_ml in the top of your file
@@ -37,25 +38,7 @@ def main(argv=None):
 
     # initialize indices_matq
 
-    if args.action_config.max_decode_length is not None:
-        global encoder_indices_matq
-        global decoder_indices_matq
-
-        global encoder_attended_indices
-        global decoder_attended_indices
-
-        if True: # indexing-bmm
-            encoder_indices_matq = init_indices_q(args.config.model.num_heads, 
-                args.action_config.max_decode_length, args.device, args.config.model.attn_position)
-            decoder_indices_matq = init_indices_q(args.config.model.num_heads, 
-                args.action_config.max_decode_length, args.device, args.config.model.dec_attn_position)
-
-        if False: # indexing-torch gather
-            encoder_attended_indices = init_attended_indices(args.config.model.num_heads, 
-                args.action_config.max_decode_length, args.device, args.config.model.attn_position,  args.config.model.attn_displacement)
-            decoder_attended_indices = init_attended_indices(args.config.model.num_heads, 
-                args.action_config.max_decode_length, args.device, args.config.model.dec_attn_position,  args.config.model.dec_attn_displacement)
-
+    init_indices(args)
 
     print(f'Running torch {torch.version.__version__}')
 

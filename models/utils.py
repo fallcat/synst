@@ -629,6 +629,28 @@ def init_attended_indices(num_heads, max_len, device, attn_position, attn_displa
     return attended_indices
 
 
+def init_indices(args):
+    if args.action_config.max_decode_length is not None:
+        global encoder_indices_matq
+        global decoder_indices_matq
 
+        global encoder_attended_indices
+        global decoder_attended_indices
+
+        print('initialize cached indicies')
+
+        if args.config.model.indexing_type == 'bmm': # indexing-bmm
+            print('init index-bmm')
+            encoder_indices_matq = init_indices_q(args.config.model.num_heads, 
+                args.action_config.max_decode_length+1, args.device, args.config.model.attn_position)
+            decoder_indices_matq = init_indices_q(args.config.model.num_heads, 
+                args.action_config.max_decode_length+1, args.device, args.config.model.dec_attn_position)
+
+        if args.config.model.indexing_type == 'gather': # indexing-torch gather
+            print('init index-gather')
+            encoder_attended_indices = init_attended_indices(args.config.model.num_heads, 
+                args.action_config.max_decode_length+1, args.device, args.config.model.attn_position,  args.config.model.attn_displacement)
+            decoder_attended_indices = init_attended_indices(args.config.model.num_heads, 
+                args.action_config.max_decode_length+1, args.device, args.config.model.dec_attn_position,  args.config.model.dec_attn_displacement)
 
 

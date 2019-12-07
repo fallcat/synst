@@ -11,7 +11,8 @@ from torch.nn import functional as F
 import torch.multiprocessing as mp
 
 from utils import same_tensor
-from models.utils import init_indices_q, init_attended_indices, encoder_indices_matq, decoder_indices_matq, encoder_attended_indices, decoder_attended_indices
+import models.utils as utils
+from models.utils import init_indices_q, init_attended_indices
 
 class NewAttention(nn.Module):
     ''' Implement a hard-coded attention module '''
@@ -232,11 +233,9 @@ class NewAttention(nn.Module):
         if self.attn_indexing and self.indexing_type == 'gather':
 
             if self.which_attn == "encoder":
-                global encoder_attended_indices
-                attended_indices = encoder_attended_indices
+                attended_indices = utils.encoder_attended_indices
             else:
-                global decoder_attended_indices
-                attended_indices = decoder_attended_indices
+                attended_indices = utils.decoder_attended_indices
 
             # get attn config
             attn_config = []
@@ -264,12 +263,18 @@ class NewAttention(nn.Module):
             
             with torch.no_grad():
 
-                # train all or test enc-self
-                if decoder_position == -1:
-                    if attended_indices is None or queries_shape[1] > attended_indices.shape[2]: # recompute
-                        del attended_indices
-                        attended_indices = init_attended_indices(self.num_heads, queries_shape[1], values.device, attn_position, attn_displacement)
-
+                # recompute attended indices
+                # if decoder_position == -1:
+                if attended_indices is None or queries_shape[1] > attended_indices.shape[2] or decoder_position >= attended_indices.shape[2]: # recompute
+                    print("recompute!")
+                    if self.which_attn == "encoder":
+                        utils.encoder_attended_indices = init_attended_indices(self.num_heads, max(queries_shape[1], decoder_position+1), 
+                                                                                values.device, attn_position, attn_displacement)
+                        attended_indices = utils.encoder_attended_indices
+                    else:
+                        utils.decoder_attended_indices = init_attended_indices(self.num_heads, max(queries_shape[1], decoder_position+1), 
+                                                                                values.device, attn_position, attn_displacement)
+                        attended_indices = utils.decoder_attended_indices
 
             if decoder_position == -1:
                 # bs x nh x qlen x proj_dim
@@ -279,9 +284,12 @@ class NewAttention(nn.Module):
 
             else:
                 # bs x nh x 1 x proj_dim
-                return torch.gather(values, 2, attended_indices[:, :, decoder_position:decoder_position+1].expand(
+                try:
+                    return torch.gather(values, 2, attended_indices[:, :, decoder_position:decoder_position+1].expand(
                             batch_size, self.num_heads, queries_shape[1], self.projection_dim)
                             ).transpose(2,1).contiguous().view(batch_size, -1, self.num_heads * self.projection_dim)
+                except:
+                    pdb.set_trace()
 
         # simple indexing - fix window size 1 - implementation: stacking values
         if False:
@@ -346,11 +354,9 @@ class NewAttention(nn.Module):
         # simple indexing 3 - fix window size 1 - implementation: bmm
         if self.attn_indexing and self.indexing_type == 'bmm':
             if self.which_attn == "encoder":
-                global encoder_indices_matq
-                indices_matq = encoder_indices_matq
+                indices_matq = utils.encoder_indices_matq
             else:
-                global decoder_indices_matq
-                indices_matq = decoder_indices_matq
+                indices_matq = utils.decoder_indices_matq
 
             bs_nh, qlen = queries_shape[0], queries_shape[1]
             # values = values.view(batch_size, num_head, -1, dim_proj)
@@ -373,16 +379,22 @@ class NewAttention(nn.Module):
                 values = values.view(values_shape)
 
 
-            # indices_matq
+            # recompute indices matq
+            if indices_matq is None or indices_matq.shape[2] < qlen or indices_matq.shape[2] <= decoder_position: # only consider self-attention
+                if self.which_attn == "encoder":
+                    utils.encoder_indices_matq = init_indices_q(self.num_heads, max(qlen, decoder_position+1), values.device, attn_position)
+                    indices_matq = utils.encoder_indices_matq
+                else:
+                    utils.decoder_indices_matq = init_indices_q(self.num_heads, max(qlen, decoder_position+1), values.device, attn_position)
+                    indices_matq = utils.decoder_indices_matq
+
+
             if decoder_position == -1:
-                if indices_matq is None or indices_matq.shape[2] < qlen: # only consider self-attention
-                    del indices_matq
-                    indices_matq = init_indices_q(self.num_heads, qlen, values.device, attn_position)
                 # bmm
                 attended = torch.bmm(indices_matq[:,:,:qlen,:qlen].expand(batch_size, self.num_heads, qlen, qlen).contiguous().view(-1, qlen, qlen), 
                                     values)
             else:
-                attended = torch.bmm(indices_matq[:,:,decoder_position,:qlen].expand(batch_size, self.num_heads, 1, qlen).contiguous().view(-1, 1, qlen), 
+                attended = torch.bmm(indices_matq[:,:,decoder_position:decoder_position+1,:values_shape[1]].expand(batch_size, self.num_heads, 1, values_shape[1]).contiguous().view(-1, 1, qlen), 
                                     values)
           
             return attended.view(batch_size, self.num_heads, -1, self.projection_dim).transpose(2,1).contiguous().view(batch_size, -1, self.embed_dim)
