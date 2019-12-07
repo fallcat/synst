@@ -394,7 +394,7 @@ class NewAttention(nn.Module):
                 attended = torch.bmm(indices_matq[:,:,:qlen,:qlen].expand(batch_size, self.num_heads, qlen, qlen).contiguous().view(-1, qlen, qlen), 
                                     values)
             else:
-                attended = torch.bmm(indices_matq[:,:,decoder_position:decoder_position+1,:values_shape[1]].expand(batch_size, self.num_heads, 1, values_shape[1]).contiguous().view(-1, 1, qlen), 
+                attended = torch.bmm(indices_matq[:,:,decoder_position:decoder_position+1,:values_shape[1]].expand(batch_size, self.num_heads, 1, values_shape[1]).contiguous().view(-1, 1, values_shape[1]), 
                                     values)
           
             return attended.view(batch_size, self.num_heads, -1, self.projection_dim).transpose(2,1).contiguous().view(batch_size, -1, self.embed_dim)
