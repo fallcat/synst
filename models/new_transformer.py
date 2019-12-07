@@ -291,7 +291,7 @@ class NewTransformer(nn.Module):
                        'attn_bins': config.attn_bins,
                        'attn_threshold': config.attn_threshold,
                        'attn_window': config.attn_window,
-                       'attn_indexing': config.enc_attn_indexing
+                       'attn_indexing': config.enc_attn_indexing,
                        'indexing_type': config.indexing_type}
         args = [attn_config, config.num_heads, config.embedding_size, config.hidden_dim]
         return nn.ModuleList([
