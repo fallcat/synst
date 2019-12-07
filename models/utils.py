@@ -605,7 +605,7 @@ def init_attended_indices(num_heads, max_len, device, attn_position, attn_displa
         multiply = num_heads // len(attn_position)
         attn_position = attn_position * multiply
 
-    indices_q = torch.arange(max_len, device=device, dtype=torch.long)
+    indices_q = torch.arange(max_len, device=device, dtype=torch.long).view(-1, 1)
     attended_indices = torch.zeros((1, num_heads, max_len, 1), device=device, dtype=torch.long)
 
     even = [i for i in range(num_heads) if i % 2 == 0 ]
