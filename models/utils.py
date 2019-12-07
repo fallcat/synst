@@ -593,7 +593,7 @@ def init_indices_q(num_heads, max_len, device, attn_position):
         elif p == "right":
             indices_matq[0, i, range(max_len - 1), range(1, max_len)] = 1
         else:
-            print("unknown position", p)
+            print("unknown position", p, attn_position)
             exit(-1)
     return indices_matq
 
