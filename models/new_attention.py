@@ -266,6 +266,7 @@ class NewAttention(nn.Module):
                 # train all or test enc-self
                 if decoder_position == -1:
                     if attended_indices is None or queries_shape[1] > attended_indices.shape[2]: # recompute
+                        del attended_indices
                         attended_indices = init_attended_indices(self.num_heads, queries_shape[1], values.device, attn_position, attn_displacement)
 
 
@@ -364,6 +365,7 @@ class NewAttention(nn.Module):
             # indices_matq
             if decoder_position == -1:
                 if indices_matq is None or indices_matq.shape[2] < qlen: # only consider self-attention
+                    del indices_matq
                     indices_matq = init_indices_q(self.num_heads, qlen, values.device, attn_position)
                 # bmm
                 attended = torch.bmm(indices_matq[:,:,:qlen,:qlen].expand(batch_size, self.num_heads, qlen, qlen).contiguous().view(-1, qlen, qlen), 
