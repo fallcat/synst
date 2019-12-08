@@ -128,12 +128,13 @@ class Prober(object):
 
                     sequences, test_stats = self.translator.translate(batch)
 
-                    self.update_stats(test_stats, self.test_stats, self.test_count)
+                    # self.update_stats(test_stats, self.test_stats, self.test_count)
 
                     if self.config.timed:
                         continue
 
                     target_sequences = next(iter(sequences.values()))
+                    new_targets = []
                     for i, example_id in enumerate(batch['example_ids']):
                         outputs = []
                         if verbose > 1:
@@ -146,6 +147,7 @@ class Prober(object):
                             outputs.append(f'+++++++++++++++++++++++++++++\n')
                         else:
                             sequence = target_sequences[i]
+                            new_targets.append(torch.LongTensor(sequence))
                             decoded = ' '.join(self.dataset.decode(sequence, trim=not verbose))
                             outputs.append(f'{decoded}\n')
 
@@ -153,6 +155,28 @@ class Prober(object):
                             ordered_outputs.append((example_id, outputs))
                         else:
                             output_file.writelines(outputs)
+
+                    self.dataset.collate_field(batch, 'target', new_targets)
+                    result = self.model(batch)
+
+                    # stats
+                    encoder_stats = probe(result['encoder_attn_weights_tensor'])
+                    decoder_stats = probe(result['decoder_attn_weights_tensor'])
+                    enc_dec_stats = probe(result['enc_dec_attn_weights_tensor'])
+                    test_stats = {'encoder_stats': {stats_type: encoder_stats[stats_type].view(self.num_layers,
+                                                                                                self.num_heads,
+                                                                                                -1)
+                                                     for stats_type in STATS_TYPES},
+                                   'decoder_stats': {stats_type: decoder_stats[stats_type].view(self.num_layers,
+                                                                                                self.num_heads,
+                                                                                                -1)
+                                                     for stats_type in STATS_TYPES},
+                                   'enc_dec_stats': {stats_type: enc_dec_stats[stats_type].view(self.num_layers,
+                                                                                                self.num_heads,
+                                                                                                -1)
+                                                     for stats_type in STATS_TYPES}}
+
+                    self.update_stats(test_stats, self.test_stats, self.test_count)
 
             for _, outputs in sorted(ordered_outputs, key=lambda x: x[0]): # pylint:disable=consider-using-enumerate
                 output_file.writelines(outputs)
