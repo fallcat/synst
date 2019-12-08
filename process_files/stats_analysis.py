@@ -28,6 +28,7 @@ def visualize(mean, std, num_layers, num_heads, fig_path, fig_name):
     ax.autoscale_view()
 
     plt.savefig(fig_path)
+    plt.close(fig)
 
 
 splits = ['train', 'test']
