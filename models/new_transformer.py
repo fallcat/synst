@@ -205,6 +205,7 @@ class TransformerDecoderLayer(nn.Module):
         # print("decoder source attention")
 
         if hasattr(self, 'source_attention'):
+            print("in source, state", state.shape)
             state = self.source_attention(
                 state, # residual
                 source, source, state, **kwargs # passed to multiheaded attention
