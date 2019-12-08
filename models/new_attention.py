@@ -217,6 +217,7 @@ class NewAttention(nn.Module):
         # print("attn_type, attn_position, attn_param, attn_displacement", attn_type, attn_position, attn_param, attn_displacement)
 
         # simple indexing 2 - fix window size 1 - implementation: saving indices
+        
         if self.attn_indexing and self.indexing_type == 'gather':
 
             if self.which_attn == "encoder":
@@ -240,20 +241,14 @@ class NewAttention(nn.Module):
             if key_mask is not None:
                 values.masked_fill_(key_mask[:, None, :, None], float(0))
 
-            # max_padding = max(attn_displacement)
-            # max_query_len = queries_shape[1] if decoder_position == -1 else decoder_position + 1
-            # more_padding = round((max_query_len - 1) * self.word_count_ratio) + 1 - values_shape[1]
-            # if more_padding > 0:
-            #     values = F.pad(values, (0, 0, max_padding, max_padding + more_padding), "constant", 0)
-            # else:
-            #     values = F.pad(values, (0, 0, max_padding, max_padding), "constant", 0)
+            max_padding = max(attn_displacement)
+            values = F.pad(values, (0, 0, max_padding, max_padding), "constant", 0)
             
             with torch.no_grad():
 
                 # recompute attended indices
-                # if decoder_position == -1:
                 if attended_indices is None or queries_shape[1] > attended_indices.shape[2] or decoder_position >= attended_indices.shape[2]: # recompute
-                    #print("recompute!")
+                    # print("recompute!")
                     if self.which_attn == "encoder":
                         utils.encoder_attended_indices = init_attended_indices(self.num_heads, max(queries_shape[1], decoder_position+1), 
                                                                                 values.device, attn_position, attn_displacement)
@@ -263,6 +258,7 @@ class NewAttention(nn.Module):
                                                                                 values.device, attn_position, attn_displacement)
                         attended_indices = utils.decoder_attended_indices
 
+
             if decoder_position == -1:
                 # bs x nh x qlen x proj_dim
                 return torch.gather(values, 2, attended_indices[:, :, :queries_shape[1]].expand(
@@ -271,12 +267,11 @@ class NewAttention(nn.Module):
 
             else:
                 # bs x nh x 1 x proj_dim
-                try:
-                    return torch.gather(values, 2, attended_indices[:, :, decoder_position:decoder_position+1].expand(
+                return torch.gather(values, 2, attended_indices[:, :, decoder_position:decoder_position+1].expand(
                             batch_size, self.num_heads, queries_shape[1], self.projection_dim)
                             ).transpose(2,1).contiguous().view(batch_size, -1, self.num_heads * self.projection_dim)
-                except:
-                    pdb.set_trace()
+    
+
 
         # simple indexing - fix window size 1 - implementation: stacking values
         if False:
@@ -479,7 +474,7 @@ class NewAttention(nn.Module):
                 # recompute attended indices
                 # if decoder_position == -1:
                 if attended_indices is None or queries_shape[1] > attended_indices.shape[2] or decoder_position >= attended_indices.shape[2]: # recompute
-                    #print("recompute!")
+                    # print("recompute!")
                     if self.which_attn == "encoder":
                         utils.encoder_attended_indices = init_attended_indices_conv(self.num_heads, max(queries_shape[1], decoder_position+1), 
                                                                                 attended.device, attn_position, attn_displacement)

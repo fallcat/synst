@@ -615,20 +615,16 @@ def init_attended_indices(num_heads, max_len, device, attn_position, attn_displa
     assert type(attn_position[0]) is str
 
     if attn_position[0] == 'left':
-        attended_indices[:, even] += indices_q - offset
-        attended_indices[:, even, 0] = 0
+        attended_indices[:, even] += indices_q
 
     if attn_position[1] == 'right':
-        attended_indices[:, odd] += indices_q + offset
-        attended_indices[:, odd, max_len-1] = max_len-1
-
+        attended_indices[:, odd] += indices_q + 2 * offset
     
     if attn_position[1] == 'center':
-        attended_indices[:, odd] += indices_q 
+        attended_indices[:, odd] += indices_q + offset
 
     if attn_position[1] == 'left':
-        attended_indices[:, odd] += indices_q - offset
-        attended_indices[:, odd, 0] = 0
+        attended_indices[:, odd] += indices_q
 
     return attended_indices
 
