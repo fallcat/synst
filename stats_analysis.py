@@ -18,11 +18,24 @@ def visualize(mean, std, num_layers, num_heads, fig_path, fig_name):
     fig, ax = plt.subplots()
     width = 0.35
     ind = np.arange(num_layers)
+
+    def autolabel(rects):
+        """
+        Attach a text label above each bar displaying its height
+        """
+        for rect in rects:
+            height = rect.get_height()
+            ax.text(rect.get_x() + rect.get_width() / 2., 1.05 * height,
+                    '%d' % int(height),
+                    ha='center', va='bottom')
+
     p = [ax.bar(ind + width * i, mean[:, i], width, bottom=0, yerr=std[:, i]) for i in range(num_heads)]
     ax.set_title(fig_name)
     ax.set_xticks(ind + width / 2)
     ax.set_xticklabels(np.arange(1, num_layers + 1))
     ax.set_xlabel('Layer')
+    for rects in p:
+        autolabel(rects)
 
     ax.legend((pn[0] for pn in p), ("Head " + str(i) for i in range(1, num_heads + 1)))
     ax.autoscale_view()
@@ -35,7 +48,7 @@ splits = ['train', 'test']
 
 
 def main():
-    base_path = '//mnt/nfs/work1/miyyer/wyou/synst/experiments/iwslt01/'
+    base_path = 'experiments/iwslt01/'
     stats_path = 'stats_100000'
     with open(base_path + stats_path + '.pickle', 'rb') as stats_file:
         with open(base_path + stats_path + '.txt', 'wt') as output_file:
