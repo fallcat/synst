@@ -220,6 +220,8 @@ class TransformerDecoderLayer(nn.Module):
             if cached is None:
                 cache[self.uuid] = state
             else:
+                print("cached", cached.shape)
+                print("state", state.shape)
                 state = cache[self.uuid] = torch.cat((cached, state), 1)
 
         return {'state': state, 'mask': mask, 'cache': cache}
