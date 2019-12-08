@@ -168,9 +168,10 @@ class TransformerDecoderLayer(nn.Module):
         cache = inputs.get('cache')
         input_lens = inputs.get('input_lens')
 
+        decoder_position = state.shape[1] - 1
+
         if not self.no_attn:
             kwargs = {'layer_i': layer_i}
-            decoder_position = state.shape[1] - 1
             if self.causal and cache is not None:
                 # If caching, only want the last k=span sequence values. Requires no causal masking.
                 residual = state[:, -self.span:]
