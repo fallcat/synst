@@ -253,7 +253,7 @@ class NewAttention(nn.Module):
                 # recompute attended indices
                 # if decoder_position == -1:
                 if attended_indices is None or queries_shape[1] > attended_indices.shape[2] or decoder_position >= attended_indices.shape[2]: # recompute
-                    print("recompute!")
+                    #print("recompute!")
                     if self.which_attn == "encoder":
                         utils.encoder_attended_indices = init_attended_indices(self.num_heads, max(queries_shape[1], decoder_position+1), 
                                                                                 values.device, attn_position, attn_displacement)
@@ -479,7 +479,7 @@ class NewAttention(nn.Module):
                 # recompute attended indices
                 # if decoder_position == -1:
                 if attended_indices is None or queries_shape[1] > attended_indices.shape[2] or decoder_position >= attended_indices.shape[2]: # recompute
-                    print("recompute!")
+                    #print("recompute!")
                     if self.which_attn == "encoder":
                         utils.encoder_attended_indices = init_attended_indices_conv(self.num_heads, max(queries_shape[1], decoder_position+1), 
                                                                                 attended.device, attn_position, attn_displacement)
