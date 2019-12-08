@@ -205,7 +205,7 @@ class TransformerDecoderLayer(nn.Module):
         # print("decoder source attention")
 
         if hasattr(self, 'source_attention'):
-            print("in source, state", state.shape)
+            # print("in source, state", state.shape)
             state = self.source_attention(
                 state, # residual
                 source, source, state, **kwargs # passed to multiheaded attention
@@ -221,8 +221,8 @@ class TransformerDecoderLayer(nn.Module):
             if cached is None:
                 cache[self.uuid] = state
             else:
-                print("cached", cached.shape)
-                print("state", state.shape)
+                # print("cached", cached.shape)
+                # print("state", state.shape)
                 state = cache[self.uuid] = torch.cat((cached, state), 1)
 
         return {'state': state, 'mask': mask, 'cache': cache}
