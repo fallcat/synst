@@ -12,7 +12,7 @@ import torch.multiprocessing as mp
 
 from utils import same_tensor
 import models.utils as utils
-from models.utils import init_indices_q, init_attended_indices
+from models.utils import init_indices_q, init_attended_indices, init_attended_indices_conv
 
 class NewAttention(nn.Module):
     ''' Implement a hard-coded attention module '''
@@ -176,23 +176,9 @@ class NewAttention(nn.Module):
                         and (attn_configs[1] in easy_positions or set(attn_configs[1]).issubset(easy_positions)):
                     attn_type, attn_position, attn_param, attn_displacement = attn_configs
 
-                    if list not in [type(x) for x in [attn_displacement, attn_param]]:
-                        distance_diff = torch.arange(-self.half_window, self.half_window + 1, dtype=torch.float32)
-                        conv_filter = (1 / (attn_param * math.sqrt(2 * math.pi)) * torch.exp(- 1 / 2 * (distance_diff / attn_param) ** 2)).view(1, 1, -1)
-                    else:
-                        attn_config = []
-                        for attn_config_i in [attn_type, attn_position, attn_param, attn_displacement]:
-                            if type(attn_config_i) is not list:
-                                attn_config.append([attn_config_i] * self.num_heads)
-                            else:
-                                attn_config.append(attn_config_i)
-
-                        attn_type, attn_position, attn_param, attn_displacement = attn_config
-                        conv_filter = []
-                        for i in range(self.num_heads):
-                            distance_diff = torch.arange(-self.half_window, self.half_window + 1, dtype=torch.float32)
-                            conv_filter.append((1 / (attn_param[i] * math.sqrt(2 * math.pi)) * torch.exp(
-                                - 1 / 2 * (distance_diff / attn_param[i]) ** 2))).view(1, 1, -1)
+                    distance_diff = torch.arange(-self.half_window, self.half_window + 1, dtype=torch.float32, device=torch.device("cuda"))
+                    conv_filter = (1 / (attn_param * math.sqrt(2 * math.pi)) * torch.exp(- 1 / 2 * (distance_diff / attn_param) ** 2)).view(1, 1, -1)
+                    
                     if type(attn_position) is not list:
                         attn_position = [attn_position]
                     mask_conv_filters = []
@@ -208,7 +194,8 @@ class NewAttention(nn.Module):
                         else:
                             mask_conv_filter[:, :, -self.half_window - d:] = 0
                         mask_conv_filters.append(mask_conv_filter)
-                        # print("mask_conv_filters first calculated", mask_conv_filters)
+                    mask_conv_filters = torch.cat(mask_conv_filters, dim=0)
+                    # print("mask_conv_filters first calculated", mask_conv_filters)
                 else:
                     conv_filter = None
                     mask_conv_filters = None
@@ -253,13 +240,13 @@ class NewAttention(nn.Module):
             if key_mask is not None:
                 values.masked_fill_(key_mask[:, None, :, None], float(0))
 
-            max_padding = max(attn_displacement)
-            max_query_len = queries_shape[1] if decoder_position == -1 else decoder_position + 1
-            more_padding = round((max_query_len - 1) * self.word_count_ratio) + 1 - values_shape[1]
-            if more_padding > 0:
-                values = F.pad(values, (0, 0, max_padding, max_padding + more_padding), "constant", 0)
-            else:
-                values = F.pad(values, (0, 0, max_padding, max_padding), "constant", 0)
+            # max_padding = max(attn_displacement)
+            # max_query_len = queries_shape[1] if decoder_position == -1 else decoder_position + 1
+            # more_padding = round((max_query_len - 1) * self.word_count_ratio) + 1 - values_shape[1]
+            # if more_padding > 0:
+            #     values = F.pad(values, (0, 0, max_padding, max_padding + more_padding), "constant", 0)
+            # else:
+            #     values = F.pad(values, (0, 0, max_padding, max_padding), "constant", 0)
             
             with torch.no_grad():
 
@@ -462,174 +449,58 @@ class NewAttention(nn.Module):
         # old_values = values
         if conv_filter is not None:
             # print("hi")
-            if list not in [type(x) for x in [attn_param, attn_displacement]]:
-                if mask is not None:
-                    use_conv_filter = mask_conv_filters if len(mask_conv_filters) != 1 else mask_conv_filters[0]
-                else:
-                    use_conv_filter = conv_filter
-                if key_mask is not None:
-                    values = values.view(batch_size, self.num_heads, values_shape[1], values_shape[2])
-                    values.masked_fill_(key_mask[:, None, :, None], float(0))
-                    values = values.view(values_shape)
+            if mask is not None:
+                use_conv_filter = mask_conv_filters
+            else:
+                use_conv_filter = conv_filter
 
-                values = values.transpose(1, 2).contiguous().view(batch_size * self.embed_dim, 1, -1)
-                try:
-                    if type(use_conv_filter) is not list:
-                        attended = F.conv1d(values, use_conv_filter, padding=self.half_window + attn_displacement)
-                    else:
-                        attended = []
-                        for i, f in enumerate(use_conv_filter):
-                            a = F.conv1d(values.view(batch_size,
-                                                     self.num_heads,
-                                                     self.projection_dim,
-                                                     -1)[:, i].contiguous().view(batch_size * self.projection_dim,
-                                                                                 1,
-                                                                                 -1),
-                                         use_conv_filter[i], padding=self.half_window + attn_displacement)
-                            attended.append(a.view(batch_size, self.projection_dim, -1))
-                        attended = torch.stack(attended, dim=1)
-                except:
-                    if values.is_cuda:
-                        if type(use_conv_filter) is not list:
-                            use_conv_filter = use_conv_filter.cuda().type_as(values).to(values.get_device())
-                        else:
-                            use_conv_filter = [x.cuda().type_as(values).to(values.get_device()) for x in use_conv_filter]
-                    if mask is None:
-                        self.attn_configs[layer_i] = attn_configs, use_conv_filter, mask_conv_filters
-                    else:
-                        if type(use_conv_filter) is not list:
-                            self.attn_configs[layer_i] = attn_configs, conv_filter, [use_conv_filter]
-                        else:
-                            self.attn_configs[layer_i] = attn_configs, conv_filter, [use_conv_filter]
-                    if type(use_conv_filter) is not list:
-                        attended = F.conv1d(values, use_conv_filter, padding=self.half_window + attn_displacement)
-                    else:
-                        attended = []
-                        for i, f in enumerate(use_conv_filter):
-                            a = F.conv1d(values.view(batch_size,
-                                                     self.num_heads,
-                                                     self.projection_dim,
-                                                     -1)[:, i].contiguous().view(batch_size * self.projection_dim,
-                                                                                 1,
-                                                                                 -1),
-                                         use_conv_filter[i], padding=self.half_window + attn_displacement)
-                            attended.append(a.view(batch_size, self.projection_dim, -1))
+            values = values.view(batch_size, self.num_heads, values_shape[1], values_shape[2])
+            if key_mask is not None:
+                values.masked_fill_(key_mask[:, None, :, None], float(0))
 
-                        attended = torch.stack(attended, dim=1)
+            if mask is not None:
+                values = values.transpose(3,1).transpose(3,2).contiguous().view(batch_size*self.projection_dim, self.num_heads, -1)
+                attended = F.conv1d(values, use_conv_filter, padding=self.half_window + attn_displacement, groups=self.num_heads)
+                attended = attended.view(batch_size, self.projection_dim, self.num_heads, -1).transpose(1,2).transpose(2,3).contiguous()
+            else:
+                values = values.view(values_shape).transpose(1, 2).contiguous().view(batch_size * self.embed_dim, 1, -1)
+                attended = F.conv1d(values, use_conv_filter, padding=self.half_window + attn_displacement)
                 attended = attended.view(batch_size, self.num_heads,
                                          self.projection_dim,
                                          -1).transpose(2, 3).contiguous()
-                if self.word_count_ratio == 1:
-                    current_len = queries_shape[1] if decoder_position == -1 else decoder_position + 1
-                    if attended.shape[2] < current_len + 2 * attn_displacement:
-                        new_attended = values.new_zeros((batch_size,
-                                                         self.num_heads,
-                                                         current_len + 2 * attn_displacement,
-                                                         queries_shape[2]))
-                        new_attended[:, :, :attended.shape[2]] = attended
-                        attended = new_attended
 
-                    if type(attn_position) is not list:
-                        if attn_position == "center":
-                            if decoder_position == -1:
-                                conv_attended = attended[:, :, attn_displacement:queries_shape[1] + attn_displacement]
-                            else:
-                                conv_attended = attended[:, :, decoder_position + attn_displacement].unsqueeze(-1)
-                        elif attn_position == "left":
-                            if decoder_position == -1:
-                                conv_attended = attended[:, :, :queries_shape[1]]
-                            else:
-                                conv_attended = attended[:, :, decoder_position].unsqueeze(-1)
-                        elif attn_position == "right":
-                            if decoder_position == -1:
-                                conv_attended = attended[:, :, 2*attn_displacement:queries_shape[1] + 2*attn_displacement]
-                            else:
-                                conv_attended = attended[:, :, decoder_position + 2 * attn_displacement].unsqueeze(-1)
-                        else:
-                            conv_attended = attended[:, :, attn_displacement:attn_displacement+1].expand(batch_size, self.num_heads, queries_shape[1], self.projection_dim)
+            if self.which_attn == "encoder":
+                attended_indices = utils.encoder_attended_indices
+            else:
+                attended_indices = utils.decoder_attended_indices
+
+            with torch.no_grad():
+
+                # recompute attended indices
+                # if decoder_position == -1:
+                if attended_indices is None or queries_shape[1] > attended_indices.shape[2] or decoder_position >= attended_indices.shape[2]: # recompute
+                    print("recompute!")
+                    if self.which_attn == "encoder":
+                        utils.encoder_attended_indices = init_attended_indices_conv(self.num_heads, max(queries_shape[1], decoder_position+1), 
+                                                                                attended.device, attn_position, attn_displacement)
+                        attended_indices = utils.encoder_attended_indices
                     else:
-                        conv_attended = []
-                        for i, p in enumerate(attn_position):
-                            if p == "center":
-                                if decoder_position == -1:
-                                    conv_attended.append(attended[:, i,
-                                                         attn_displacement:queries_shape[1] + attn_displacement])
-                                else:
-                                    conv_attended.append(
-                                        attended[:, i, decoder_position + attn_displacement].unsqueeze(-2))
-                            elif p == "left":
-                                if decoder_position == -1:
-                                    conv_attended.append(attended[:, i, :queries_shape[1]])
-                                else:
-                                    conv_attended.append(attended[:, i, decoder_position].unsqueeze(-2))
-                            elif p == "right":
-                                if decoder_position == -1:
-                                    conv_attended.append(attended[:, i,
-                                                        2 * attn_displacement:queries_shape[1] + 2 * attn_displacement])
-                                else:
-                                    conv_attended.append(attended[:, i, decoder_position + 2 * attn_displacement].unsqueeze(-2))
-                            else:
-                                conv_attended.append(attended[:, i, attn_displacement:attn_displacement+1].expand(batch_size,
-                                                                                              queries_shape[1],
-                                                                                              self.projection_dim))
-                        conv_attended = torch.stack(conv_attended, dim=1)
-                    conv_attended = conv_attended.view(batch_size,
-                                                       self.num_heads,
-                                                       -1,
-                                                       self.projection_dim
-                                                       ).transpose(2, 1).contiguous().view(batch_size,
-                                                                                           -1,
-                                                                                           self.num_heads * self.projection_dim
-                                                                                           )
-                else:
-                    current_len = queries_shape[1] if decoder_position == -1 else decoder_position + 1
-                    if attended.shape[2] < round((current_len - 1) * self.word_count_ratio) + 1 + 2 * attn_displacement:
-                        new_attended = values.new_zeros((batch_size,
-                                                         self.num_heads,
-                                                         round(current_len * self.word_count_ratio)
-                                                         + 2 * attn_displacement,
-                                                         queries_shape[2]))
-                        new_attended[:, :, :attended.shape[2]] = attended
-                        attended = new_attended
-                    indices_q = torch.round(torch.arange(current_len,
-                                                         device=values.get_device(),
-                                                         dtype=torch.float32) * self.word_count_ratio).long()
-                    if type(attn_position) is not list:
-                        if attn_position == "center":
-                            conv_attended = attended[:, :, indices_q + attn_displacement]
-                        elif attn_position == "left":
-                            conv_attended = attended[:, :, indices_q]
-                        elif attn_position == "right":
-                            conv_attended = attended[:, :, indices_q + 2 * attn_displacement]
-                        else:
-                            conv_attended = attended[:, :, attn_displacement:attn_displacement+1].expand(batch_size, self.num_heads, current_len, self.projection_dim)
-                    else:
-                        conv_attended = []
-                        for i, p in enumerate(attn_position):
-                            if p == "center":
-                                conv_attended.append(attended[:, i, indices_q + attn_displacement])
-                            elif p == "left":
-                                conv_attended.append(attended[:, i, indices_q])
-                            elif p == "right":
-                                conv_attended.append(attended[:, i, indices_q + 2 * attn_displacement])
-                            else:
-                                conv_attended.append(attended[:, i, attn_displacement:attn_displacement+1].expand(batch_size,
-                                                                                              current_len,
-                                                                                              self.projection_dim))
-                        conv_attended = torch.stack(conv_attended, dim=1)
+                        utils.decoder_attended_indices = init_attended_indices_conv(self.num_heads, max(queries_shape[1], decoder_position+1), 
+                                                                                attended.device, attn_position, attn_displacement)
+                        attended_indices = utils.decoder_attended_indices
 
-                    if decoder_position != -1:
-                        conv_attended = conv_attended[:, :, -1].unsqueeze(-2)
-                    conv_attended = conv_attended.view(batch_size,
-                                                       self.num_heads,
-                                                       -1,
-                                                       self.projection_dim
-                                                       ).transpose(2, 1).contiguous().view(batch_size,
-                                                                                           -1,
-                                                                                           self.num_heads * self.projection_dim
-                                                                                           )
+            if decoder_position == -1:
+                # bs x nh x qlen x proj_dim
+                return torch.gather(attended, 2, attended_indices[:, :, :queries_shape[1]].expand(
+                            batch_size, self.num_heads, queries_shape[1], self.projection_dim)
+                            ).transpose(2,1).contiguous().view(batch_size, -1, self.num_heads * self.projection_dim)
 
-                return conv_attended
+            else:
+                # bs x nh x 1 x proj_dim
+                return torch.gather(attended, 2, attended_indices[:, :, decoder_position:decoder_position+1].expand(
+                        batch_size, self.num_heads, queries_shape[1], self.projection_dim)
+                        ).transpose(2,1).contiguous().view(batch_size, -1, self.num_heads * self.projection_dim)
+
 
         # If we want to look at last token of the sentence, or different bins of the sentence,
         # we would need sentence length to compute the focused position. If we have input_lens,

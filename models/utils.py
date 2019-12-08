@@ -615,6 +615,41 @@ def init_attended_indices(num_heads, max_len, device, attn_position, attn_displa
     assert type(attn_position[0]) is str
 
     if attn_position[0] == 'left':
+        attended_indices[:, even] += indices_q - offset
+        attended_indices[:, even, 0] = 0
+
+    if attn_position[1] == 'right':
+        attended_indices[:, odd] += indices_q + offset
+        attended_indices[:, odd, max_len-1] = max_len-1
+
+    
+    if attn_position[1] == 'center':
+        attended_indices[:, odd] += indices_q 
+
+    if attn_position[1] == 'left':
+        attended_indices[:, odd] += indices_q - offset
+        attended_indices[:, odd, 0] = 0
+
+    return attended_indices
+
+def init_attended_indices_conv(num_heads, max_len, device, attn_position, attn_displacement):
+
+    if type(attn_position) is not list:
+        attn_position = [attn_position]
+    if len(attn_position) < num_heads:
+        multiply = num_heads // len(attn_position)
+        attn_position = attn_position * multiply
+
+    indices_q = torch.arange(max_len, device=device, dtype=torch.long).view(-1, 1)
+    attended_indices = torch.zeros((1, num_heads, max_len, 1), device=device, dtype=torch.long)
+    offset = attn_displacement
+
+    even = [i for i in range(num_heads) if i % 2 == 0 ]
+    odd = [i for i in range(num_heads) if i % 2 != 0 ]
+
+    assert type(attn_position[0]) is str
+
+    if attn_position[0] == 'left':
         attended_indices[:, even] += indices_q
 
     if attn_position[1] == 'right':
@@ -652,5 +687,15 @@ def init_indices(args):
                 args.action_config.max_decode_length+1, args.device, args.config.model.attn_position,  args.config.model.attn_displacement)
             decoder_attended_indices = init_attended_indices(args.config.model.num_heads, 
                 args.action_config.max_decode_length+1, args.device, args.config.model.dec_attn_position,  args.config.model.dec_attn_displacement)
+
+        if args.config.model.attn_indexing is False and args.config.model.attn_window > 0:
+            encoder_attended_indices = init_attended_indices_conv(args.config.model.num_heads, 
+                args.action_config.max_decode_length+1, args.device, args.config.model.attn_position,  args.config.model.attn_displacement)
+
+        if args.config.model.attn_indexing is False and args.config.model.dec_attn_window > 0:
+            decoder_attended_indices = init_attended_indices_conv(args.config.model.num_heads, 
+                args.action_config.max_decode_length+1, args.device, args.config.model.dec_attn_position,  args.config.model.dec_attn_displacement)
+
+
 
 
