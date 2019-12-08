@@ -34,13 +34,14 @@ def visualize(mean, std, num_layers, num_heads, fig_path, fig_name):
     ax.set_xticks(ind + width / 2)
     ax.set_xticklabels(np.arange(1, num_layers + 1))
     ax.set_xlabel('Layer')
+    ax.set_ylabel('Distance')
     for rects in p:
         autolabel(rects)
 
     ax.legend((pn[0] for pn in p), ("Head " + str(i) for i in range(1, num_heads + 1)))
     ax.autoscale_view()
 
-    plt.savefig(fig_path)
+    plt.savefig(fig_path, bbox_inches='tight')
     plt.close(fig)
 
 
