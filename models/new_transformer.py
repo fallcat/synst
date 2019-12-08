@@ -191,6 +191,9 @@ class TransformerDecoderLayer(nn.Module):
                 residual, # residual
                 state, state, state, **kwargs # passed to multiheaded attention
             )
+        else:
+            if self.causal and cache is not None:
+                state = state[:, -self.span:]
 
         source = sources['state']
         # print("source", source)
