@@ -200,9 +200,12 @@ class WarmupLRSchedule2(object):
     This needs to be a top-level class in order to pickle it, even though a nested function would
     otherwise work.
     '''
-    def __init__(self, warmup_steps=4000):
+    def __init__(self, initial_lr=1e-7, peak_lr=1e-3, final_lr=1e-9, warmup_steps=4000):
         ''' Initialize the learning rate schedule '''
         self.warmup_steps = warmup_steps
+        self.initial_lr = initial_lr
+        self.peak_lr = peak_lr
+        self.final_lr = final_lr
 
     def __call__(self, step):
         ''' The actual learning rate schedule '''
@@ -211,9 +214,9 @@ class WarmupLRSchedule2(object):
 
         if step < self.warmup_steps:
             # print("step < self.warmup_steps", step,  1e-7 + (1e-3 - 1e-7) / self.warmup_steps * step)
-            return 1e-7 + (1e-3 - 1e-7) / self.warmup_steps * step
+            return self.initial_lr + (self.peak_lr - self.initial_lr) / self.warmup_steps * step
         else:
-            return max(1e-3 * self.warmup_steps ** 0.5 * step ** -0.5, 1e-9)
+            return max(self.peak_lr * self.warmup_steps ** 0.5 * step ** -0.5, self.final_lr)
         # step = max(1, step)
         # return min(step ** -0.5, step * self.warmup_steps ** -1.5)
 
