@@ -190,7 +190,7 @@ class Prober(object):
     def update_stats(self, stats, self_stats, self_count):
         ''' Update stats after each batch '''
         for model_stat in stats:
-            print(stats[model_stat][STATS_TYPES[0]])
+            # print(stats[model_stat][STATS_TYPES[0]])
             current_count = stats[model_stat][STATS_TYPES[0]].shape[-1]
             old_count = self_count[model_stat]
             new_count = old_count + current_count
