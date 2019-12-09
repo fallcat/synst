@@ -135,7 +135,7 @@ class Prober(object):
                     target_sequences = next(iter(sequences.values()))
                     new_targets = []
                     for i, example_id in enumerate(batch['example_ids']):
-                        print("example_id", example_id)
+                        # print("example_id", example_id)
                         if example_id == 24:
                             print("saved")
                             train_tensors = {'encoder': result['encoder_attn_weights_tensor'].cpu().numpy().tolist(),
@@ -258,7 +258,7 @@ class Prober(object):
                 print(f'Translation timing={timing/self.config.timed}')
             else:
                 step = experiment.curr_step
-                output_filename = self.config.output_filename or f'translated_{step}.txt'
+                output_filename = self.config.output_filename or f'translated_{step}_probe.txt'
                 output_path = os.path.join(self.config.output_directory, output_filename)
                 output_file = stack.enter_context(open(output_path, 'wt'))
 
