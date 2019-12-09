@@ -181,6 +181,7 @@ class Prober(object):
                                                      for stats_type in STATS_TYPES}}
 
                     self.update_stats(test_stats, self.test_stats, self.test_count)
+                    self.save_stats(stats_file)
 
             for _, outputs in sorted(ordered_outputs, key=lambda x: x[0]): # pylint:disable=consider-using-enumerate
                 output_file.writelines(outputs)
@@ -226,8 +227,8 @@ class Prober(object):
 
     def save_stats(self, stats_file):
         ''' Save stats to file '''
-        stats = {'train_stats': self.train_stats, 'train_count': self.train_count,
-                 'test_stats': self.test_stats, 'test_count': self.test_count}
+        stats = {'train_stats': self.np_to_list(self.train_stats), 'train_count': self.train_count,
+                 'test_stats': self.np_to_list(self.test_stats), 'test_count': self.test_count}
         json.dump(stats, stats_file)
 
     def np_to_list(self, stats):
