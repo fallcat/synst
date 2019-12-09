@@ -22,6 +22,8 @@ from utils import tqdm_wrap_stdout
 
 from models.utils import MODEL_STATS, STATS_TYPES, probe
 
+import numpy as np
+
 
 class Prober(object):
     ''' An object that encapsulates model evaluation '''
@@ -42,18 +44,14 @@ class Prober(object):
             self.model = nn.DataParallel(model.cuda())
 
         # stats
-        self.train_stats = {model_stat: {stats_type: {'mean': torch.zeros((model.num_layers, model.num_heads),
-                                                                    dtype=torch.float32).to(device),
-                                                      'var': torch.zeros((model.num_layers, model.num_heads),
-                                                                    dtype=torch.float32).to(device)}
+        self.train_stats = {model_stat: {stats_type: {'mean': np.zeros((model.num_layers, model.num_heads)),
+                                                      'var': np.zeros((model.num_layers, model.num_heads))}
                                    for stats_type in STATS_TYPES}
                       for model_stat in MODEL_STATS}
         self.train_count = {model_stat: 0 for model_stat in MODEL_STATS}
 
-        self.test_stats = {model_stat: {stats_type: {'mean': torch.zeros((model.num_layers, model.num_heads),
-                                                                         dtype=torch.float32).to(device),
-                                                     'var': torch.zeros((model.num_layers, model.num_heads),
-                                                                        dtype=torch.float32).to(device)}
+        self.test_stats = {model_stat: {stats_type: {'mean': np.zeros((model.num_layers, model.num_heads)),
+                                                     'var': np.zeros((model.num_layers, model.num_heads))}
                                         for stats_type in STATS_TYPES}
                            for model_stat in MODEL_STATS}
         self.test_count = {model_stat: 0 for model_stat in MODEL_STATS}
@@ -192,7 +190,8 @@ class Prober(object):
     def update_stats(self, stats, self_stats, self_count):
         ''' Update stats after each batch '''
         for model_stat in stats:
-            current_count = stats[model_stat][STATS_TYPES[0]].size()[-1]
+            print(stats[model_stat][STATS_TYPES[0]])
+            current_count = stats[model_stat][STATS_TYPES[0]].shape[-1]
             old_count = self_count[model_stat]
             new_count = old_count + current_count
             for stat_type in stats[model_stat]:
