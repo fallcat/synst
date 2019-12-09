@@ -414,7 +414,7 @@ class ProbeNewAttention(nn.Module):
         ), attn_weights
 
     def forward(self, values, keys, queries, # pylint:disable=arguments-differ
-                key_mask=None, attention_mask=None, num_queries=0, layer_i=0, decoder_position=-1, target_lens=None,
+                key_mask=None, attention_mask=None, num_queries=0, layer_i=0, decoder_position=-1, input_lens=None,
                 original_targets=None, word_embedding=None):
         ''' Forward pass of the attention '''
         batch_size = values.shape[0]
