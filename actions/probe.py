@@ -135,7 +135,9 @@ class Prober(object):
                     target_sequences = next(iter(sequences.values()))
                     new_targets = []
                     for i, example_id in enumerate(batch['example_ids']):
-                        if example_id == "24":
+                        print("example_id", example_id)
+                        if example_id == 24:
+                            print("saved")
                             train_tensors = {'encoder': result['encoder_attn_weights_tensor'].cpu().numpy().tolist(),
                                              'decoder': result['decoder_attn_weights_tensor'].cpu().numpy().tolist(),
                                              'enc_dec': result['enc_dec_attn_weights_tensor'].cpu().numpy().tolist()}
