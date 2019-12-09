@@ -136,9 +136,9 @@ class Prober(object):
                     new_targets = []
                     for i, example_id in enumerate(batch['example_ids']):
                         if example_id == "24":
-                            train_tensors = {'encoder': result['encoder_attn_weights_tensor'].cpu().numpy(),
-                                             'decoder': result['decoder_attn_weights_tensor'].cpu().numpy(),
-                                             'enc_dec': result['enc_dec_attn_weights_tensor'].cpu().numpy()}
+                            train_tensors = {'encoder': result['encoder_attn_weights_tensor'].cpu().numpy().tolist(),
+                                             'decoder': result['decoder_attn_weights_tensor'].cpu().numpy().tolist(),
+                                             'enc_dec': result['enc_dec_attn_weights_tensor'].cpu().numpy().tolist()}
                             json.dump(train_tensors, example_file)
                         outputs = []
                         if verbose > 1:
@@ -229,6 +229,12 @@ class Prober(object):
         stats = {'train_stats': self.train_stats, 'train_count': self.train_count,
                  'test_stats': self.test_stats, 'test_count': self.test_count}
         json.dump(stats, stats_file)
+
+    def np_to_list(self, stats):
+        return {model_stat: {stats_type: {'mean': stats[model_stat][stats_type]['mean'].tolist(),
+                                   'var': stats[model_stat][stats_type]['var'].tolist()}
+                      for stats_type in STATS_TYPES}
+         for model_stat in MODEL_STATS}
 
     def __call__(self, epoch, experiment, verbose=0):
         ''' Generate from the model '''
