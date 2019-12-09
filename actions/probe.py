@@ -14,7 +14,7 @@ from contextlib import ExitStack
 
 import torch
 import torch.nn as nn
-import pickle
+import json
 from tqdm import tqdm
 
 from utils import profile
@@ -81,7 +81,7 @@ class Prober(object):
         ''' Get the padding index '''
         return self.dataset.padding_idx
 
-    def translate_all(self, output_file, stats_file, epoch, experiment, verbose=0):
+    def translate_all(self, output_file, stats_file, example_file, epoch, experiment, verbose=0):
         ''' Generate all predictions from the dataset '''
         def get_description():
             description = f'Generate #{epoch}'
@@ -111,17 +111,18 @@ class Prober(object):
                     encoder_stats = probe(result['encoder_attn_weights_tensor'])
                     decoder_stats = probe(result['decoder_attn_weights_tensor'])
                     enc_dec_stats = probe(result['enc_dec_attn_weights_tensor'])
+
                     train_stats = {'encoder_stats': {stats_type: encoder_stats[stats_type].view(self.num_layers,
                                                                                           self.num_heads,
-                                                                                          -1)
+                                                                                          -1).cpu().numpy()
                                                      for stats_type in STATS_TYPES},
                                    'decoder_stats': {stats_type: decoder_stats[stats_type].view(self.num_layers,
                                                                                                 self.num_heads,
-                                                                                                -1)
+                                                                                                -1).cpu().numpy()
                                                      for stats_type in STATS_TYPES},
                                    'enc_dec_stats': {stats_type: enc_dec_stats[stats_type].view(self.num_layers,
                                                                                                 self.num_heads,
-                                                                                                -1)
+                                                                                                -1).cpu().numpy()
                                                      for stats_type in STATS_TYPES}}
 
                     self.update_stats(train_stats, self.train_stats, self.train_count)
@@ -136,6 +137,11 @@ class Prober(object):
                     target_sequences = next(iter(sequences.values()))
                     new_targets = []
                     for i, example_id in enumerate(batch['example_ids']):
+                        if example_id == "24":
+                            train_tensors = {'encoder': result['encoder_attn_weights_tensor'].cpu().numpy(),
+                                             'decoder': result['decoder_attn_weights_tensor'].cpu().numpy(),
+                                             'enc_dec': result['enc_dec_attn_weights_tensor'].cpu().numpy()}
+                            json.dump(train_tensors, example_file)
                         outputs = []
                         if verbose > 1:
                             trim = verbose < 2
@@ -165,15 +171,15 @@ class Prober(object):
                     enc_dec_stats = probe(result['enc_dec_attn_weights_tensor'])
                     test_stats = {'encoder_stats': {stats_type: encoder_stats[stats_type].view(self.num_layers,
                                                                                                 self.num_heads,
-                                                                                                -1)
+                                                                                                -1).cpu().numpy()
                                                      for stats_type in STATS_TYPES},
                                    'decoder_stats': {stats_type: decoder_stats[stats_type].view(self.num_layers,
                                                                                                 self.num_heads,
-                                                                                                -1)
+                                                                                                -1).cpu().numpy()
                                                      for stats_type in STATS_TYPES},
                                    'enc_dec_stats': {stats_type: enc_dec_stats[stats_type].view(self.num_layers,
                                                                                                 self.num_heads,
-                                                                                                -1)
+                                                                                                -1).cpu().numpy()
                                                      for stats_type in STATS_TYPES}}
 
                     self.update_stats(test_stats, self.test_stats, self.test_count)
@@ -223,7 +229,7 @@ class Prober(object):
         ''' Save stats to file '''
         stats = {'train_stats': self.train_stats, 'train_count': self.train_count,
                  'test_stats': self.test_stats, 'test_count': self.test_count}
-        pickle.dump(stats, stats_file, protocol=pickle.HIGHEST_PROTOCOL)
+        json.dump(stats, stats_file)
 
     def __call__(self, epoch, experiment, verbose=0):
         ''' Generate from the model '''
@@ -251,10 +257,14 @@ class Prober(object):
 
                 stats_filename = self.config.stats_filename or f'stats_{step}.pickle'
                 stats_path = os.path.join(self.config.stats_directory, stats_filename)
-                stats_file = stack.enter_context(open(stats_path, 'wb'))
+                stats_file = stack.enter_context(open(stats_path, 'w'))
+
+                example_filename = f'example25_{step}.pickle'
+                example_path = os.path.join(self.config.stats_directory, example_filename)
+                example_file = stack.enter_context(open(example_path, 'w'))
 
                 if verbose:
                     print(f'Outputting to {output_path}')
                     print(f'Stats saving to {stats_path}')
 
-                self.translate_all(output_file, stats_file, epoch, experiment, verbose)
+                self.translate_all(output_file, stats_file, example_file, epoch, experiment, verbose)
