@@ -196,10 +196,10 @@ class Prober(object):
             new_count = old_count + current_count
             for stat_type in stats[model_stat]:
                 old_mean = self_stats[model_stat][stat_type]['mean']
-                current_mean = stats[model_stat][stat_type].mean(dim=-1)
-                new_mean = (old_mean * self_count[model_stat] + stats[model_stat][stat_type].sum(dim=-1)) / new_count
+                current_mean = stats[model_stat][stat_type].mean(axis=-1)
+                new_mean = (old_mean * self_count[model_stat] + stats[model_stat][stat_type].sum(axis=-1)) / new_count
                 old_var = self_stats[model_stat][stat_type]['var']
-                current_var = stats[model_stat][stat_type].var(dim=-1) # torch.sum((stats[model_stat][stat_type] - new_mean.unsqueeze(-1)) ** 2, dim=-1) / (current_count - 1)
+                current_var = stats[model_stat][stat_type].var(axis=-1) # torch.sum((stats[model_stat][stat_type] - new_mean.unsqueeze(-1)) ** 2, dim=-1) / (current_count - 1)
                 new_var = (old_count * (old_var + (old_mean - new_mean) ** 2)
                            + current_count * (current_var + (current_mean - new_mean) ** 2)) / new_count
                 self_stats[model_stat][stat_type]['mean'] = new_mean
