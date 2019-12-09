@@ -260,11 +260,11 @@ class Prober(object):
                 output_path = os.path.join(self.config.output_directory, output_filename)
                 output_file = stack.enter_context(open(output_path, 'wt'))
 
-                stats_filename = self.config.stats_filename or f'stats_{step}.pickle'
+                stats_filename = self.config.stats_filename or f'stats_{step}.json'
                 stats_path = os.path.join(self.config.stats_directory, stats_filename)
                 stats_file = stack.enter_context(open(stats_path, 'w'))
 
-                example_filename = f'example25_{step}.pickle'
+                example_filename = f'example25_{step}.json'
                 example_path = os.path.join(self.config.stats_directory, example_filename)
                 example_file = stack.enter_context(open(example_path, 'w'))
 
