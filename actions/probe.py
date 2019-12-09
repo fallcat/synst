@@ -181,7 +181,6 @@ class Prober(object):
                                                      for stats_type in STATS_TYPES}}
 
                     self.update_stats(test_stats, self.test_stats, self.test_count)
-                    self.save_stats(stats_file)
 
             for _, outputs in sorted(ordered_outputs, key=lambda x: x[0]): # pylint:disable=consider-using-enumerate
                 output_file.writelines(outputs)
