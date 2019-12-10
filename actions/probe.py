@@ -136,7 +136,7 @@ class Prober(object):
                     new_targets = []
                     for i, example_id in enumerate(batch['example_ids']):
                         # print("example_id", example_id)
-                        if example_id == 24:
+                        if example_id == 430:
                             print("saved")
                             train_tensors = {'encoder': result['encoder_attn_weights_tensor'].cpu().numpy().tolist(),
                                              'decoder': result['decoder_attn_weights_tensor'].cpu().numpy().tolist(),
@@ -266,7 +266,7 @@ class Prober(object):
                 stats_path = os.path.join(self.config.stats_directory, stats_filename)
                 stats_file = stack.enter_context(open(stats_path, 'w'))
 
-                example_filename = f'example25_{step}.json'
+                example_filename = f'example430_{step}.json'
                 example_path = os.path.join(self.config.stats_directory, example_filename)
                 example_file = stack.enter_context(open(example_path, 'w'))
 
