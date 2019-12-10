@@ -215,8 +215,8 @@ class Prober(object):
     def update_stats2(self, stats, self_stats, self_count):
         ''' Update stats after each batch '''
         for model_stat in stats:
-            for x in self.num_heads:
-                for y in self.num_layers:
+            for x in range(self.num_heads):
+                for y in range(self.num_layers):
                     print("stats[model_stat]['abs_argmax_distances']", stats[model_stat]['abs_argmax_distances'].shape)
                     self_stats[model_stat]['abs_argmax_distances'][x][y].extend(stats[model_stat]['abs_argmax_distances'][x][y].tolist())
 
