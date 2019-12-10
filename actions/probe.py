@@ -44,13 +44,13 @@ class Prober(object):
             self.model = nn.DataParallel(model.cuda())
 
         # stats
-        self.train_stats = {model_stat: {stats_type: [] # {'mean': np.zeros((model.num_layers, model.num_heads)),
+        self.train_stats = {model_stat: {stats_type: np.zeros((model.num_layers, model.num_heads)) # {'mean': np.zeros((model.num_layers, model.num_heads)),
                                                       #'var': np.zeros((model.num_layers, model.num_heads))}
                                    for stats_type in STATS_TYPES}
                       for model_stat in MODEL_STATS}
         self.train_count = {model_stat: 0 for model_stat in MODEL_STATS}
 
-        self.test_stats = {model_stat: {stats_type: [] # {'mean': np.zeros((model.num_layers, model.num_heads)),
+        self.test_stats = {model_stat: {stats_type: np.zeros((model.num_layers, model.num_heads)) # {'mean': np.zeros((model.num_layers, model.num_heads)),
                                                      #'var': np.zeros((model.num_layers, model.num_heads))}
                                         for stats_type in STATS_TYPES}
                            for model_stat in MODEL_STATS}
@@ -216,7 +216,7 @@ class Prober(object):
         ''' Update stats after each batch '''
         for model_stat in stats:
             print("stats[model_stat]['abs_argmax_distances']", stats[model_stat]['abs_argmax_distances'].shape)
-            self_stats[model_stat]['abs_argmax_distances'].extend(stats[model_stat]['abs_argmax_distances'].reshape(-1).tolist())
+            self_stats[model_stat]['abs_argmax_distances'] += stats[model_stat]['abs_argmax_distances']
 
     # def update_stats(self, stats):
     #     ''' Update stats after each batch '''
