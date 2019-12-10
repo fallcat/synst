@@ -5,7 +5,6 @@ parser = argparse.ArgumentParser(description='calculate average line len')
 parser.add_argument(
         '--file',
         type=str,
-        nargs='+',
         default='/mnt/nfs/work1/miyyer/wyou/wmt/train.tok.clean.bpe.32000.en',
         help='Names of files to select lines from'
     )
