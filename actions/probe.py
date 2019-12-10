@@ -44,14 +44,14 @@ class Prober(object):
             self.model = nn.DataParallel(model.cuda())
 
         # stats
-        self.train_stats = {model_stat: {stats_type: {'mean': np.zeros((model.num_layers, model.num_heads)),
-                                                      'var': np.zeros((model.num_layers, model.num_heads))}
+        self.train_stats = {model_stat: {stats_type: [] # {'mean': np.zeros((model.num_layers, model.num_heads)),
+                                                      #'var': np.zeros((model.num_layers, model.num_heads))}
                                    for stats_type in STATS_TYPES}
                       for model_stat in MODEL_STATS}
         self.train_count = {model_stat: 0 for model_stat in MODEL_STATS}
 
-        self.test_stats = {model_stat: {stats_type: {'mean': np.zeros((model.num_layers, model.num_heads)),
-                                                     'var': np.zeros((model.num_layers, model.num_heads))}
+        self.test_stats = {model_stat: {stats_type: [] # {'mean': np.zeros((model.num_layers, model.num_heads)),
+                                                     #'var': np.zeros((model.num_layers, model.num_heads))}
                                         for stats_type in STATS_TYPES}
                            for model_stat in MODEL_STATS}
         self.test_count = {model_stat: 0 for model_stat in MODEL_STATS}
@@ -99,6 +99,7 @@ class Prober(object):
             ordered_outputs = []
             with torch.no_grad():
                 self.model.eval()
+                count = 0
                 for batch in batches:
                     # run the data through the model
                     batches.set_description_str(get_description())
@@ -123,7 +124,7 @@ class Prober(object):
                                                                                                 -1).cpu().numpy()
                                                      for stats_type in STATS_TYPES}}
 
-                    self.update_stats(train_stats, self.train_stats, self.train_count)
+                    self.update_stats2(train_stats, self.train_stats, self.train_count)
 
                     sequences, test_stats = self.translator.translate(batch)
 
@@ -182,12 +183,15 @@ class Prober(object):
                                                                                                 -1).cpu().numpy()
                                                      for stats_type in STATS_TYPES}}
 
-                    self.update_stats(test_stats, self.test_stats, self.test_count)
+                    self.update_stats2(test_stats, self.test_stats, self.test_count)
+                    count += 1
+                    if count == 50:
+                        break
 
             for _, outputs in sorted(ordered_outputs, key=lambda x: x[0]): # pylint:disable=consider-using-enumerate
                 output_file.writelines(outputs)
 
-        self.save_stats(stats_file)
+        self.save_stats2(stats_file)
 
     def update_stats(self, stats, self_stats, self_count):
         ''' Update stats after each batch '''
@@ -207,6 +211,11 @@ class Prober(object):
                 self_stats[model_stat][stat_type]['mean'] = new_mean
                 self_stats[model_stat][stat_type]['var'] = new_var
             self_count[model_stat] = new_count
+
+    def update_stats2(self, stats, self_stats, self_count):
+        ''' Update stats after each batch '''
+        for model_stat in stats:
+            stats[model_stat]['abs_argmax_distances'].extend(self_stats[model_stat]['abs_argmax_distances'].reshape(-1).tolist())
 
     # def update_stats(self, stats):
     #     ''' Update stats after each batch '''
@@ -230,6 +239,12 @@ class Prober(object):
         ''' Save stats to file '''
         stats = {'train_stats': self.np_to_list(self.train_stats), 'train_count': self.train_count,
                  'test_stats': self.np_to_list(self.test_stats), 'test_count': self.test_count}
+        json.dump(stats, stats_file)
+
+    def save_stats2(self, stats_file):
+        ''' Save stats to file '''
+        stats = {'train_stats': [self.train_stats[model_stat]['abs_argmax_distances']  for model_stat in self.train_stats],
+                 'test_stats': [self.test_stats[model_stat]['abs_argmax_distances']  for model_stat in self.test_stats]}
         json.dump(stats, stats_file)
 
     def np_to_list(self, stats):
@@ -262,7 +277,7 @@ class Prober(object):
                 output_path = os.path.join(self.config.output_directory, output_filename)
                 output_file = stack.enter_context(open(output_path, 'wt'))
 
-                stats_filename = self.config.stats_filename or f'stats_{step}.json'
+                stats_filename = self.config.stats_filename or f'stats2_{step}.json'
                 stats_path = os.path.join(self.config.stats_directory, stats_filename)
                 stats_file = stack.enter_context(open(stats_path, 'w'))
 
