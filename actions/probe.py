@@ -215,7 +215,7 @@ class Prober(object):
     def update_stats2(self, stats, self_stats, self_count):
         ''' Update stats after each batch '''
         for model_stat in stats:
-            stats[model_stat]['abs_argmax_distances'].extend(self_stats[model_stat]['abs_argmax_distances'].reshape(-1).tolist())
+            self_stats[model_stat]['abs_argmax_distances'].extend(stats[model_stat]['abs_argmax_distances'].reshape(-1).tolist())
 
     # def update_stats(self, stats):
     #     ''' Update stats after each batch '''
