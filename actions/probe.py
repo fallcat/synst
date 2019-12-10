@@ -50,7 +50,7 @@ class Prober(object):
                       for model_stat in MODEL_STATS}
         self.train_count = {model_stat: 0 for model_stat in MODEL_STATS}
 
-        self.test_stats = {model_stat: {stats_type: np.zeros((model.num_layers, model.num_heads)) # {'mean': np.zeros((model.num_layers, model.num_heads)),
+        self.test_stats = {model_stat: {stats_type: [[[] for y in range(model.num_heads)] for x in range(model.num_layers)] # {'mean': np.zeros((model.num_layers, model.num_heads)),
                                                      #'var': np.zeros((model.num_layers, model.num_heads))}
                                         for stats_type in STATS_TYPES}
                            for model_stat in MODEL_STATS}
