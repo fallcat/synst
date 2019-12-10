@@ -44,7 +44,7 @@ class Prober(object):
             self.model = nn.DataParallel(model.cuda())
 
         # stats
-        self.train_stats = {model_stat: {stats_type: [[[] for y in model.num_heads] for x in range(model.num_layers)] # {'mean': np.zeros((model.num_layers, model.num_heads)),
+        self.train_stats = {model_stat: {stats_type: [[[] for y in range(model.num_heads)] for x in range(model.num_layers)] # {'mean': np.zeros((model.num_layers, model.num_heads)),
                                                       #'var': np.zeros((model.num_layers, model.num_heads))}
                                    for stats_type in STATS_TYPES}
                       for model_stat in MODEL_STATS}
