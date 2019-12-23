@@ -1,5 +1,5 @@
 """
-	
+
 	Dataset loading iwslt-sized en-fr en-ro en-jp dataset
 
 """
@@ -8,17 +8,18 @@ import copy
 
 from data.annotated import AnnotatedTextDataset
 
+
 class PETITEEnFrDataset(AnnotatedTextDataset):
-	NAME="petite"
-	LANGUAGE_PAIR = ('en', 'fr')
+    NAME = "petite"
+    LANGUAGE_PAIR = ('en', 'fr')
 
 
 class PETITEEnRoDataset(AnnotatedTextDataset):
-	NAME="petite"
-	LANGUAGE_PAIR = ('en', 'ro')
+    NAME = "petite"
+    LANGUAGE_PAIR = ('en', 'ro')
 
 
 class PETITEEnJpDataset(AnnotatedTextDataset):
-	NAME="petite"
-	LANGUAGE_PAIR = ('en', 'ja')
-	WORD_COUNT = (5114050, 3576290)
+    NAME = "petite"
+    LANGUAGE_PAIR = ('en', 'ja')
+    WORD_COUNT = (5114050, 3576290)

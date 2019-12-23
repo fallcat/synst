@@ -208,12 +208,9 @@ class WarmupLRSchedule2(object):
         # but the input step is zero-based so just do a max with 1
 
         if step < self.warmup_steps:
-            # print("step < self.warmup_steps", step,  1e-7 + (1e-3 - 1e-7) / self.warmup_steps * step)
             return 1e-7 + (1e-3 - 1e-7) / self.warmup_steps * step
         else:
             return max(1e-3 * self.warmup_steps ** 0.5 * step ** -0.5, 1e-9)
-        # step = max(1, step)
-        # return min(step ** -0.5, step * self.warmup_steps ** -1.5)
 
 
 class DummyLRSchedule(object):
@@ -367,7 +364,7 @@ class ProbeTranslator(object):
             else:
                 length_basis = [0] * len(batch['inputs'])
 
-            decoder = ProbeBeamSearchDecoder(
+            decoder = BeamSearchDecoder(
                 self.decoder,
                 self.eos_idx,
                 self.config,
@@ -575,7 +572,7 @@ class ProbeNewTranslator(object):
             else:
                 length_basis = [0] * len(batch['inputs'])
 
-            decoder = ProbeBeamSearchDecoder(
+            decoder = BeamSearchDecoder(
                 self.decoder,
                 self.eos_idx,
                 self.config,
@@ -593,8 +590,13 @@ class ProbeNewTranslator(object):
             #     for beam, decoder_attn_weights_tensors, enc_dec_attn_weights_tensors in decoder.decode(encoded, beams)
             # ]
 
-            decoder_results = decoder.decode(encoded, beams)
-            targets = [beam.best_hypothesis.sequence[self.span - 1:] for beam in decoder_results['beams']]
+            targets = [
+                beam.best_hypothesis.sequence[self.span - 1:]
+                for beam in decoder.decode(encoded, beams)
+            ]
+
+            # decoder_results = decoder.decode(encoded, beams)
+            # targets = [beam.best_hypothesis.sequence[self.span - 1:] for beam in decoder_results['beams']]
 
             gold_targets = []
             gold_target_lens = batch['target_lens']
@@ -611,9 +613,10 @@ class ProbeNewTranslator(object):
             return OrderedDict([
                 ('targets', targets),
                 ('gold_targets', gold_targets)
-            ]), {'encoder_attn_weights_tensor': encoder_attn_weights_tensor,
-                 'decoder_attn_weights_tensors': decoder_results['decoder_attn_weights_tensors'],
-                 'enc_dec_attn_weights_tensors': decoder_results['enc_dec_attn_weights_tensors']}
+            ])
+                 #   {'encoder_attn_weights_tensor': encoder_attn_weights_tensor,
+                 # 'decoder_attn_weights_tensors': decoder_results['decoder_attn_weights_tensors'],
+                 # 'enc_dec_attn_weights_tensors': decoder_results['enc_dec_attn_weights_tensors']}
 
 
 def get_final_state(x, mask, dim=1):
@@ -672,7 +675,7 @@ def save_attention(input_sentence, output_words, attentions, file_path):
     # Set up axes
     ax.set_xticklabels([''] + input_sentence.split(' ') +
                        ['<EOS>'], rotation=90)
-    ax.set_yticklabels([''] + output_words.split(' '))
+    ax.set_yticklabels([''] + output_words.split(' ') + ['<EOS>'])
 
     # Show label at every tick
     ax.xaxis.set_major_locator(ticker.MultipleLocator(1))

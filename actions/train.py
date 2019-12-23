@@ -199,8 +199,6 @@ class Trainer(object):
                         length_per_update = 0
                         num_tokens_per_update = 0
 
-                    
-
                 except RuntimeError as rte:
                     if 'out of memory' in str(rte):
                         torch.cuda.empty_cache()
@@ -211,7 +209,6 @@ class Trainer(object):
                     else:
                         batches.close()
                         raise rte
-
 
                 if self.should_checkpoint():
                     new_best = False
