@@ -212,7 +212,7 @@ def add_new_transformer_args(parser):
     group.add_argument(
         '--attn-window',
         type=int,
-        default=3,
+        default=-1,
         help='The window to do convolution at'
     )
     group.add_argument(
@@ -289,7 +289,7 @@ def add_new_transformer_args(parser):
     group.add_argument(
         '--dec-attn-window',
         type=int,
-        default=3,
+        default=-1,
         help='The window to do convolution at'
     )
     group.add_argument(
@@ -366,7 +366,7 @@ def add_new_transformer_args(parser):
     group.add_argument(
         '--enc-dec-attn-window',
         type=int,
-        default=3,
+        default=-1,
         help='The window to do convolution at'
     )
     group.add_argument(
@@ -450,6 +450,20 @@ def add_new_transformer_args(parser):
         type=bool,
         default=False,
         help="flag indicating whether use indexing(window-size=1) or not. if use, center+displacement word will be selected directly from values."
+    )
+
+    group.add_argument(
+        '--enc-no-attn',
+        default=False,
+        action='store_true',
+        help="flag indicating not using attention for encoder self-attention"
+    )
+
+    group.add_argument(
+        '--dec-no-attn',
+        default=False,
+        action='store_true',
+        help="flag indicating not using attention for decoder self-attention"
     )
 
     return group
@@ -734,11 +748,18 @@ def add_train_args(parser):
         help='For the linear annealing schedule'
     )
     group.add_argument(
+        '--peak-learning-rate',
+        dest='peak_lr',
+        type=float,
+        default=1e-3,
+        help='For the linear annealing schedule'
+    )
+    group.add_argument(
         '--learning-rate-scheduler',
         dest='lr_scheduler',
         type=str,
         default='warmup',
-        choices=['exponential', 'warmup', 'linear'],
+        choices=['exponential', 'warmup', 'linear', 'warmup2'],
         help='The learning rate schedule of the optimizer'
     )
     group.add_argument(
@@ -1081,20 +1102,32 @@ def add_probe_off_diagonal_args(parser):
     group.add_argument(
         '--off-diagonal-threshold-type',
         type=str,
-        default='argmax_offset',
-        choices=['argmax_offset', 'argmax_prob', 'argmax_number'],
+        default='number',
+        choices=['offset', 'prob', 'number'],
         help='The type of threshold to determine if the attention of this sentence is considered off-diagonal.'
-             'argmax_offset puts sentences whose argmax offset exceed threshold number into off-diagonal category,'
-             'argmax_prob puts sentences whose argmax prob among off diagonal words exceed threshould number into off-diagonal category,'
-             'argmax_number puts sentences whose number of argmax that is off diagonal exceed the threshold into off-diagonal category.'
+             'offset puts sentences whose argmax offset exceed threshold number into off-diagonal category,'
+             'prob puts sentences whose argmax prob among off diagonal words exceed threshould number into off-diagonal category,'
+             'number puts sentences whose number of argmax that is off diagonal exceed the threshold into off-diagonal category.'
              'Only for source attention.'
     )
     group.add_argument(
-        '--off-diagonal-threshold-num',
+        '--off-diagonal-threshold-param',
         type=float,
-        default=1,
+        default=3,
         help='The type of threshold to determine if the attention of this sentence is considered off-diagonal.'
              'Only for source attention'
+    )
+    group.add_argument(
+        '--off-diagonal-distance-threshold',
+        type=float,
+        default=2,
+        help='How far away from the diagonal do we consider it as off-diagonal'
+    )
+    group.add_argument(
+        '--off-diagonal-bins',
+        type=int,
+        default=5,
+        help='Bins for off-diagonal analysis'
     )
 
     group.set_defaults(gold_p=0)
@@ -1258,7 +1291,7 @@ def parse_args(argv=None):
 
     parser.add_argument(
         '--project-name',
-        default='probe_transformer',
+        default='probe-transformer',
         type=str,
         help='Specify where to store in comet'
     )
@@ -1338,7 +1371,7 @@ def parse_args(argv=None):
 
     probe_off_diagonal_parser = subparsers.add_parser('probe_off_diagonal', help='Probe the performance of sentences where learned attention looks off diagonal')
     groups['probe_off_diagonal'] = add_probe_off_diagonal_args(probe_off_diagonal_parser)
-    probe_new_translate_parser.set_defaults(
+    probe_off_diagonal_parser.set_defaults(
         action=ProbeOffDiagonal,
         action_type='probe_off_diagonal',
         action_config=groups['probe_off_diagonal'],
@@ -1405,7 +1438,7 @@ Commit your changes first, then try again.''')
 
     args.experiment = experiment_type(
         *experiment_args,
-        project_name='transformer-attn',
+        project_name=args.project_name,
         workspace='umass-nlp',
         disabled=not args.track,
         auto_metric_logging=False,
@@ -1459,7 +1492,7 @@ Commit your changes first, then try again.''')
     if args.action_type == 'evaluate':
         args.action_config.average_checkpoints = args.average_checkpoints
 
-    if (args.action_type == 'translate' or args.action_type == 'probe_new_translate') and args.num_devices > 1:
+    if (args.action_type in ['translate', 'probe_new_translate', 'probe_off_diagonal']) and args.num_devices > 1:
         # Caching is currently not thread-safe
         args.action_config.disable_cache = True
 

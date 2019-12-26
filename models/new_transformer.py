@@ -71,16 +71,18 @@ class TransformerEncoderLayer(nn.Module):
     def __init__(self, attn_config, num_heads, dim, hidden_dim, dropout_p=0.1):
         ''' Initialize the transformer layer '''
         super(TransformerEncoderLayer, self).__init__()
+        self.no_attn = attn_config['no_attn']
 
         self.ffn = TransformerSublayer(
             TransformerFFN(dim, hidden_dim),
             dim, dropout_p
         )
 
-        self.self_attention = TransformerSublayer(
-            NewAttention(attn_config, dim, num_heads),
-            dim, dropout_p
-        )
+        if not self.no_attn:
+            self.self_attention = TransformerSublayer(
+                NewAttention(attn_config, dim, num_heads),
+                dim, dropout_p
+            )
 
     def reset_parameters(self):
         ''' Reset the parameters of the module '''
@@ -94,11 +96,12 @@ class TransformerEncoderLayer(nn.Module):
 
         # print("encoder self attention")
 
-        state = self.self_attention(
-            state,  # residual
-            state, state, state, mask,  # passed to multiheaded attention
-            layer_i=layer_i, word_embedding=word_embedding
-        )
+        if not self.no_attn:
+            state = self.self_attention(
+                state,  # residual
+                state, state, state, mask,  # passed to multiheaded attention
+                layer_i=layer_i, word_embedding=word_embedding
+            )
 
         state = self.ffn(
             state, # residual
@@ -120,16 +123,18 @@ class TransformerDecoderLayer(nn.Module):
         self.uuid = uuid.uuid4()
 
         self.enc_dec_attn_config = enc_dec_attn_config
+        self.no_attn = dec_attn_config['no_attn']
 
         self.ffn = TransformerSublayer(
             TransformerFFN(dim, hidden_dim),
             dim, dropout_p
         )
 
-        self.self_attention = TransformerSublayer(
-            NewAttention(dec_attn_config, dim, num_heads),
-            dim, dropout_p
-        )
+        if not self.no_attn:
+            self.self_attention = TransformerSublayer(
+                NewAttention(dec_attn_config, dim, num_heads),
+                dim, dropout_p
+            )
 
         if self.enc_dec_attn_config['enc_dec_attn_layer'] == 1 or \
                 (type(self.enc_dec_attn_config['enc_dec_attn_layer'] is list) and
@@ -163,27 +168,32 @@ class TransformerDecoderLayer(nn.Module):
         cache = inputs.get('cache')
         input_lens = inputs.get('input_lens')
 
-        kwargs = {'layer_i': layer_i}
         decoder_position = state.shape[1] - 1
-        if self.causal and cache is not None:
-            # If caching, only want the last k=span sequence values. Requires no causal masking.
-            residual = state[:, -self.span:]
-            kwargs['num_queries'] = self.span
-            kwargs['decoder_position'] = decoder_position
-            kwargs['word_embedding'] = word_embedding[:, -self.span:]
+
+        if not self.no_attn:
+            kwargs = {'layer_i': layer_i}
+            if self.causal and cache is not None:
+                # If caching, only want the last k=span sequence values. Requires no causal masking.
+                residual = state[:, -self.span:]
+                kwargs['num_queries'] = self.span
+                kwargs['decoder_position'] = decoder_position
+                kwargs['word_embedding'] = word_embedding[:, -self.span:]
+            else:
+                # If not caching, use the full sequence and ensure an appropriate causal mask
+                residual = state
+                kwargs['key_mask'] = mask
+                kwargs['attention_mask'] = self.mask(state)
+                kwargs['word_embedding'] = word_embedding
+
+            # print("decoder self attention")
+
+            state = self.self_attention(
+                residual, # residual
+                state, state, state, **kwargs # passed to multiheaded attention
+            )
         else:
-            # If not caching, use the full sequence and ensure an appropriate causal mask
-            residual = state
-            kwargs['key_mask'] = mask
-            kwargs['attention_mask'] = self.mask(state)
-            kwargs['word_embedding'] = word_embedding
-
-        # print("decoder self attention")
-
-        state = self.self_attention(
-            residual, # residual
-            state, state, state, **kwargs # passed to multiheaded attention
-        )
+            if self.causal and cache is not None:
+                state = state[:, -self.span:]
 
         source = sources['state']
         # print("source", source)
@@ -198,6 +208,7 @@ class TransformerDecoderLayer(nn.Module):
         # print("decoder source attention")
 
         if hasattr(self, 'source_attention'):
+            # print("in source, state", state.shape)
             state = self.source_attention(
                 state, # residual
                 source, source, state, **kwargs # passed to multiheaded attention
@@ -213,6 +224,8 @@ class TransformerDecoderLayer(nn.Module):
             if cached is None:
                 cache[self.uuid] = state
             else:
+                # print("cached", cached.shape)
+                # print("state", state.shape)
                 state = cache[self.uuid] = torch.cat((cached, state), 1)
 
         return {'state': state, 'mask': mask, 'cache': cache}
@@ -291,7 +304,8 @@ class NewTransformer(nn.Module):
                        'attn_bins': config.attn_bins,
                        'attn_threshold': config.attn_threshold,
                        'attn_window': config.attn_window,
-                       'attn_indexing': config.enc_attn_indexing}
+                       'attn_indexing': config.enc_attn_indexing,
+                       'no_attn': config.enc_no_attn}
         args = [attn_config, config.num_heads, config.embedding_size, config.hidden_dim]
         return nn.ModuleList([
             TransformerEncoderLayer(*args, **kwargs)
@@ -315,7 +329,8 @@ class NewTransformer(nn.Module):
                            'attn_bins': config.dec_attn_bins,
                            'attn_threshold': config.dec_attn_threshold,
                            'attn_window': config.dec_attn_window,
-                           'attn_indexing': config.dec_attn_indexing}
+                           'attn_indexing': config.dec_attn_indexing,
+                           'no_attn': config.dec_no_attn}
         enc_dec_attn_config = {'attn_type': config.enc_dec_attn_type,
                                'attn_position': config.enc_dec_attn_position,
                                'attn_param': config.enc_dec_attn_param,

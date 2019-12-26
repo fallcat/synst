@@ -10,6 +10,7 @@ from __future__ import print_function
 import os
 import sys
 import timeit
+import pprint
 from contextlib import ExitStack
 
 import torch
@@ -19,6 +20,7 @@ from tqdm import tqdm
 from utils import profile
 from utils import tqdm_wrap_stdout
 from models.utils import save_attention
+from collections import defaultdict
 
 
 class ProbeOffDiagonal(object):
@@ -38,6 +40,14 @@ class ProbeOffDiagonal(object):
         self.modules = {
             'model': model
         }
+
+        # self.off_diagonal = []
+        # self.non_off_diagonal = []
+        self.number_dict = {'encoder': defaultdict(int), 'decoder': defaultdict(int)}
+        self.number_frac_dict = {'encoder': defaultdict(int), 'decoder': defaultdict(int)}
+        self.number_frac_list_dict = {'encoder': defaultdict(list), 'decoder': defaultdict(list)}
+        self.offset_dict = defaultdict(int)
+        self.prob_dict = defaultdict(int)
 
     @property
     def dataset(self):
@@ -59,7 +69,7 @@ class ProbeOffDiagonal(object):
         ''' Get the padding index '''
         return self.dataset.padding_idx
 
-    def translate_all(self, output_file, epoch, experiment, verbose=0):
+    def translate_all(self, output_file, enc_off_diagonal_output_file, dec_off_diagonal_output_file, epoch, experiment, verbose=0):
         ''' Generate all predictions from the dataset '''
         def get_description():
             description = f'Generate #{epoch}'
@@ -82,13 +92,12 @@ class ProbeOffDiagonal(object):
                 # print("in probe new translate", flush=True)
                 # run the data through the model
                 batches.set_description_str(get_description())
-                sequences, attn_weights_tensors_dict = self.translator.translate(batch)
+                sequences = self.translator.translate(batch)
 
                 if self.config.timed:
                     continue
 
                 target_sequences = next(iter(sequences.values()))
-                encoder_attn_weights_tensor = attn_weights_tensors_dict['encoder_attn_weights_tensor']
                 new_targets = []
                 output_sentences = []
                 source_sentences = []
@@ -131,7 +140,54 @@ class ProbeOffDiagonal(object):
                 # Decoder heatmap
                 # print("saving decoder heatmap")
                 for i, example_id in enumerate(batch['example_ids']):
-                    print("result['enc_dec_attn_weights_tensor']", result['enc_dec_attn_weights_tensor'].shape)
+                    # print("result.keys()", result.keys())
+                    # print("result['encoder_attn_weights_tensor']", result['encoder_attn_weights_tensor'].shape)
+                    for coder in ['encoder', 'decoder']:
+                        attn_weights_shape = result[coder + '_attn_weights_tensor'].shape
+                        attn_weights = result[coder + '_attn_weights_tensor'].view(-1,
+                                                                                  attn_weights_shape[2],
+                                                                                  attn_weights_shape[3])
+                        indices_q = torch.round(torch.arange(attn_weights_shape[2], dtype=torch.float32,
+                                                 device=attn_weights.get_device()).view(1, -1) * self.dataset.word_count_ratio)
+                        argmax_weights = torch.argmax(attn_weights, dim=2)
+                        # print("argmax_weights", argmax_weights)
+                        max_weights = torch.max(attn_weights, dim=2)[0]  #attn_weights[argmax_weights]
+                        # print("max_weights", max_weights.shape)
+                        distance = torch.abs(argmax_weights.type_as(indices_q) - indices_q)
+                        # print("attn_weights", attn_weights.shape)
+                        # print("distance", distance.shape)
+                        # print(distance)
+                        # print("distance >= threshold", (distance >= self.config.off_diagonal_distance_threshold).shape)
+                        # print(distance >= self.config.off_diagonal_distance_threshold, torch.sum(distance >= self.config.off_diagonal_distance_threshold))
+                        # print("max_weights[distance >= threshold]", max_weights[distance >= self.config.off_diagonal_distance_threshold].shape, max_weights[distance >= 1])
+
+                        max_prob = torch.max(max_weights[distance >= self.config.off_diagonal_distance_threshold])
+                        argmax_offset = torch.max(distance)
+                        number = torch.sum(distance >= self.config.off_diagonal_distance_threshold)
+                        #self.config.off_diagonal_threshold_param
+
+                        if self.config.off_diagonal_threshold_type == "number":
+                            # print("number")
+                            idx = int(torch.round(number.to(torch.float32) / float(attn_weights.shape[0] *
+                                                                               attn_weights.shape[1]) *
+                                              self.config.off_diagonal_bins).cpu().item())
+                            self.number_frac_dict[coder][idx] += 1
+                            self.number_frac_list_dict[coder][idx].append(example_id)
+                        # elif self.config.off_diagonal_threshold_type == "offset":
+                        #     print("offset")
+                        #     if argmax_offset >= self.config.off_diagonal_threshold_param:
+                        #         self.off_diagonal.append(example_id)
+                        #     else:
+                        #         self.non_off_diagonal.append(example_id)
+                        # else:  # prob
+                        #     print("prob")
+                        #     if max_prob >= self.config.off_diagonal_threshold_param:
+                        #         self.off_diagonal.append(example_id)
+                        #     else:
+                        #         self.non_off_diagonal.append(example_id)
+
+                    #self.dataset.word_count_ratio
+
                     # for j in range(result['decoder_attn_weights_tensor'].shape[0]):
                     #     for k in range(result['decoder_attn_weights_tensor'].shape[1]):
                     #         attn_filename = f'decoder_attn_weights{example_id}_l{j}_h{k}.png'
@@ -142,6 +198,30 @@ class ProbeOffDiagonal(object):
                     #         attn_path = os.path.join(self.config.output_directory, attn_filename)
                     #         save_attention(source_sentences[i], '<PAD>' + output_sentences[i],
                     #                        result['enc_dec_attn_weights_tensor'][j][k].cpu().numpy(), attn_path)
+
+            # print("num off diagonal", len(self.off_diagonal))
+            # print("num non off diagonal", len(self.non_off_diagonal))
+
+            pp = pprint.PrettyPrinter()
+            print("---------Encoder---------")
+            print("number_dict")
+            pp.pprint([(k, self.number_dict['encoder'][k]) for k in sorted(self.number_dict['encoder'].keys())])
+            print("number_frac_dict")
+            pp.pprint([(k, self.number_frac_dict['encoder'][k]) for k in sorted(self.number_frac_dict['encoder'].keys())])
+            print("---------Decoder---------")
+            print("number_dict")
+            pp.pprint([(k, self.number_dict['decoder'][k]) for k in sorted(self.number_dict['decoder'].keys())])
+            print("number_frac_dict")
+            pp.pprint(
+                [(k, self.number_frac_dict['decoder'][k]) for k in sorted(self.number_frac_dict['decoder'].keys())])
+
+            for k in sorted(self.number_frac_dict['encoder'].keys()):
+                enc_off_diagonal_output_file.write(str(k) + "\t" + " ".join(str(x) for x in self.number_frac_list_dict['encoder'][k]) + "\n")
+            for k in sorted(self.number_frac_dict['decoder'].keys()):
+                dec_off_diagonal_output_file.write(
+                    str(k) + "\t" + " ".join(str(x) for x in self.number_frac_list_dict['decoder'][k]) + "\n")
+            # off_diagonal_output_file.write(str(len(self.off_diagonal)) + "\t" + " ".join([str(x) for x in self.off_diagonal]) + "\n")
+            # off_diagonal_output_file.write(str(len(self.non_off_diagonal)) + "\t" + " ".join([str(x) for x in self.non_off_diagonal]) + "\n")
 
             for _, outputs in sorted(ordered_outputs, key=lambda x: x[0]): # pylint:disable=consider-using-enumerate
                 output_file.writelines(outputs)
@@ -166,11 +246,21 @@ class ProbeOffDiagonal(object):
                 print(f'Translation timing={timing/self.config.timed}')
             else:
                 step = experiment.curr_step
-                output_filename = self.config.output_filename or f'translated_{step}.txt'
+                output_filename = self.config.output_filename or f'translated_{step}_all.txt'
                 output_path = os.path.join(self.config.output_directory, output_filename)
                 output_file = stack.enter_context(open(output_path, 'wt'))
+
+                enc_off_diagonal_output_filename = f'off_diagonal_pairs_{step}_enc_th{self.config.off_diagonal_distance_threshold}_' \
+                                                   f'ty{self.config.off_diagonal_threshold_type}_bins{self.config.off_diagonal_bins}.txt'
+                enc_off_diagonal_output_path = os.path.join(self.config.output_directory, enc_off_diagonal_output_filename)
+                enc_off_diagonal_output_file = stack.enter_context(open(enc_off_diagonal_output_path, 'wt'))
+
+                dec_off_diagonal_output_filename = f'off_diagonal_pairs_{step}_dec_th{self.config.off_diagonal_distance_threshold}_' \
+                                                   f'ty{self.config.off_diagonal_threshold_type}_bins{self.config.off_diagonal_bins}.txt'
+                dec_off_diagonal_output_path = os.path.join(self.config.output_directory, dec_off_diagonal_output_filename)
+                dec_off_diagonal_output_file = stack.enter_context(open(dec_off_diagonal_output_path, 'wt'))
 
                 if verbose:
                     print(f'Outputting to {output_path}')
 
-                self.translate_all(output_file, epoch, experiment, verbose)
+                self.translate_all(output_file, enc_off_diagonal_output_file, dec_off_diagonal_output_file, epoch, experiment, verbose)

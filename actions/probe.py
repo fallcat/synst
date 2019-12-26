@@ -14,13 +14,15 @@ from contextlib import ExitStack
 
 import torch
 import torch.nn as nn
-import pickle
+import json
 from tqdm import tqdm
 
 from utils import profile
 from utils import tqdm_wrap_stdout
 
 from models.utils import MODEL_STATS, STATS_TYPES, probe
+
+import numpy as np
 
 
 class Prober(object):
@@ -42,18 +44,14 @@ class Prober(object):
             self.model = nn.DataParallel(model.cuda())
 
         # stats
-        self.train_stats = {model_stat: {stats_type: {'mean': torch.zeros((model.num_layers, model.num_heads),
-                                                                    dtype=torch.float32).to(device),
-                                                      'var': torch.zeros((model.num_layers, model.num_heads),
-                                                                    dtype=torch.float32).to(device)}
+        self.train_stats = {model_stat: {stats_type: [[[] for y in range(model.num_heads)] for x in range(model.num_layers)] # {'mean': np.zeros((model.num_layers, model.num_heads)),
+                                                      #'var': np.zeros((model.num_layers, model.num_heads))}
                                    for stats_type in STATS_TYPES}
                       for model_stat in MODEL_STATS}
         self.train_count = {model_stat: 0 for model_stat in MODEL_STATS}
 
-        self.test_stats = {model_stat: {stats_type: {'mean': torch.zeros((model.num_layers, model.num_heads),
-                                                                         dtype=torch.float32).to(device),
-                                                     'var': torch.zeros((model.num_layers, model.num_heads),
-                                                                        dtype=torch.float32).to(device)}
+        self.test_stats = {model_stat: {stats_type: [[[] for y in range(model.num_heads)] for x in range(model.num_layers)] # {'mean': np.zeros((model.num_layers, model.num_heads)),
+                                                     #'var': np.zeros((model.num_layers, model.num_heads))}
                                         for stats_type in STATS_TYPES}
                            for model_stat in MODEL_STATS}
         self.test_count = {model_stat: 0 for model_stat in MODEL_STATS}
@@ -81,7 +79,7 @@ class Prober(object):
         ''' Get the padding index '''
         return self.dataset.padding_idx
 
-    def translate_all(self, output_file, stats_file, epoch, experiment, verbose=0):
+    def translate_all(self, output_file, stats_file, example_file, epoch, experiment, verbose=0):
         ''' Generate all predictions from the dataset '''
         def get_description():
             description = f'Generate #{epoch}'
@@ -101,6 +99,7 @@ class Prober(object):
             ordered_outputs = []
             with torch.no_grad():
                 self.model.eval()
+                count = 0
                 for batch in batches:
                     # run the data through the model
                     batches.set_description_str(get_description())
@@ -111,30 +110,39 @@ class Prober(object):
                     encoder_stats = probe(result['encoder_attn_weights_tensor'])
                     decoder_stats = probe(result['decoder_attn_weights_tensor'])
                     enc_dec_stats = probe(result['enc_dec_attn_weights_tensor'])
+
                     train_stats = {'encoder_stats': {stats_type: encoder_stats[stats_type].view(self.num_layers,
                                                                                           self.num_heads,
-                                                                                          -1)
+                                                                                          -1).cpu().numpy()
                                                      for stats_type in STATS_TYPES},
                                    'decoder_stats': {stats_type: decoder_stats[stats_type].view(self.num_layers,
                                                                                                 self.num_heads,
-                                                                                                -1)
+                                                                                                -1).cpu().numpy()
                                                      for stats_type in STATS_TYPES},
                                    'enc_dec_stats': {stats_type: enc_dec_stats[stats_type].view(self.num_layers,
                                                                                                 self.num_heads,
-                                                                                                -1)
+                                                                                                -1).cpu().numpy()
                                                      for stats_type in STATS_TYPES}}
 
-                    self.update_stats(train_stats, self.train_stats, self.train_count)
+                    self.update_stats2(train_stats, self.train_stats, self.train_count)
 
                     sequences, test_stats = self.translator.translate(batch)
 
-                    self.update_stats(test_stats, self.test_stats, self.test_count)
+                    # self.update_stats(test_stats, self.test_stats, self.test_count)
 
                     if self.config.timed:
                         continue
 
                     target_sequences = next(iter(sequences.values()))
+                    new_targets = []
                     for i, example_id in enumerate(batch['example_ids']):
+                        # print("example_id", example_id)
+                        if example_id == 430:
+                            print("saved")
+                            train_tensors = {'encoder': result['encoder_attn_weights_tensor'].cpu().numpy().tolist(),
+                                             'decoder': result['decoder_attn_weights_tensor'].cpu().numpy().tolist(),
+                                             'enc_dec': result['enc_dec_attn_weights_tensor'].cpu().numpy().tolist()}
+                            json.dump(train_tensors, example_file)
                         outputs = []
                         if verbose > 1:
                             trim = verbose < 2
@@ -146,6 +154,7 @@ class Prober(object):
                             outputs.append(f'+++++++++++++++++++++++++++++\n')
                         else:
                             sequence = target_sequences[i]
+                            new_targets.append(torch.LongTensor(sequence))
                             decoded = ' '.join(self.dataset.decode(sequence, trim=not verbose))
                             outputs.append(f'{decoded}\n')
 
@@ -154,28 +163,62 @@ class Prober(object):
                         else:
                             output_file.writelines(outputs)
 
+                    self.dataset.collate_field(batch, 'target', new_targets)
+                    result = self.model(batch)
+
+                    # stats
+                    encoder_stats = probe(result['encoder_attn_weights_tensor'])
+                    decoder_stats = probe(result['decoder_attn_weights_tensor'])
+                    enc_dec_stats = probe(result['enc_dec_attn_weights_tensor'])
+                    test_stats = {'encoder_stats': {stats_type: encoder_stats[stats_type].view(self.num_layers,
+                                                                                                self.num_heads,
+                                                                                                -1).cpu().numpy()
+                                                     for stats_type in STATS_TYPES},
+                                   'decoder_stats': {stats_type: decoder_stats[stats_type].view(self.num_layers,
+                                                                                                self.num_heads,
+                                                                                                -1).cpu().numpy()
+                                                     for stats_type in STATS_TYPES},
+                                   'enc_dec_stats': {stats_type: enc_dec_stats[stats_type].view(self.num_layers,
+                                                                                                self.num_heads,
+                                                                                                -1).cpu().numpy()
+                                                     for stats_type in STATS_TYPES}}
+
+                    self.update_stats2(test_stats, self.test_stats, self.test_count)
+                    count += 1
+                    if count == 50:
+                        break
+
             for _, outputs in sorted(ordered_outputs, key=lambda x: x[0]): # pylint:disable=consider-using-enumerate
                 output_file.writelines(outputs)
 
-        self.save_stats(stats_file)
+        self.save_stats2(stats_file)
 
     def update_stats(self, stats, self_stats, self_count):
         ''' Update stats after each batch '''
         for model_stat in stats:
-            current_count = stats[model_stat][STATS_TYPES[0]].size()[-1]
+            # print(stats[model_stat][STATS_TYPES[0]])
+            current_count = stats[model_stat][STATS_TYPES[0]].shape[-1]
             old_count = self_count[model_stat]
             new_count = old_count + current_count
             for stat_type in stats[model_stat]:
                 old_mean = self_stats[model_stat][stat_type]['mean']
-                current_mean = stats[model_stat][stat_type].mean(dim=-1)
-                new_mean = (old_mean * self_count[model_stat] + stats[model_stat][stat_type].sum(dim=-1)) / new_count
+                current_mean = stats[model_stat][stat_type].mean(axis=-1)
+                new_mean = (old_mean * self_count[model_stat] + stats[model_stat][stat_type].sum(axis=-1)) / new_count
                 old_var = self_stats[model_stat][stat_type]['var']
-                current_var = stats[model_stat][stat_type].var(dim=-1) # torch.sum((stats[model_stat][stat_type] - new_mean.unsqueeze(-1)) ** 2, dim=-1) / (current_count - 1)
+                current_var = stats[model_stat][stat_type].var(axis=-1) # torch.sum((stats[model_stat][stat_type] - new_mean.unsqueeze(-1)) ** 2, dim=-1) / (current_count - 1)
                 new_var = (old_count * (old_var + (old_mean - new_mean) ** 2)
                            + current_count * (current_var + (current_mean - new_mean) ** 2)) / new_count
                 self_stats[model_stat][stat_type]['mean'] = new_mean
                 self_stats[model_stat][stat_type]['var'] = new_var
             self_count[model_stat] = new_count
+
+    def update_stats2(self, stats, self_stats, self_count):
+        ''' Update stats after each batch '''
+        for model_stat in stats:
+            for x in range(self.num_layers):
+                for y in range(self.num_heads):
+                    print("stats[model_stat]['abs_argmax_distances']", stats[model_stat]['abs_argmax_distances'].shape)
+                    self_stats[model_stat]['abs_argmax_distances'][x][y].extend(stats[model_stat]['abs_argmax_distances'][x][y].tolist())
 
     # def update_stats(self, stats):
     #     ''' Update stats after each batch '''
@@ -197,9 +240,21 @@ class Prober(object):
 
     def save_stats(self, stats_file):
         ''' Save stats to file '''
-        stats = {'train_stats': self.train_stats, 'train_count': self.train_count,
-                 'test_stats': self.test_stats, 'test_count': self.test_count}
-        pickle.dump(stats, stats_file, protocol=pickle.HIGHEST_PROTOCOL)
+        stats = {'train_stats': self.np_to_list(self.train_stats), 'train_count': self.train_count,
+                 'test_stats': self.np_to_list(self.test_stats), 'test_count': self.test_count}
+        json.dump(stats, stats_file)
+
+    def save_stats2(self, stats_file):
+        ''' Save stats to file '''
+        stats = {'train_stats': [self.train_stats[model_stat]['abs_argmax_distances']  for model_stat in self.train_stats],
+                 'test_stats': [self.test_stats[model_stat]['abs_argmax_distances']  for model_stat in self.test_stats]}
+        json.dump(stats, stats_file)
+
+    def np_to_list(self, stats):
+        return {model_stat: {stats_type: {'mean': stats[model_stat][stats_type]['mean'].tolist(),
+                                   'var': stats[model_stat][stats_type]['var'].tolist()}
+                      for stats_type in STATS_TYPES}
+         for model_stat in MODEL_STATS}
 
     def __call__(self, epoch, experiment, verbose=0):
         ''' Generate from the model '''
@@ -221,16 +276,20 @@ class Prober(object):
                 print(f'Translation timing={timing/self.config.timed}')
             else:
                 step = experiment.curr_step
-                output_filename = self.config.output_filename or f'translated_{step}.txt'
+                output_filename = self.config.output_filename or f'translated_{step}_probe.txt'
                 output_path = os.path.join(self.config.output_directory, output_filename)
                 output_file = stack.enter_context(open(output_path, 'wt'))
 
-                stats_filename = self.config.stats_filename or f'stats_{step}.pickle'
+                stats_filename = self.config.stats_filename or f'stats2_{step}.json'
                 stats_path = os.path.join(self.config.stats_directory, stats_filename)
-                stats_file = stack.enter_context(open(stats_path, 'wb'))
+                stats_file = stack.enter_context(open(stats_path, 'w'))
+
+                example_filename = f'example430_{step}.json'
+                example_path = os.path.join(self.config.stats_directory, example_filename)
+                example_file = stack.enter_context(open(example_path, 'w'))
 
                 if verbose:
                     print(f'Outputting to {output_path}')
                     print(f'Stats saving to {stats_path}')
 
-                self.translate_all(output_file, stats_file, epoch, experiment, verbose)
+                self.translate_all(output_file, stats_file, example_file, epoch, experiment, verbose)
