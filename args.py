@@ -453,6 +453,7 @@ def add_new_transformer_args(parser):
     )
 
     group.add_argument(
+<<<<<<< HEAD
         '--enc-no-attn',
         default=False,
         action='store_true',
@@ -465,6 +466,14 @@ def add_new_transformer_args(parser):
         action='store_true',
         help="flag indicating not using attention for decoder self-attention"
     )
+=======
+        '--indexing-type',
+        type=str,
+        choices=['gather', 'bmm'],
+        default='bmm'
+    )
+
+>>>>>>> index-optim
 
     return group
 
@@ -759,7 +768,7 @@ def add_train_args(parser):
         dest='lr_scheduler',
         type=str,
         default='warmup',
-        choices=['exponential', 'warmup', 'linear', 'warmup2'],
+        choices=['exponential', 'warmup', 'linear','warmup2'],
         help='The learning rate schedule of the optimizer'
     )
     group.add_argument(
