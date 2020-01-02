@@ -223,9 +223,9 @@ class NewAttention(nn.Module):
         if self.attn_indexing and self.indexing_type == 'gather':
 
             if self.which_attn == "encoder":
-                attended_indices = utils.encoder_attended_indices
+                attended_indices = utils.encoder_attended_indices[values.device.index]
             else:
-                attended_indices = utils.decoder_attended_indices
+                attended_indices = utils.decoder_attended_indices[values.device.index]
 
             # get attn config
             attn_config = []
@@ -253,20 +253,23 @@ class NewAttention(nn.Module):
                 if attended_indices is None or queries_shape[1] > attended_indices.shape[2] or decoder_position >= attended_indices.shape[2]: # recompute
                     # print("recompute!")
                     if self.which_attn == "encoder":
-                        utils.encoder_attended_indices = init_attended_indices(self.num_heads, max(queries_shape[1], decoder_position+1),
+                        utils.encoder_attended_indices[values.device.index] = init_attended_indices(self.num_heads, max(queries_shape[1], decoder_position+1), 
                                                                                 values.device, attn_position, attn_displacement)
-                        attended_indices = utils.encoder_attended_indices
+                        attended_indices = utils.encoder_attended_indices[values.device.index]
                     else:
-                        utils.decoder_attended_indices = init_attended_indices(self.num_heads, max(queries_shape[1], decoder_position+1),
+                        utils.decoder_attended_indices[values.device.index] = init_attended_indices(self.num_heads, max(queries_shape[1], decoder_position+1), 
                                                                                 values.device, attn_position, attn_displacement)
-                        attended_indices = utils.decoder_attended_indices
+                        attended_indices = utils.decoder_attended_indices[values.device.index]
 
 
             if decoder_position == -1:
                 # bs x nh x qlen x proj_dim
-                return torch.gather(values, 2, attended_indices[:, :, :queries_shape[1]].expand(
+                try:
+                    return torch.gather(values, 2, attended_indices[:, :, :queries_shape[1]].expand(
                             batch_size, self.num_heads, queries_shape[1], self.projection_dim)
                             ).transpose(2,1).contiguous().view(batch_size, -1, self.num_heads * self.projection_dim)
+                except:
+                    pdb.set_trace()
 
             else:
                 # bs x nh x 1 x proj_dim
