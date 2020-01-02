@@ -24,8 +24,8 @@ STATS_TYPES = ['entropies', 'argmax_probabilities', 'argmax_distances', 'abs_arg
 encoder_indices_matq = None
 decoder_indices_matq = None
 
-encoder_attended_indices = None
-decoder_attended_indices = None
+encoder_attended_indices = [None]*8
+decoder_attended_indices = [None]*8
 
 def restore(path, modules, num_checkpoints=1, map_location=None, strict=True):
     '''
@@ -135,7 +135,7 @@ class LabelSmoothingLoss(nn.Module):
     '''
     def __init__(self, smoothing=0.0, ignore_index=-1, reduction='sum'):
         ''' Initialize the label smoothing loss '''
-        super(LabelSmoothingLoss, self).__init__()
+        super(LabelSmoothingLoss,  self).__init__()
 
         self.reduction = reduction
         self.smoothing = smoothing
@@ -583,7 +583,7 @@ def init_indices_q(num_heads, max_len, device, attn_position):
         multiply = num_heads // len(attn_position)
         attn_position = attn_position * multiply
 
-    indices_matq = torch.zeros((1, num_heads, max_len, max_len), device=device, dtype=torch.float32)
+    indices_matq = torch.zeros((1, num_heads, max_len, max_len), device=device, dtype=torch.float32, requires_grad=False)
 
     for i, p in enumerate(attn_position):
         if p == "center":
@@ -606,7 +606,7 @@ def init_attended_indices(num_heads, max_len, device, attn_position, attn_displa
         attn_position = attn_position * multiply
 
     indices_q = torch.arange(max_len, device=device, dtype=torch.long).view(-1, 1)
-    attended_indices = torch.zeros((1, num_heads, max_len, 1), device=device, dtype=torch.long)
+    attended_indices = torch.zeros((1, num_heads, max_len, 1), device=device, dtype=torch.long, requires_grad=False)
     offset = max(attn_displacement)
 
     even = [i for i in range(num_heads) if i % 2 == 0 ]
@@ -626,7 +626,8 @@ def init_attended_indices(num_heads, max_len, device, attn_position, attn_displa
     if attn_position[1] == 'left':
         attended_indices[:, odd] += indices_q
 
-    return nn.DataParallel(attended_indices)
+    # return attended_indices
+    return attended_indices
 
 def init_attended_indices_conv(num_heads, max_len, device, attn_position, attn_displacement):
 
@@ -637,7 +638,7 @@ def init_attended_indices_conv(num_heads, max_len, device, attn_position, attn_d
         attn_position = attn_position * multiply
 
     indices_q = torch.arange(max_len, device=device, dtype=torch.long).view(-1, 1)
-    attended_indices = torch.zeros((1, num_heads, max_len, 1), device=device, dtype=torch.long)
+    attended_indices = torch.zeros((1, num_heads, max_len, 1), device=device, dtype=torch.long, requires_grad=False)
     offset = attn_displacement
 
     even = [i for i in range(num_heads) if i % 2 == 0 ]
