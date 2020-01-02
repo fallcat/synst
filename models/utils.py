@@ -626,7 +626,7 @@ def init_attended_indices(num_heads, max_len, device, attn_position, attn_displa
     if attn_position[1] == 'left':
         attended_indices[:, odd] += indices_q
 
-    return attended_indices
+    return nn.DataParallel(attended_indices)
 
 def init_attended_indices_conv(num_heads, max_len, device, attn_position, attn_displacement):
 
