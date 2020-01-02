@@ -21,6 +21,11 @@ from utils.probe_beam_search import ProbeBeamSearchDecoder
 MODEL_STATS = ['encoder_stats', 'decoder_stats', 'enc_dec_stats']
 STATS_TYPES = ['entropies', 'argmax_probabilities', 'argmax_distances', 'abs_argmax_distances']
 
+encoder_indices_matq = None
+decoder_indices_matq = None
+
+encoder_attended_indices = None
+decoder_attended_indices = None
 
 def restore(path, modules, num_checkpoints=1, map_location=None, strict=True):
     '''
@@ -683,4 +688,124 @@ def save_attention(input_sentence, output_words, attentions, file_path):
 
     plt.savefig(file_path)
     plt.close('all')
+
+
+def init_indices_q(num_heads, max_len, device, attn_position):
+    if type(attn_position) is not list:
+        attn_position = [attn_position]
+    if len(attn_position) < num_heads:
+        multiply = num_heads // len(attn_position)
+        attn_position = attn_position * multiply
+
+    indices_matq = torch.zeros((1, num_heads, max_len, max_len), device=device, dtype=torch.float32)
+
+    for i, p in enumerate(attn_position):
+        if p == "center":
+            indices_matq[0, i, range(max_len), range(max_len)] = 1
+        elif p == "left":
+            indices_matq[0, i, range(1, max_len), range(max_len - 1)] = 1
+        elif p == "right":
+            indices_matq[0, i, range(max_len - 1), range(1, max_len)] = 1
+        else:
+            print("unknown position", p, attn_position)
+            exit(-1)
+    return indices_matq
+
+def init_attended_indices(num_heads, max_len, device, attn_position, attn_displacement):
+
+    if type(attn_position) is not list:
+        attn_position = [attn_position]
+    if len(attn_position) < num_heads:
+        multiply = num_heads // len(attn_position)
+        attn_position = attn_position * multiply
+
+    indices_q = torch.arange(max_len, device=device, dtype=torch.long).view(-1, 1)
+    attended_indices = torch.zeros((1, num_heads, max_len, 1), device=device, dtype=torch.long)
+    offset = max(attn_displacement)
+
+    even = [i for i in range(num_heads) if i % 2 == 0 ]
+    odd = [i for i in range(num_heads) if i % 2 != 0 ]
+
+    assert type(attn_position[0]) is str
+
+    if attn_position[0] == 'left':
+        attended_indices[:, even] += indices_q
+
+    if attn_position[1] == 'right':
+        attended_indices[:, odd] += indices_q + 2 * offset
+    
+    if attn_position[1] == 'center':
+        attended_indices[:, odd] += indices_q + offset
+
+    if attn_position[1] == 'left':
+        attended_indices[:, odd] += indices_q
+
+    return attended_indices
+
+def init_attended_indices_conv(num_heads, max_len, device, attn_position, attn_displacement):
+
+    if type(attn_position) is not list:
+        attn_position = [attn_position]
+    if len(attn_position) < num_heads:
+        multiply = num_heads // len(attn_position)
+        attn_position = attn_position * multiply
+
+    indices_q = torch.arange(max_len, device=device, dtype=torch.long).view(-1, 1)
+    attended_indices = torch.zeros((1, num_heads, max_len, 1), device=device, dtype=torch.long)
+    offset = attn_displacement
+
+    even = [i for i in range(num_heads) if i % 2 == 0 ]
+    odd = [i for i in range(num_heads) if i % 2 != 0 ]
+
+    assert type(attn_position[0]) is str
+
+    if attn_position[0] == 'left':
+        attended_indices[:, even] += indices_q
+
+    if attn_position[1] == 'right':
+        attended_indices[:, odd] += indices_q + 2 * offset
+    
+    if attn_position[1] == 'center':
+        attended_indices[:, odd] += indices_q + offset
+
+    if attn_position[1] == 'left':
+        attended_indices[:, odd] += indices_q
+
+    return attended_indices
+
+
+def init_indices(args):
+    if args.action_config.max_decode_length is not None:
+        global encoder_indices_matq
+        global decoder_indices_matq
+
+        global encoder_attended_indices
+        global decoder_attended_indices
+
+        print('initialize cached indicies')
+
+        if args.config.model.indexing_type == 'bmm': # indexing-bmm
+            print('init index-bmm')
+            encoder_indices_matq = init_indices_q(args.config.model.num_heads, 
+                args.action_config.max_decode_length+1, args.device, args.config.model.attn_position)
+            decoder_indices_matq = init_indices_q(args.config.model.num_heads, 
+                args.action_config.max_decode_length+1, args.device, args.config.model.dec_attn_position)
+
+        if args.config.model.indexing_type == 'gather': # indexing-torch gather
+            print('init index-gather')
+            encoder_attended_indices = init_attended_indices(args.config.model.num_heads, 
+                args.action_config.max_decode_length+1, args.device, args.config.model.attn_position,  args.config.model.attn_displacement)
+            decoder_attended_indices = init_attended_indices(args.config.model.num_heads, 
+                args.action_config.max_decode_length+1, args.device, args.config.model.dec_attn_position,  args.config.model.dec_attn_displacement)
+
+        if args.config.model.attn_indexing is False and args.config.model.attn_window > 0:
+            encoder_attended_indices = init_attended_indices_conv(args.config.model.num_heads, 
+                args.action_config.max_decode_length+1, args.device, args.config.model.attn_position,  args.config.model.attn_displacement)
+
+        if args.config.model.attn_indexing is False and args.config.model.dec_attn_window > 0:
+            decoder_attended_indices = init_attended_indices_conv(args.config.model.num_heads, 
+                args.action_config.max_decode_length+1, args.device, args.config.model.dec_attn_position,  args.config.model.dec_attn_displacement)
+
+
+
 

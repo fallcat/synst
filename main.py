@@ -22,17 +22,24 @@ from torch.autograd import profiler, set_detect_anomaly
 
 from args import parse_args
 from data.utils import get_dataloader
-from models.utils import restore
+from models.utils import restore, init_indices_q, init_attended_indices, encoder_indices_matq, decoder_indices_matq, encoder_attended_indices, decoder_attended_indices
+from models.utils import init_indices
 from utils import profile
 
 # import comet_ml in the top of your file
 from comet_ml import Experiment
-import pdb   
+    
 # Add the following code anywhere in your machine learning file
+
 
 def main(argv=None):
     ''' Main entry point '''
     args = parse_args(argv)
+
+    # initialize indices_matq
+
+    init_indices(args)
+
     print(f'Running torch {torch.version.__version__}')
 
     profile_cuda_memory = args.config.cuda.profile_cuda_memory
@@ -44,7 +51,6 @@ def main(argv=None):
     print(dataloader.dataset.stats)
 
     model = args.model(args.config.model, dataloader.dataset)
-    #pdb.set_trace()
     action = args.action(args.action_config, model, dataloader, args.device)
     if args.action_type == 'train' and args.action_config.early_stopping:
         args.config.data.split = 'valid'
@@ -72,7 +78,6 @@ def main(argv=None):
             for module_name, module in action.modules.items()
             if module_name not in args.reset_parameters
         }
-        #pdb.set_trace()
 
         epoch, step = restore(
             args.restore,
@@ -97,3 +102,4 @@ def main(argv=None):
 
 if __name__ == '__main__':
     main()
+
