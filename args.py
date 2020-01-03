@@ -456,9 +456,14 @@ def add_new_transformer_args(parser):
         '--indexing-type',
         type=str,
         choices=['gather', 'bmm'],
-        default='bmm'
+        default='gather'
     )
-
+    group.add_argument(
+        '--tie-ffn-weights',
+        type=bool,
+        help="whether tie ffn layer weights or not",
+        default=False
+    )
 
     return group
 

@@ -3,7 +3,7 @@ A module which implements the basic Transformer
 '''
 import uuid
 import threading
-
+import pdb
 import torch
 from torch import nn
 
@@ -294,10 +294,17 @@ class NewTransformer(nn.Module):
                        'attn_indexing': config.enc_attn_indexing,
                        'indexing_type': config.indexing_type}
         args = [attn_config, config.num_heads, config.embedding_size, config.hidden_dim]
-        return nn.ModuleList([
+        encoders = nn.ModuleList([
             TransformerEncoderLayer(*args, **kwargs)
             for _ in range(config.num_layers)
         ])
+
+        if config.tie_ffn_weights:
+            for enc in encoders[1:]:
+                enc.ffn.sublayer.hidden.weight = encoders[0].ffn.sublayer.hidden.weight
+                enc.ffn.sublayer.output.weight = encoders[0].ffn.sublayer.output.weight
+
+        return encoders
 
     # @classmethod
     def create_decoders(self, config):
@@ -338,10 +345,18 @@ class NewTransformer(nn.Module):
                                'indexing_type': config.indexing_type
                                }
         args = [dec_attn_config, enc_dec_attn_config, config.num_heads, config.embedding_size, config.hidden_dim]
-        return nn.ModuleList([
+        decoders = nn.ModuleList([
             TransformerDecoderLayer(*args, layer_i, **kwargs)
             for layer_i in range(config.num_layers)
         ])
+
+        if config.tie_ffn_weights:
+            for dec in decoders[1:]:
+                dec.ffn.sublayer.hidden.weight = decoders[0].ffn.sublayer.hidden.weight
+                dec.ffn.sublayer.output.weight = decoders[0].ffn.sublayer.output.weight
+
+        return decoders
+
 
     @property
     def sos_idx(self):
@@ -381,7 +396,6 @@ class NewTransformer(nn.Module):
         targets = left_shift(batch['targets'])
         nll = self.cross_entropy(logits, targets).sum(dims[:-1])
         smoothed_nll = self.label_smoothing(logits, targets).sum(dims)
-
         return smoothed_nll, nll
 
     def encode(self, inputs):
