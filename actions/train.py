@@ -25,7 +25,7 @@ from actions.evaluate import Evaluator
 from data.parallel import chunked_scattering
 from models.utils import LinearLRSchedule, WarmupLRSchedule, WarmupLRSchedule2, DummyLRSchedule, checkpoint
 from utils import profile, tqdm_wrap_stdout, tqdm_unwrap_stdout
-
+import pdb
 
 class Trainer(object):
     ''' An object that encapsulates model training '''
@@ -172,7 +172,6 @@ class Trainer(object):
                     
                     nll, length = self.calculate_gradient(batch)
                     did_optimize = try_optimize(i)
-                    
 
                     # record the effective number of tokens
                     num_tokens_per_update += int(sum(batch['input_lens']))
