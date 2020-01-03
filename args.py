@@ -453,7 +453,6 @@ def add_new_transformer_args(parser):
     )
 
     group.add_argument(
-<<<<<<< HEAD
         '--enc-no-attn',
         default=False,
         action='store_true',
@@ -466,14 +465,21 @@ def add_new_transformer_args(parser):
         action='store_true',
         help="flag indicating not using attention for decoder self-attention"
     )
-=======
+
+    group.add_argument(
         '--indexing-type',
         type=str,
         choices=['gather', 'bmm'],
-        default='bmm'
+        default='gather'
     )
 
->>>>>>> index-optim
+    group.add_argument(
+        '--tie-ffn-weights',
+        type=bool,
+        help="whether tie ffn layer weights or not",
+        default=False
+    )
+
 
     return group
 
