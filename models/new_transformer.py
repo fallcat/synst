@@ -68,15 +68,17 @@ class TransformerFFN(nn.Module):
 
 class TransformerEncoderLayer(nn.Module):
     ''' Implements a single encoder layer in a transformer encoder stack '''
-    def __init__(self, attn_config, num_heads, dim, hidden_dim, dropout_p=0.1):
+    def __init__(self, attn_config, num_heads, dim, hidden_dim, layer_i, dropout_p=0.1):
         ''' Initialize the transformer layer '''
         super(TransformerEncoderLayer, self).__init__()
         self.no_attn = attn_config['no_attn']
 
-        self.ffn = TransformerSublayer(
-            TransformerFFN(dim, hidden_dim),
-            dim, dropout_p
-        )
+        if attn_config['ffn_layer'][layer_i]:
+            self.ffn = TransformerSublayer(
+                TransformerFFN(dim, hidden_dim),
+                dim, dropout_p
+            )
+            print('enc layer %i has ffn' % layer_i)
 
         if not self.no_attn:
             self.self_attention = TransformerSublayer(
@@ -103,10 +105,11 @@ class TransformerEncoderLayer(nn.Module):
                 layer_i=layer_i, word_embedding=word_embedding
             )
 
-        state = self.ffn(
-            state, # residual
-            state # passed to feed-forward network
-        )
+        if hasattr(self, 'ffn'):
+            state = self.ffn(
+                state, # residual
+                state # passed to feed-forward network
+            )
 
         return {'state': state, 'mask': mask}
 
@@ -125,10 +128,13 @@ class TransformerDecoderLayer(nn.Module):
         self.enc_dec_attn_config = enc_dec_attn_config
         self.no_attn = dec_attn_config['no_attn']
 
-        self.ffn = TransformerSublayer(
-            TransformerFFN(dim, hidden_dim),
-            dim, dropout_p
-        )
+
+        if dec_attn_config['ffn_layer'][layer_i]:
+            self.ffn = TransformerSublayer(
+                TransformerFFN(dim, hidden_dim),
+                dim, dropout_p
+            )
+            print('dec layer %i has ffn' % layer_i)
 
         if not self.no_attn:
             self.self_attention = TransformerSublayer(
@@ -214,10 +220,11 @@ class TransformerDecoderLayer(nn.Module):
                 source, source, state, **kwargs # passed to multiheaded attention
             )
 
-        state = self.ffn(
-            state, # residual
-            state # passed to feed-forward network
-        )
+        if hasattr(self, 'ffn'):
+            state = self.ffn(
+                state, # residual
+                state # passed to feed-forward network
+            )
 
         if self.causal and cache is not None:
             cached = cache.get(self.uuid)
@@ -291,6 +298,11 @@ class NewTransformer(nn.Module):
     def create_encoders(cls, config):
         ''' Create the transformer encoders '''
         kwargs = {'dropout_p': config.dropout_p}
+
+        if config.ffn_layer == -1:
+            config.ffn_layer = [1] * config.num_layers
+        assert len(config.ffn_layer) == config.num_layers
+
         attn_config = {'attn_type': config.attn_type,
                        'attn_position': config.attn_position,
                        'attn_param': config.attn_param,
@@ -306,17 +318,19 @@ class NewTransformer(nn.Module):
                        'attn_window': config.attn_window,
                        'attn_indexing': config.enc_attn_indexing,
                        'no_attn': config.enc_no_attn,
-                       'indexing_type': config.indexing_type}
+                       'indexing_type': config.indexing_type,
+                       'ffn_layer': config.ffn_layer}
         args = [attn_config, config.num_heads, config.embedding_size, config.hidden_dim]
         encoders = nn.ModuleList([
-            TransformerEncoderLayer(*args, **kwargs)
-            for _ in range(config.num_layers)
+            TransformerEncoderLayer(*args, layer_i, **kwargs)
+            for layer_i in range(config.num_layers)
         ])
 
         if config.tie_ffn_weights:
             for enc in encoders[1:]:
-                enc.ffn.sublayer.hidden.weight = encoders[0].ffn.sublayer.hidden.weight
-                enc.ffn.sublayer.output.weight = encoders[0].ffn.sublayer.output.weight
+                if hasattr(enc, 'ffn'):
+                    enc.ffn.sublayer.hidden.weight = encoders[0].ffn.sublayer.hidden.weight
+                    enc.ffn.sublayer.output.weight = encoders[0].ffn.sublayer.output.weight
 
         return encoders
 
@@ -324,6 +338,11 @@ class NewTransformer(nn.Module):
     def create_decoders(self, config):
         ''' Create the transformer decoders '''
         kwargs = {'dropout_p': config.dropout_p, 'span': config.span}
+
+        if config.ffn_layer == -1:
+            config.ffn_layer = [1] * config.num_layers
+        assert len(config.ffn_layer) == config.num_layers
+
         dec_attn_config = {'attn_type': config.dec_attn_type,
                            'attn_position': config.dec_attn_position,
                            'attn_param': config.dec_attn_param,
@@ -339,7 +358,8 @@ class NewTransformer(nn.Module):
                            'attn_window': config.dec_attn_window,
                            'attn_indexing': config.dec_attn_indexing,
                            'no_attn': config.dec_no_attn,
-                           'indexing_type': config.indexing_type}
+                           'indexing_type': config.indexing_type,
+                           'ffn_layer': config.ffn_layer}
         enc_dec_attn_config = {'attn_type': config.enc_dec_attn_type,
                                'attn_position': config.enc_dec_attn_position,
                                'attn_param': config.enc_dec_attn_param,
@@ -357,7 +377,8 @@ class NewTransformer(nn.Module):
                                'attn_threshold': config.enc_dec_attn_threshold,
                                'attn_window': config.enc_dec_attn_window,
                                'attn_indexing': config.enc_dec_attn_indexing,
-                               'indexing_type': config.indexing_type
+                               'indexing_type': config.indexing_type,
+                               'ffn_layer': config.ffn_layer
                                }
         args = [dec_attn_config, enc_dec_attn_config, config.num_heads, config.embedding_size, config.hidden_dim]
         decoders = nn.ModuleList([
@@ -367,8 +388,9 @@ class NewTransformer(nn.Module):
 
         if config.tie_ffn_weights:
             for dec in decoders[1:]:
-                dec.ffn.sublayer.hidden.weight = decoders[0].ffn.sublayer.hidden.weight
-                dec.ffn.sublayer.output.weight = decoders[0].ffn.sublayer.output.weight
+                if hasattr(dec, 'ffn'):
+                    dec.ffn.sublayer.hidden.weight = decoders[0].ffn.sublayer.hidden.weight
+                    dec.ffn.sublayer.output.weight = decoders[0].ffn.sublayer.output.weight
 
         return decoders
 

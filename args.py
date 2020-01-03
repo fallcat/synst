@@ -480,6 +480,13 @@ def add_new_transformer_args(parser):
         default=False
     )
 
+    group.add_argument(
+        '--ffn-layer',
+        type=int,
+        nargs='+',
+        help="which layer has ffn layer, 0 no 1 yes",
+        default=-1
+    )
 
     return group
 
