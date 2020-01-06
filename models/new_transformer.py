@@ -328,9 +328,12 @@ class NewTransformer(nn.Module):
 
         if config.tie_ffn_weights:
             for enc in encoders[1:]:
-                if hasattr(enc, 'ffn'):
+                if hasattr(enc, 'ffn') and hasattr(encoders[0], 'ffn'):
                     enc.ffn.sublayer.hidden.weight = encoders[0].ffn.sublayer.hidden.weight
                     enc.ffn.sublayer.output.weight = encoders[0].ffn.sublayer.output.weight
+                elif hasattr(enc, 'ffn') and hasattr(encoders[1], 'ffn'):
+                    enc.ffn.sublayer.hidden.weight = encoders[1].ffn.sublayer.hidden.weight
+                    enc.ffn.sublayer.output.weight = encoders[1].ffn.sublayer.output.weight
 
         return encoders
 
@@ -388,9 +391,12 @@ class NewTransformer(nn.Module):
 
         if config.tie_ffn_weights:
             for dec in decoders[1:]:
-                if hasattr(dec, 'ffn'):
+                if hasattr(dec, 'ffn') and hasattr(decoders[0], 'ffn'):
                     dec.ffn.sublayer.hidden.weight = decoders[0].ffn.sublayer.hidden.weight
                     dec.ffn.sublayer.output.weight = decoders[0].ffn.sublayer.output.weight
+                elif hasattr(dec, 'ffn') and hasattr(decoders[1], 'ffn'):
+                    dec.ffn.sublayer.hidden.weight = decoders[1].ffn.sublayer.hidden.weight
+                    dec.ffn.sublayer.output.weight = decoders[1].ffn.sublayer.output.weight
 
         return decoders
 
