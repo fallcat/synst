@@ -213,9 +213,12 @@ class WarmupLRSchedule2(object):
         # but the input step is zero-based so just do a max with 1
 
         if step < self.warmup_steps:
+            # print("step < self.warmup_steps", step,  1e-7 + (1e-3 - 1e-7) / self.warmup_steps * step)
             return 1e-7 + (1e-3 - 1e-7) / self.warmup_steps * step
         else:
             return max(1e-3 * self.warmup_steps ** 0.5 * step ** -0.5, 1e-9)
+        # step = max(1, step)
+        # return min(step ** -0.5, step * self.warmup_steps ** -1.5)
 
 
 class DummyLRSchedule(object):
@@ -369,7 +372,7 @@ class ProbeTranslator(object):
             else:
                 length_basis = [0] * len(batch['inputs'])
 
-            decoder = BeamSearchDecoder(
+            decoder = ProbeBeamSearchDecoder(
                 self.decoder,
                 self.eos_idx,
                 self.config,
@@ -411,117 +414,6 @@ class ProbeTranslator(object):
                 ('targets', targets),
                 ('gold_targets', gold_targets),
             ]), {'enc_dec_stats': {stats_type: torch.cat([enc_dec_stat[stats_type].view(self.num_layers,
-                                                                                        self.num_heads,
-                                                                                        -1)
-                                                          for enc_dec_stat in enc_dec_stats], dim=-1)
-                                   for stats_type in STATS_TYPES}}
-
-
-class ProbeTranslator2(object):
-    ''' An object that encapsulates model evaluation '''
-    def __init__(self, config, model, dataset):
-        self.config = config
-        self.dataset = dataset
-
-        self.span = model.span
-        self.encoder = ModuleWrapper(model, 'encode')
-        self.decoder = ModuleWrapper(model, 'decode')
-
-        self.modules = {
-            'model': model
-        }
-
-        self.num_layers = model.num_layers
-        self.num_heads = model.num_heads
-
-    def to(self, device):
-        ''' Move the translator to the specified device '''
-        if 'cuda' in device.type:
-            self.encoder = nn.DataParallel(self.encoder.cuda())
-            self.decoder = nn.DataParallel(self.decoder.cuda())
-
-        return self
-
-    @property
-    def std_dev(self):
-        return math.sqrt(self.variance)
-
-    @property
-    def sos_idx(self):
-        ''' Get the sos index '''
-        return self.dataset.sos_idx
-
-    @property
-    def eos_idx(self):
-        ''' Get the eos index '''
-        return self.dataset.eos_idx
-
-    @property
-    def padding_idx(self):
-        ''' Get the padding index '''
-        return self.dataset.padding_idx
-
-    def translate(self, batch):
-        ''' Generate with the given batch '''
-        with torch.no_grad():
-            if self.config.length_basis:
-                length_basis = batch[self.config.length_basis]
-            else:
-                length_basis = [0] * len(batch['inputs'])
-
-            decoder = ProbeBeamSearchDecoder(
-                self.decoder,
-                self.eos_idx,
-                self.config,
-                self.span
-            )
-
-            encoded, encoder_attn_weights_tensor = self.encoder(batch['inputs'])
-
-            encoder_stats = probe(encoder_attn_weights_tensor)
-
-            beams = decoder.initialize_search(
-                [[self.sos_idx] * self.span for _ in range(len(batch['inputs']))],
-                [l + self.config.max_decode_length + self.span + 1 for l in length_basis]
-            )
-            # targets = [
-            #     beam.best_hypothesis.sequence[self.span - 1:]
-            #     for beam, decoder_attn_weights_tensors, enc_dec_attn_weights_tensors in decoder.decode(encoded, beams)
-            # ]
-
-            decoder_results = decoder.decode(encoded, beams)
-            targets = [beam.best_hypothesis.sequence[self.span - 1:] for beam in decoder_results['beams']]
-
-            decoder_stats = [probe(decoder_attn_weights_tensor)
-                             for decoder_attn_weights_tensor in decoder_results['decoder_attn_weights_tensors']]
-            enc_dec_stats = [probe(enc_dec_attn_weights_tensor)
-                             for enc_dec_attn_weights_tensor in decoder_results['enc_dec_attn_weights_tensors']]
-
-            gold_targets = []
-            gold_target_lens = batch['target_lens']
-            for i, target in enumerate(batch['targets']):
-                target_len = gold_target_lens[i]
-                gold_targets.append(target[:target_len].tolist())
-
-            # print("decoder_stats")
-            # for stats_type in STATS_TYPES:
-            #     print(stats_type)
-            #     for decoder_stat in decoder_stats:
-            #         print(decoder_stat[stats_type].size())
-
-            return OrderedDict([
-                ('targets', targets),
-                ('gold_targets', gold_targets),
-            ]), {'encoder_stats': {stats_type: encoder_stats[stats_type].view(self.num_layers,
-                                                                              self.num_heads,
-                                                                              -1)
-                                   for stats_type in STATS_TYPES},
-                 'decoder_stats': {stats_type: torch.cat([decoder_stat[stats_type].view(self.num_layers,
-                                                                                        self.num_heads,
-                                                                                        -1)
-                                                          for decoder_stat in decoder_stats], dim=-1)
-                                   for stats_type in STATS_TYPES},
-                 'enc_dec_stats': {stats_type: torch.cat([enc_dec_stat[stats_type].view(self.num_layers,
                                                                                         self.num_heads,
                                                                                         -1)
                                                           for enc_dec_stat in enc_dec_stats], dim=-1)
@@ -577,7 +469,7 @@ class ProbeNewTranslator(object):
             else:
                 length_basis = [0] * len(batch['inputs'])
 
-            decoder = BeamSearchDecoder(
+            decoder = ProbeBeamSearchDecoder(
                 self.decoder,
                 self.eos_idx,
                 self.config,
@@ -595,13 +487,8 @@ class ProbeNewTranslator(object):
             #     for beam, decoder_attn_weights_tensors, enc_dec_attn_weights_tensors in decoder.decode(encoded, beams)
             # ]
 
-            targets = [
-                beam.best_hypothesis.sequence[self.span - 1:]
-                for beam in decoder.decode(encoded, beams)
-            ]
-
-            # decoder_results = decoder.decode(encoded, beams)
-            # targets = [beam.best_hypothesis.sequence[self.span - 1:] for beam in decoder_results['beams']]
+            decoder_results = decoder.decode(encoded, beams)
+            targets = [beam.best_hypothesis.sequence[self.span - 1:] for beam in decoder_results['beams']]
 
             gold_targets = []
             gold_target_lens = batch['target_lens']
@@ -618,10 +505,9 @@ class ProbeNewTranslator(object):
             return OrderedDict([
                 ('targets', targets),
                 ('gold_targets', gold_targets)
-            ])
-                 #   {'encoder_attn_weights_tensor': encoder_attn_weights_tensor,
-                 # 'decoder_attn_weights_tensors': decoder_results['decoder_attn_weights_tensors'],
-                 # 'enc_dec_attn_weights_tensors': decoder_results['enc_dec_attn_weights_tensors']}
+            ]), {'encoder_attn_weights_tensor': encoder_attn_weights_tensor,
+                 'decoder_attn_weights_tensors': decoder_results['decoder_attn_weights_tensors'],
+                 'enc_dec_attn_weights_tensors': decoder_results['enc_dec_attn_weights_tensors']}
 
 
 def get_final_state(x, mask, dim=1):
@@ -680,7 +566,7 @@ def save_attention(input_sentence, output_words, attentions, file_path):
     # Set up axes
     ax.set_xticklabels([''] + input_sentence.split(' ') +
                        ['<EOS>'], rotation=90)
-    ax.set_yticklabels([''] + output_words.split(' ') + ['<EOS>'])
+    ax.set_yticklabels([''] + output_words.split(' '))
 
     # Show label at every tick
     ax.xaxis.set_major_locator(ticker.MultipleLocator(1))
@@ -785,14 +671,14 @@ def init_indices(args):
 
         print('initialize cached indicies')
 
-        if args.config.model.indexing_type == 'bmm': # indexing-bmm
+        if args.config.model.indexing_type == 'bmm' and args.config.model.enc_attn_indexing and args.config.model.dec_attn_indexing: # indexing-bmm
             print('init index-bmm')
             encoder_indices_matq = init_indices_q(args.config.model.num_heads, 
                 args.action_config.max_decode_length+1, args.device, args.config.model.attn_position)
             decoder_indices_matq = init_indices_q(args.config.model.num_heads, 
                 args.action_config.max_decode_length+1, args.device, args.config.model.dec_attn_position)
 
-        if args.config.model.indexing_type == 'gather': # indexing-torch gather
+        if args.config.model.indexing_type == 'gather' and args.config.model.enc_attn_indexing and args.config.model.dec_attn_indexing: # indexing-torch gather
             print('init index-gather')
             encoder_attended_indices = init_attended_indices(args.config.model.num_heads, 
                 args.action_config.max_decode_length+1, args.device, args.config.model.attn_position,  args.config.model.attn_displacement)
