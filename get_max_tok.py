@@ -35,7 +35,7 @@ bsize = pat.findall(data)[0]
 # 1) first try bsize * n
 low = int(bsize)
 old = low
-for i in range(3, 20):
+for i in range(2, 20):
 	new_b = int(old) * i
 	print("trying %i" % new_b)
 	data = data.replace("-b %s" % bsize, "-b %i" % new_b)

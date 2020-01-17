@@ -14,7 +14,6 @@ from utils import same_tensor
 import models.utils as utils
 from models.utils import init_indices_q, init_attended_indices, init_attended_indices_conv
 
-
 class NewAttention(nn.Module):
     ''' Implement a hard-coded attention module '''
     ATTN_TYPES = ['normal', 'uniform', 'no', 'learned']
@@ -43,7 +42,6 @@ class NewAttention(nn.Module):
         self.half_window = int((self.attn_window - 1) / 2)
         self.attn_displacement = attn_config['attn_displacement']
         self.num_layers = attn_config['num_layers']
-        self.no_attn = attn_config['no_attn'] if 'no_attn' in attn_config else False
         self.word_count_ratio = attn_config['word_count_ratio'] if 'word_count_ratio' in attn_config else 1
         self.attn_concat = attn_config['attn_concat'] if 'attn_concat' in attn_config else 0
         if self.attn_concat in [1, 2]:
@@ -239,14 +237,13 @@ class NewAttention(nn.Module):
 
             # bs x num_heads x vlen x proj_dim
             values = values.view(batch_size, self.num_heads, values_shape[1], values_shape[2])
-
             # mask padding 
             if key_mask is not None:
                 values.masked_fill_(key_mask[:, None, :, None], float(0))
 
             max_padding = max(attn_displacement)
             values = F.pad(values, (0, 0, max_padding, max_padding), "constant", 0)
-
+            
             with torch.no_grad():
 
                 # recompute attended indices
@@ -260,8 +257,7 @@ class NewAttention(nn.Module):
                         utils.decoder_attended_indices[values.device.index] = init_attended_indices(self.num_heads, max(queries_shape[1], decoder_position+1), 
                                                                                 values.device, attn_position, attn_displacement)
                         attended_indices = utils.decoder_attended_indices[values.device.index]
-
-
+               
             if decoder_position == -1:
                 # bs x nh x qlen x proj_dim
                 try:
@@ -269,13 +265,80 @@ class NewAttention(nn.Module):
                             batch_size, self.num_heads, queries_shape[1], self.projection_dim)
                             ).transpose(2,1).contiguous().view(batch_size, -1, self.num_heads * self.projection_dim)
                 except:
+                    print("self")
                     pdb.set_trace()
 
             else:
                 # bs x nh x 1 x proj_dim
-                return torch.gather(values, 2, attended_indices[:, :, decoder_position:decoder_position+1].expand(
+                try:
+                    return torch.gather(values, 2, attended_indices[:, :, decoder_position:decoder_position+1].expand(
                             batch_size, self.num_heads, queries_shape[1], self.projection_dim)
                             ).transpose(2,1).contiguous().view(batch_size, -1, self.num_heads * self.projection_dim)
+                except:
+                    print("x")
+                    pdb.set_trace()
+    
+
+
+        # simple indexing - fix window size 1 - implementation: stacking values
+        if False:
+
+            # get attn config
+            attn_config = []
+            for attn_config_i in [attn_type, attn_position, attn_param, attn_displacement]:
+                if type(attn_config_i) is not list:
+                    attn_config.append([attn_config_i] * self.num_heads)
+                else:
+                    attn_config.append(attn_config_i)
+
+            attn_type, attn_position, attn_param, attn_displacement = attn_config
+
+            # bs x num_heads x vlen x proj_dim
+            values = values.view(batch_size, self.num_heads, values_shape[1], values_shape[2]) 
+            if key_mask is not None:
+                values.masked_fill_(key_mask[:, None, :, None], float(0))
+
+            max_padding = max(attn_displacement)
+            max_query_len = queries_shape[1] if decoder_position == -1 else decoder_position + 1
+            more_padding = round((max_query_len - 1) * self.word_count_ratio) + 1 - values_shape[1]
+            if more_padding > 0:
+                values = F.pad(values, (0, 0, max_padding, max_padding + more_padding), "constant", 0)
+            else:
+                values = F.pad(values, (0, 0, max_padding, max_padding), "constant", 0)
+            
+            with torch.no_grad():
+                max_query_len = queries_shape[1] if decoder_position == -1 else decoder_position + 1
+
+                # train all or test enc-self
+                if decoder_position == -1:
+                    indices_q = torch.round(torch.arange(queries_shape[1]).type_as(values) * self.word_count_ratio).long()
+
+                else:
+                    pdb.set_trace()
+                    indices_q = torch.round(torch.arange(decoder_position, decoder_position+1).type_as(values) * self.word_count_ratio).long()
+
+            # need to put outside of no_grad whenever involving indexing values, otherwise not the same as uniform-window=1
+            attended = []
+            for i, p, in enumerate(attn_position):
+                if p == "center":
+                    attended.append(values[:, i, max_padding + indices_q])
+
+                elif p == "left":
+                    attended.append(values[:, i, max_padding + indices_q - attn_displacement[i]])
+
+                elif p == "right":
+                    attended.append(values[:, i, max_padding + indices_q + attn_displacement[i]])
+
+                elif p == "first":
+                    attended.append(values[:, i, [max_padding]*indices_q.shape[0]])
+
+                else:
+                    print("unknown position")
+                    exit(-1)
+            
+            attended = torch.stack(attended, dim=1)
+            
+            return attended.transpose(2, 1).contiguous().view(batch_size, -1, self.num_heads * self.projection_dim)
 
         # simple indexing 3 - fix window size 1 - implementation: bmm
         if self.attn_indexing and self.indexing_type == 'bmm':
@@ -765,7 +828,7 @@ class NewAttention(nn.Module):
                 attn_weights = attn_weights.view(values_shape[0],
                                                  queries_shape[1],
                                                  values_shape[1])
-
+     
         if mask is not None:
             try:
                 attn_weights = attn_weights * (mask == 0).to(dtype=torch.float32)
@@ -784,7 +847,7 @@ class NewAttention(nn.Module):
                 attn_weights.masked_fill_(key_mask[:, None, None], float(0))
             except:
                 attn_weights = attn_weights.to(key_mask.device)
-
+                
                 attn_weights.masked_fill_(key_mask[:, None, None], float(0))
             attn_weights = attn_weights.view(attn_weights_shape)
 
@@ -883,20 +946,8 @@ class NewAttention(nn.Module):
         if num_queries:
             queries = queries[:, -num_queries:]
 
-        if not self.no_attn:
-            attended = self.attention(values, keys, queries, key_mask, attention_mask, layer_i, decoder_position,
-                                      input_lens)
-        else:
-            return self.output_projection(values.view(
-                                                        batch_size,
-                                                        self.num_heads,
-                                                        -1,
-                                                        self.projection_dim
-                                                    ).transpose(2, 1).contiguous().view(
-                                                        batch_size,
-                                                        -1,
-                                                        self.num_heads * self.projection_dim
-                                                    ))
+        attended = self.attention(values, keys, queries, key_mask, attention_mask, layer_i, decoder_position,
+                                  input_lens)
 
         queries = queries.view(
             batch_size,
@@ -910,7 +961,7 @@ class NewAttention(nn.Module):
         )
 
         if self.attn_score:
-
+            
             projected_queries = F.linear(queries, self.attn_score_project_in_weights).view(-1,
                                                                                            1,
                                                                                            self.projection_dim)
@@ -921,7 +972,7 @@ class NewAttention(nn.Module):
             scores = torch.bmm(projected_queries, attended.transpose(1, 2)).softmax(dim=-1)
             attended = F.linear(torch.bmm(scores, attended).squeeze(1),
                                 self.attn_score_project_out_weights).view(attended_shape)
-
+        
 
         if 'learned' not in self.attn_type and 'learned' != self.attn_type and self.attn_concat_weights is not None:
             if self.attn_concat == 1:

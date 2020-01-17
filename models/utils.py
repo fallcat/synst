@@ -213,9 +213,12 @@ class WarmupLRSchedule2(object):
         # but the input step is zero-based so just do a max with 1
 
         if step < self.warmup_steps:
+            # print("step < self.warmup_steps", step,  1e-7 + (1e-3 - 1e-7) / self.warmup_steps * step)
             return 1e-7 + (1e-3 - 1e-7) / self.warmup_steps * step
         else:
             return max(1e-3 * self.warmup_steps ** 0.5 * step ** -0.5, 1e-9)
+        # step = max(1, step)
+        # return min(step ** -0.5, step * self.warmup_steps ** -1.5)
 
 
 class DummyLRSchedule(object):
@@ -369,7 +372,7 @@ class ProbeTranslator(object):
             else:
                 length_basis = [0] * len(batch['inputs'])
 
-            decoder = BeamSearchDecoder(
+            decoder = ProbeBeamSearchDecoder(
                 self.decoder,
                 self.eos_idx,
                 self.config,
@@ -527,7 +530,6 @@ class ProbeTranslator2(object):
                                                           for enc_dec_stat in enc_dec_stats], dim=-1)
                                    for stats_type in STATS_TYPES}}
 
-
 class ProbeNewTranslator(object):
     ''' An object that encapsulates model evaluation '''
     def __init__(self, config, model, dataset):
@@ -577,7 +579,7 @@ class ProbeNewTranslator(object):
             else:
                 length_basis = [0] * len(batch['inputs'])
 
-            decoder = BeamSearchDecoder(
+            decoder = ProbeBeamSearchDecoder(
                 self.decoder,
                 self.eos_idx,
                 self.config,
@@ -595,13 +597,8 @@ class ProbeNewTranslator(object):
             #     for beam, decoder_attn_weights_tensors, enc_dec_attn_weights_tensors in decoder.decode(encoded, beams)
             # ]
 
-            targets = [
-                beam.best_hypothesis.sequence[self.span - 1:]
-                for beam in decoder.decode(encoded, beams)
-            ]
-
-            # decoder_results = decoder.decode(encoded, beams)
-            # targets = [beam.best_hypothesis.sequence[self.span - 1:] for beam in decoder_results['beams']]
+            decoder_results = decoder.decode(encoded, beams)
+            targets = [beam.best_hypothesis.sequence[self.span - 1:] for beam in decoder_results['beams']]
 
             gold_targets = []
             gold_target_lens = batch['target_lens']
@@ -618,10 +615,9 @@ class ProbeNewTranslator(object):
             return OrderedDict([
                 ('targets', targets),
                 ('gold_targets', gold_targets)
-            ])
-                 #   {'encoder_attn_weights_tensor': encoder_attn_weights_tensor,
-                 # 'decoder_attn_weights_tensors': decoder_results['decoder_attn_weights_tensors'],
-                 # 'enc_dec_attn_weights_tensors': decoder_results['enc_dec_attn_weights_tensors']}
+            ]), {'encoder_attn_weights_tensor': encoder_attn_weights_tensor,
+                 'decoder_attn_weights_tensors': decoder_results['decoder_attn_weights_tensors'],
+                 'enc_dec_attn_weights_tensors': decoder_results['enc_dec_attn_weights_tensors']}
 
 
 def get_final_state(x, mask, dim=1):
@@ -680,7 +676,7 @@ def save_attention(input_sentence, output_words, attentions, file_path):
     # Set up axes
     ax.set_xticklabels([''] + input_sentence.split(' ') +
                        ['<EOS>'], rotation=90)
-    ax.set_yticklabels([''] + output_words.split(' ') + ['<EOS>'])
+    ax.set_yticklabels([''] + output_words.split(' '))
 
     # Show label at every tick
     ax.xaxis.set_major_locator(ticker.MultipleLocator(1))
@@ -721,7 +717,7 @@ def init_attended_indices(num_heads, max_len, device, attn_position, attn_displa
 
     indices_q = torch.arange(max_len, device=device, dtype=torch.long).view(-1, 1)
     attended_indices = torch.zeros((1, num_heads, max_len, 1), device=device, dtype=torch.long, requires_grad=False)
-    offset = max(attn_displacement)
+    offset = max(attn_displacement) if type(attn_displacement) is list else 1
 
     even = [i for i in range(num_heads) if i % 2 == 0 ]
     odd = [i for i in range(num_heads) if i % 2 != 0 ]
@@ -785,19 +781,21 @@ def init_indices(args):
 
         print('initialize cached indicies')
 
-        if args.config.model.indexing_type == 'bmm': # indexing-bmm
+        if args.config.model.indexing_type == 'bmm' and args.config.model.enc_attn_indexing and args.config.model.dec_attn_indexing: # indexing-bmm
             print('init index-bmm')
             encoder_indices_matq = init_indices_q(args.config.model.num_heads, 
                 args.action_config.max_decode_length+1, args.device, args.config.model.attn_position)
             decoder_indices_matq = init_indices_q(args.config.model.num_heads, 
                 args.action_config.max_decode_length+1, args.device, args.config.model.dec_attn_position)
 
-        if args.config.model.indexing_type == 'gather': # indexing-torch gather
+        if args.config.model.indexing_type == 'gather' and args.config.model.enc_attn_indexing and args.config.model.dec_attn_indexing: # indexing-torch gather
             print('init index-gather')
-            encoder_attended_indices = init_attended_indices(args.config.model.num_heads, 
-                args.action_config.max_decode_length+1, args.device, args.config.model.attn_position,  args.config.model.attn_displacement)
-            decoder_attended_indices = init_attended_indices(args.config.model.num_heads, 
-                args.action_config.max_decode_length+1, args.device, args.config.model.dec_attn_position,  args.config.model.dec_attn_displacement)
+            encoder_attended_indices[0] = init_attended_indices(args.config.model.num_heads, 
+                args.action_config.max_decode_length+1, 
+                args.device, args.config.model.attn_position,  args.config.model.attn_displacement)
+            decoder_attended_indices[0] = init_attended_indices(args.config.model.num_heads, 
+                args.action_config.max_decode_length+1, 
+                args.device, args.config.model.dec_attn_position,  args.config.model.dec_attn_displacement)
 
         if args.config.model.attn_indexing is False and args.config.model.attn_window > 0:
             encoder_attended_indices = init_attended_indices_conv(args.config.model.num_heads, 
