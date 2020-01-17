@@ -709,6 +709,7 @@ def init_indices_q(num_heads, max_len, device, attn_position):
 
 def init_attended_indices(num_heads, max_len, device, attn_position, attn_displacement):
 
+    print("init attended indices")
     if type(attn_position) is not list:
         attn_position = [attn_position]
     if len(attn_position) < num_heads:
@@ -791,10 +792,10 @@ def init_indices(args):
         if args.config.model.indexing_type == 'gather' and args.config.model.enc_attn_indexing and args.config.model.dec_attn_indexing: # indexing-torch gather
             print('init index-gather')
             encoder_attended_indices[0] = init_attended_indices(args.config.model.num_heads, 
-                args.action_config.max_decode_length+1, 
+                350,#args.action_config.max_decode_length+1, 
                 args.device, args.config.model.attn_position,  args.config.model.attn_displacement)
             decoder_attended_indices[0] = init_attended_indices(args.config.model.num_heads, 
-                args.action_config.max_decode_length+1, 
+                350, #args.action_config.max_decode_length+1, 
                 args.device, args.config.model.dec_attn_position,  args.config.model.dec_attn_displacement)
 
         if args.config.model.attn_indexing is False and args.config.model.attn_window > 0:
