@@ -2,7 +2,7 @@
 
 # Requires sacrebleu in your PATH
 if ! [[ "$MOSESDECODER" ]]; then
-  MOSESDECODER="/home/wyou/mosesdecoder"
+  MOSESDECODER="/mnt/nfs/work1/miyyer/simengsun/unsupervisedMT/tools/mosesdecoder"
 fi
 
 DECODED="$1"
