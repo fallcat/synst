@@ -311,7 +311,7 @@ class Trainer(object):
 
         # need to use .item() which converts to Python scalar
         # because as a Tensor it accumulates gradients
-        return nll.item(), torch.sum(batch['target_lens']).item(), reward
+        return nll.item(), torch.sum(batch['target_lens']).item(), reward.item()
 
     def __call__(self, start_epoch, experiment, verbose=0):
         ''' Execute training '''
