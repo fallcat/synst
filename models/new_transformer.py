@@ -283,7 +283,7 @@ class LayerMaskPredictor(nn.Module):
             layermask: [2*num_layers-1]
         '''
         layermask = self.projection(torch.mean(enc0output,1).mean(0))
-        layermask = torch.nn.functional.sigmoid(layermask)
+        layermask = torch.sigmoid(layermask)
         m = Bernoulli(layermask)
         res =  m.sample()
         if 1 not in res[-self.num_layers:]:
@@ -476,9 +476,10 @@ class NewTransformer(nn.Module):
         nll = self.cross_entropy(logits, targets).sum(dims[:-1])
         smoothed_nll = self.label_smoothing(logits, targets).sum(dims)
 
+        #pdb.set_trace()
         # compute nll-based reward
         total_len = sum(batch['input_lens'])
-        reward = smoothed_nll / total_len + self.reward_tradeoff / torch.sum(raw_layermask)
+        reward = - torch.log(smoothed_nll.sum() / total_len) + self.reward_tradeoff / torch.sum(raw_layermask)
 
         return smoothed_nll, nll, reward
 

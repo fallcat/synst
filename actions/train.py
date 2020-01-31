@@ -131,6 +131,7 @@ class Trainer(object):
         learning_rate = self.metric_store['lr']
         num_tokens = self.metric_store['num_tok']
         neg_log_likelihood = self.metric_store['nll']
+        rl_reward = self.metric_store['reward']
 
         def try_optimize(i, last=False):
             # optimize if:
@@ -166,11 +167,13 @@ class Trainer(object):
             nll_per_update = 0.
             length_per_update = 0
             num_tokens_per_update = 0
+            reward_per_update = 0.
+            reward_num = 0
             for i, batch in enumerate(batches, 1):
                 
                 try:
                     
-                    nll, length = self.calculate_gradient(batch)
+                    nll, length, reward = self.calculate_gradient(batch)
                     did_optimize = try_optimize(i)
 
                     # record the effective number of tokens
@@ -181,6 +184,8 @@ class Trainer(object):
                         # record length and nll
                         nll_per_update += nll
                         length_per_update += length
+                        reward_per_update += reward
+                        reward_num += 1
 
                     if did_optimize:
                         # advance the experiment step
@@ -188,15 +193,20 @@ class Trainer(object):
 
                         num_tokens.update(num_tokens_per_update)
                         neg_log_likelihood.update(nll_per_update / length_per_update)
+                        rl_reward.update(reward_per_update / reward_num)
 
                         experiment.log_metric('num_tokens', num_tokens_per_update)
                         experiment.log_metric('nll', neg_log_likelihood.last_value)
+                        experiment.log_metric('reward', rl_reward.last_value)
+
                         # experiment.log_metric('max_memory_alloc', torch.cuda.max_memory_allocated()//1024//1024)
                         # experiment.log_metric('max_memory_cache', torch.cuda.max_memory_cached()//1024//1024)
 
                         nll_per_update = 0.
                         length_per_update = 0
                         num_tokens_per_update = 0
+                        reward_per_update = 0.
+                        reward_num = 0
 
                 except RuntimeError as rte:
                     if 'out of memory' in str(rte):
@@ -300,7 +310,7 @@ class Trainer(object):
 
         # need to use .item() which converts to Python scalar
         # because as a Tensor it accumulates gradients
-        return nll.item(), torch.sum(batch['target_lens']).item()
+        return nll.item(), torch.sum(batch['target_lens']).item(), reward
 
     def __call__(self, start_epoch, experiment, verbose=0):
         ''' Execute training '''
