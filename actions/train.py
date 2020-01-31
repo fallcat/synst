@@ -306,7 +306,7 @@ class Trainer(object):
         loss = loss.sum()
 
         # calculate gradients then run an optimization step
-        loss.backward()
+        loss.backward(retain_graph=True)
         reward.backward()
 
         # need to use .item() which converts to Python scalar
