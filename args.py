@@ -495,6 +495,13 @@ def add_new_transformer_args(parser):
         help="Use layer mask"
     )
 
+    group.add_argument(
+        '--reward-tradeoff',
+        type=float,
+        default=2.0,
+        help='reward tradeoff'
+    )
+
     return group
 
 

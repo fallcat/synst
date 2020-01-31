@@ -25,7 +25,7 @@ from actions.evaluate import Evaluator
 from data.parallel import chunked_scattering
 from models.utils import LinearLRSchedule, WarmupLRSchedule, WarmupLRSchedule2, DummyLRSchedule, checkpoint
 from utils import profile, tqdm_wrap_stdout, tqdm_unwrap_stdout
-
+import pdb
 
 class Trainer(object):
     ''' An object that encapsulates model training '''
@@ -37,21 +37,18 @@ class Trainer(object):
         self.dataloader = dataloader
         self.validation_dataloader = dataloader
         self.last_checkpoint_time = time.time()
-        self.total_elapsed_time = 0
 
         if 'cuda' in device.type:
             self.model = nn.DataParallel(model.cuda())
 
         if self.config.optimizer == "adam":
-            # self.optimizer = optim.Adam(model.parameters(), config.base_lr, betas=(0.9, 0.98), eps=1e-9)
-            self.optimizer = optim.Adam(model.parameters(), 1e-7, betas=(0.9, 0.98), eps=1e-9)
+            self.optimizer = optim.Adam(model.parameters(), config.base_lr, betas=(0.9, 0.98), eps=1e-9)
+            # self.optimizer = optim.Adam(model.parameters(), 1e-7, betas=(0.9, 0.98), eps=1e-9)
             if config.lr_scheduler == 'warmup':
                 self.lr_scheduler = LambdaLR(
                     self.optimizer,
                     WarmupLRSchedule(
-                        config.warmup_steps, 
-                        config.base_lr,
-                        config.final_lr
+                        config.warmup_steps
                     )
                 )
 
@@ -134,8 +131,6 @@ class Trainer(object):
         learning_rate = self.metric_store['lr']
         num_tokens = self.metric_store['num_tok']
         neg_log_likelihood = self.metric_store['nll']
-        time_profile = self.metric_store['time_per_batch']
-        total_time_profile = self.metric_store['time_total']
 
         def try_optimize(i, last=False):
             # optimize if:
@@ -174,23 +169,9 @@ class Trainer(object):
             for i, batch in enumerate(batches, 1):
                 
                 try:
-                    start_event = torch.cuda.Event(enable_timing=True)
-                    end_event = torch.cuda.Event(enable_timing=True)
-
-                    start_event.record()
+                    
                     nll, length = self.calculate_gradient(batch)
                     did_optimize = try_optimize(i)
-                    pdb.set_trace()
-                    end_event.record()
-                    torch.cuda.synchronize()
-
-                    elapsed_time_ms = start_event.elapsed_time(end_event)
-
-                    self.total_elapsed_time += elapsed_time_ms
-                    time_profile.update(elapsed_time_ms)
-                    total_time_profile.update(self.total_elapsed_time)
-                    experiment.log_metric('elapsed_time_per_batch', elapsed_time_ms)
-                    experiment.log_metric('elapsed_time_total', self.total_elapsed_time)
 
                     # record the effective number of tokens
                     num_tokens_per_update += int(sum(batch['input_lens']))
@@ -217,18 +198,17 @@ class Trainer(object):
                         length_per_update = 0
                         num_tokens_per_update = 0
 
-                    
-
                 except RuntimeError as rte:
                     if 'out of memory' in str(rte):
                         torch.cuda.empty_cache()
 
                         oom.update(1)
                         experiment.log_metric('oom', oom.total)
+                        #exit(-1)
+                        raise rte
                     else:
                         batches.close()
                         raise rte
-
 
                 if self.should_checkpoint():
                     new_best = False
@@ -244,7 +224,6 @@ class Trainer(object):
                     break
 
             try_optimize(i, last=True)
-            pdb.set_trace()
 
     def should_checkpoint(self):
         ''' Function which determines if a new checkpoint should be saved '''
@@ -298,8 +277,9 @@ class Trainer(object):
     def optimize(self):
         ''' Calculate an optimization step '''
         self.optimizer.step()
-        self.lr_scheduler.step()
         self.optimizer.zero_grad()
+        self.lr_scheduler.step()
+        
 
         return self.lr_scheduler.get_lr()[0]
 
@@ -307,7 +287,7 @@ class Trainer(object):
         ''' Runs one step of optimization '''
         # run the data through the model
         self.model.train()
-        loss, nll = self.model(batch)
+        loss, nll, reward = self.model(batch)
 
         # nn.DataParallel wants to gather rather than doing a reduce_add, so the output here
         # will be a tensor of values that must be summed
@@ -316,6 +296,7 @@ class Trainer(object):
 
         # calculate gradients then run an optimization step
         loss.backward()
+        reward.backward()
 
         # need to use .item() which converts to Python scalar
         # because as a Tensor it accumulates gradients
@@ -347,4 +328,3 @@ class Trainer(object):
                     new_best = self.evaluate(experiment, epoch, verbose)
 
                 self.checkpoint(epoch, experiment.curr_step, new_best)
-

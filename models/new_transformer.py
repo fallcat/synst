@@ -266,6 +266,8 @@ class TransformerDecoderLayer(nn.Module):
 
 class LayerMaskPredictor(nn.Module):
     def __init__(self, embedding_size, num_layers):
+        super(LayerMaskPredictor, self).__init__()
+        self.num_layers = num_layers
         self.projection = nn.Linear(embedding_size, 2 * num_layers - 1)
         self.reset_parameters()
         
@@ -280,11 +282,13 @@ class LayerMaskPredictor(nn.Module):
             enc0output: [bs, L, embedding_size]
             layermask: [2*num_layers-1]
         '''
-        layermask = self.projection(torch.mean(enc0output, dim=1).mean(dim=0))
+        layermask = self.projection(torch.mean(enc0output,1).mean(0))
+        layermask = torch.nn.functional.sigmoid(layermask)
         m = Bernoulli(layermask)
         res =  m.sample()
-        print('layermask', res)
-        return res
+        if 1 not in res[-self.num_layers:]:
+            res[torch.argmax(layermask[-self.num_layers:]) + self.num_layers - 1] = 1
+        return res, layermask
 
 class NewTransformer(nn.Module):
     ''' The New Transformer module '''
@@ -315,6 +319,8 @@ class NewTransformer(nn.Module):
             ignore_index=self.padding_idx,
             reduction='none'
         )
+
+        self.reward_tradeoff = config.reward_tradeoff
 
         if config.layer_mask:
             self.layer_mask_predictor = LayerMaskPredictor(config.embedding_size, config.num_layers)
@@ -456,7 +462,7 @@ class NewTransformer(nn.Module):
 
     def forward(self, batch): # pylint:disable=arguments-differ
         ''' A batch of inputs and targets '''
-        encoded, layer_mask = self.encode(batch['inputs'])
+        encoded, layer_mask, raw_layermask = self.encode(batch['inputs'])
         decoded = self.decode(
             encoded,
             right_shift(right_shift(batch['targets']), shift=self.span - 1, fill=self.sos_idx),
@@ -469,7 +475,12 @@ class NewTransformer(nn.Module):
         targets = left_shift(batch['targets'])
         nll = self.cross_entropy(logits, targets).sum(dims[:-1])
         smoothed_nll = self.label_smoothing(logits, targets).sum(dims)
-        return smoothed_nll, nll
+
+        # compute nll-based reward
+        total_len = sum(batch['input_lens'])
+        reward = smoothed_nll / total_len + self.reward_tradeoff / torch.sum(raw_layermask)
+
+        return smoothed_nll, nll, reward
 
     def encode(self, inputs):
         ''' Encode the inputs '''
@@ -482,9 +493,9 @@ class NewTransformer(nn.Module):
             if i == 0 or layer_mask[i-1] == 1:
                 encoded = encoder(encoded, i, word_embedding)
             if i == 0:
-                layer_mask = self.layer_mask_predictor(encoded)
+                layer_mask, raw_layermask = self.layer_mask_predictor(encoded['state'])
 
-        return encoded, layer_mask
+        return encoded, layer_mask, raw_layermask
 
     def decode(self, encoded, targets, decoders=None, embedding=None, cache=None, mask=None, input_lens=None, layer_mask=None):
         ''' Decode the encoded sequence to the targets '''
