@@ -298,14 +298,14 @@ class Translator(object):
                 self.span
             )
 
-            encoded = self.encoder(batch['inputs'])
+            encoded, layer_mask = self.encoder(batch['inputs'])
             beams = decoder.initialize_search(
                 [[self.sos_idx] * self.span for _ in range(len(batch['inputs']))],
                 [l + self.config.max_decode_length + self.span + 1 for l in length_basis]
             )
             targets = [
                 beam.best_hypothesis.sequence[self.span - 1:]
-                for beam in decoder.decode(encoded, beams)
+                for beam in decoder.decode(encoded, beams, layer_mask)
             ]
 
             gold_targets = []
@@ -709,7 +709,6 @@ def init_indices_q(num_heads, max_len, device, attn_position):
 
 def init_attended_indices(num_heads, max_len, device, attn_position, attn_displacement):
 
-    print("init attended indices")
     if type(attn_position) is not list:
         attn_position = [attn_position]
     if len(attn_position) < num_heads:

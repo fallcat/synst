@@ -12,6 +12,7 @@ from models.attention import MultiHeadedAttention
 from models.embeddings import PositionEmbedding, TokenEmbedding
 from models.utils import LabelSmoothingLoss, Translator
 from utils import left_shift, right_shift, triu
+from torch.distributions import Bernoulli
 
 
 class TransformerSublayer(nn.Module):
@@ -263,6 +264,27 @@ class TransformerDecoderLayer(nn.Module):
 
         return mask[None, :dim, :dim]
 
+class LayerMaskPredictor(nn.Module):
+    def __init__(self, embedding_size, num_layers):
+        self.projection = nn.Linear(embedding_size, 2 * num_layers - 1)
+        self.reset_parameters()
+        
+    def reset_parameters(self):
+        ''' Reset parameters using xavier initialiation '''
+        gain = nn.init.calculate_gain('linear')
+        nn.init.xavier_uniform_(self.projection.weight, gain)
+        nn.init.constant_(self.projection.bias, 0.)
+
+    def forward(self, enc0output):
+        '''
+            enc0output: [bs, L, embedding_size]
+            layermask: [2*num_layers-1]
+        '''
+        layermask = self.projection(torch.mean(enc0output, dim=1).mean(dim=0))
+        m = Bernoulli(layermask)
+        res =  m.sample()
+        print('layermask', res)
+        return res
 
 class NewTransformer(nn.Module):
     ''' The New Transformer module '''
@@ -294,6 +316,11 @@ class NewTransformer(nn.Module):
             reduction='none'
         )
 
+        if config.layer_mask:
+            self.layer_mask_predictor = LayerMaskPredictor(config.embedding_size, config.num_layers)
+        else:
+            self.layer_mask_predictor = lambda x: torch.ones(config.num_layers * 2 - 1)
+
     @classmethod
     def create_encoders(cls, config):
         ''' Create the transformer encoders '''
@@ -321,6 +348,7 @@ class NewTransformer(nn.Module):
                        'indexing_type': config.indexing_type,
                        'ffn_layer': config.ffn_layer}
         args = [attn_config, config.num_heads, config.embedding_size, config.hidden_dim]
+
         encoders = nn.ModuleList([
             TransformerEncoderLayer(*args, layer_i, **kwargs)
             for layer_i in range(config.num_layers)
@@ -428,10 +456,12 @@ class NewTransformer(nn.Module):
 
     def forward(self, batch): # pylint:disable=arguments-differ
         ''' A batch of inputs and targets '''
+        encoded, layer_mask = self.encode(batch['inputs'])
         decoded = self.decode(
-            self.encode(batch['inputs']),
+            encoded,
             right_shift(right_shift(batch['targets']), shift=self.span - 1, fill=self.sos_idx),
-            input_lens=batch['input_lens']
+            input_lens=batch['input_lens'],
+            layer_mask=layer_mask
         )
 
         logits = decoded['logits']
@@ -449,11 +479,14 @@ class NewTransformer(nn.Module):
             'mask': inputs.eq(self.padding_idx)
         }
         for i, encoder in enumerate(self.encoders):
-            encoded = encoder(encoded, i, word_embedding)
+            if i == 0 or layer_mask[i-1] == 1:
+                encoded = encoder(encoded, i, word_embedding)
+            if i == 0:
+                layer_mask = self.layer_mask_predictor(encoded)
 
-        return encoded
+        return encoded, layer_mask
 
-    def decode(self, encoded, targets, decoders=None, embedding=None, cache=None, mask=None, input_lens=None):
+    def decode(self, encoded, targets, decoders=None, embedding=None, cache=None, mask=None, input_lens=None, layer_mask=None):
         ''' Decode the encoded sequence to the targets '''
         if decoders is None:
             decoders = self.decoders
@@ -471,7 +504,8 @@ class NewTransformer(nn.Module):
         }
         for i, decoder in enumerate(decoders):
             # print("i", i)
-            decoded = decoder(decoded, encoded, i, word_embedding)
+            if layer_mask[len(decoders) - 1 + i] == 1:
+                decoded = decoder(decoded, encoded, i, word_embedding)
 
         # compute projection to the vocabulary
         state = decoded['state']

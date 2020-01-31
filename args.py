@@ -488,6 +488,13 @@ def add_new_transformer_args(parser):
         default=-1
     )
 
+    group.add_argument(
+        '--layer-mask',
+        default=False,
+        action='store_true',
+        help="Use layer mask"
+    )
+
     return group
 
 

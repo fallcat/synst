@@ -162,7 +162,6 @@ class BeamSearchDecoder(object):
         new_hypotheses = []
         for new_hypothesis_idx in hypotheses_indices:
             base_hypothesis_idx = new_hypothesis_idx // self.beam_width
-
             base_hypothesis = beam.hypotheses[base_hypothesis_idx]
             if beam.finished_decoding(base_hypothesis, self.eos_idx):
                 new_hypotheses.append(base_hypothesis)
@@ -203,7 +202,7 @@ class BeamSearchDecoder(object):
             else:
                 self.update_greedy(scores, indices, beam, hypothesis_map, cache=cache)
 
-    def decode(self, encoded, beams):
+    def decode(self, encoded, beams, layer_mask):
         ''' Decodes the given inputs '''
         self.model.eval()
         with torch.no_grad():
@@ -217,7 +216,7 @@ class BeamSearchDecoder(object):
                 while chunks:
                     try:
                         encoded_batch, batch = chunks.pop()
-                        result = self.model(encoded_batch, batch, cache=cache)
+                        result = self.model(encoded_batch, batch, cache=cache, layer_mask=layer_mask)
 
                         new_cache = result.get('cache')
                         if new_cache:
@@ -235,7 +234,7 @@ class BeamSearchDecoder(object):
                             # current batch into two chunks and try again.
                             chunks.extend(zip(
                                 utils.split_or_chunk(encoded_batch, 2),
-                                utils.split_or_chunk(batch, 2),
+                                utils.split_or_chunk(batch, 2)
                             ))
 
                             # Additionally clear the cache in case the issue is related to allocator
@@ -248,3 +247,4 @@ class BeamSearchDecoder(object):
                 self.update_beams(log_prob, beam_map, updated_cache)
 
             return beams
+
