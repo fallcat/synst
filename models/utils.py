@@ -260,6 +260,9 @@ class Translator(object):
             'model': model
         }
 
+        # store layermask
+        self.layermasks = []
+
     def to(self, device):
         ''' Move the translator to the specified device '''
         if 'cuda' in device.type:
@@ -299,6 +302,7 @@ class Translator(object):
             )
 
             encoded, layer_mask, _ = self.encoder(batch['inputs'])
+            self.layermasks.append(layer_mask)
             beams = decoder.initialize_search(
                 [[self.sos_idx] * self.span for _ in range(len(batch['inputs']))],
                 [l + self.config.max_decode_length + self.span + 1 for l in length_basis]
