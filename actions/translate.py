@@ -134,6 +134,6 @@ class Translator(object):
                 layermask_path = os.path.join(self.config.output_directory, 'layermasks.txt')
                 with open(layermask_path, 'w') as f:
                     for lm in self.translator.layermasks:
-                        f.writeline('\t'.join([str(a) for a in lm]))
+                        f.write('\t'.join([str(a) for a in lm]))
 
 
