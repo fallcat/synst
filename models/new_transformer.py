@@ -484,9 +484,14 @@ class NewTransformer(nn.Module):
         # pdb.set_trace()
         # compute nll-based reward
         total_len = sum(batch['input_lens'])
-        reward = - torch.log(smoothed_nll.sum() / total_len) + self.reward_tradeoff / torch.sum(raw_layermask)
+        ## -log(nll) + r / |m|_0
+        # reward = - torch.log(smoothed_nll.sum() / total_len) + self.reward_tradeoff / torch.sum(raw_layermask)
 
-        return smoothed_nll, nll, reward, torch.sum(raw_layermask)
+        ## - nll - |m|_0
+        sum_layermask = torch.sum(raw_layermask)
+        reward = - smoothed_nll.sum() - sum_layermask
+
+        return smoothed_nll, nll, reward, sum_layermask
 
     def encode(self, inputs):
         ''' Encode the inputs '''
