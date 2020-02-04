@@ -328,9 +328,13 @@ class NewTransformer(nn.Module):
         self.reward_tradeoff = config.reward_tradeoff
 
         if config.layer_mask:
-            self.layer_mask_predictor = LayerMaskPredictor(config.embedding_size, config.num_layers)
+            if config.random_layermask:
+                self.layer_mask_predictor = lambda x: [Bernoulli(torch.ones(config.num_layers * 2 - 1) * 0.5).sample()] * 2
+            else:
+                self.layer_mask_predictor = LayerMaskPredictor(config.embedding_size, config.num_layers)
+
         else:
-            self.layer_mask_predictor = lambda x: torch.ones(config.num_layers * 2 - 1)
+            self.layer_mask_predictor = lambda x: [torch.ones(config.num_layers * 2 - 1)] * 2
 
     @classmethod
     def create_encoders(cls, config):
@@ -489,7 +493,7 @@ class NewTransformer(nn.Module):
 
         ## - nll - |m|_0
         sum_layermask = torch.sum(raw_layermask)
-        reward = - smoothed_nll.sum() / total_len - sum_layermask
+        reward = - smoothed_nll.sum() / total_len - self.reward_tradeoff * sum_layermask
 
         return smoothed_nll, nll, reward, sum_layermask
 

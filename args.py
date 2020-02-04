@@ -501,6 +501,13 @@ def add_new_transformer_args(parser):
         default=2.0,
         help='reward tradeoff'
     )
+    
+    group.add_argument(
+        '--random-layermask',
+        default=False,
+        action='store_true',
+        help="whether to use random layermask, if true, random sample layermask, not updating layermask predictor"
+    )
 
     return group
 
