@@ -301,8 +301,10 @@ class Translator(object):
                 self.span
             )
 
-            encoded, layer_mask, _ = self.encoder(batch['inputs'])
+            # change to store distribution
+            encoded, _, layer_mask = self.encoder(batch['inputs'])
             self.layermasks.append(layer_mask)
+            
             beams = decoder.initialize_search(
                 [[self.sos_idx] * self.span for _ in range(len(batch['inputs']))],
                 [l + self.config.max_decode_length + self.span + 1 for l in length_basis]
