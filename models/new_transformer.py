@@ -489,7 +489,7 @@ class NewTransformer(nn.Module):
 
         ## - nll - |m|_0
         sum_layermask = torch.sum(raw_layermask)
-        reward = - smoothed_nll.sum() - sum_layermask
+        reward = - smoothed_nll.sum() / total_len - sum_layermask
 
         return smoothed_nll, nll, reward, sum_layermask
 
