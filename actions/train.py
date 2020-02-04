@@ -202,6 +202,7 @@ class Trainer(object):
                         experiment.log_metric('num_tokens', num_tokens_per_update)
                         experiment.log_metric('nll', neg_log_likelihood.last_value)
                         experiment.log_metric('reward', rl_reward.last_value)
+                        experiment.log_metric('layermask', log_layermask.last_value)
 
                         # experiment.log_metric('max_memory_alloc', torch.cuda.max_memory_allocated()//1024//1024)
                         # experiment.log_metric('max_memory_cache', torch.cuda.max_memory_cached()//1024//1024)
@@ -310,7 +311,9 @@ class Trainer(object):
 
         # calculate gradients then run an optimization step
         loss.backward(retain_graph=True)
-        reward.backward()
+
+        if not self.config.random_layermask:
+            reward.backward()
 
         # need to use .item() which converts to Python scalar
         # because as a Tensor it accumulates gradients
