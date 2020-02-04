@@ -109,6 +109,7 @@ class Trainer(object):
         self.metric_store.add(metrics.Metric('lr', metrics.format_scientific, 'g', max_history=1))
         self.metric_store.add(metrics.Metric('num_tok', metrics.format_int, 'a', max_history=1000))
         self.metric_store.add(metrics.Metric('reward', metrics.format_float, max_history=1000))
+        self.metric_store.add(metrics.Metric('layermask', metrics.format_float, 'g', max_history=1))
         # self.metric_store.add(metrics.Metric('time_per_batch', metrics.format_float, 'g', max_history=100000))
         # self.metric_store.add(metrics.Metric('time_total', metrics.format_float, 'g', max_history=1))
 
@@ -133,6 +134,7 @@ class Trainer(object):
         num_tokens = self.metric_store['num_tok']
         neg_log_likelihood = self.metric_store['nll']
         rl_reward = self.metric_store['reward']
+        log_layermask = self.metric_store['layermask']
 
         def try_optimize(i, last=False):
             # optimize if:
@@ -174,7 +176,7 @@ class Trainer(object):
                 
                 try:
                     
-                    nll, length, reward = self.calculate_gradient(batch)
+                    nll, length, reward, sum_layermask = self.calculate_gradient(batch)
                     did_optimize = try_optimize(i)
 
                     # record the effective number of tokens
@@ -195,6 +197,7 @@ class Trainer(object):
                         num_tokens.update(num_tokens_per_update)
                         neg_log_likelihood.update(nll_per_update / length_per_update)
                         rl_reward.update(reward_per_update / reward_num)
+                        log_layermask.update(sum_layermask)
 
                         experiment.log_metric('num_tokens', num_tokens_per_update)
                         experiment.log_metric('nll', neg_log_likelihood.last_value)
@@ -298,7 +301,7 @@ class Trainer(object):
         ''' Runs one step of optimization '''
         # run the data through the model
         self.model.train()
-        loss, nll, reward = self.model(batch)
+        loss, nll, reward, sum_layermask = self.model(batch)
 
         # nn.DataParallel wants to gather rather than doing a reduce_add, so the output here
         # will be a tensor of values that must be summed
@@ -311,7 +314,7 @@ class Trainer(object):
 
         # need to use .item() which converts to Python scalar
         # because as a Tensor it accumulates gradients
-        return nll.item(), torch.sum(batch['target_lens']).item(), reward.item()
+        return nll.item(), torch.sum(batch['target_lens']).item(), reward.item(), sum_layermask.item()
 
     def __call__(self, start_epoch, experiment, verbose=0):
         ''' Execute training '''

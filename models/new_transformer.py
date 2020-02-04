@@ -269,6 +269,7 @@ class LayerMaskPredictor(nn.Module):
         super(LayerMaskPredictor, self).__init__()
         self.num_layers = num_layers
         self.projection = nn.Linear(embedding_size, 2 * num_layers - 1)
+        self.alpha = 0.6
         self.reset_parameters()
         
     def reset_parameters(self):
@@ -281,9 +282,13 @@ class LayerMaskPredictor(nn.Module):
         '''
             enc0output: [bs, L, embedding_size]
             layermask: [2*num_layers-1]
+            return: sampled layermask, raw-layermask-distribution
         '''
         layermask = self.projection(torch.mean(enc0output,1).mean(0))
         layermask = torch.sigmoid(layermask)
+        # add alpha to prevent saturation
+        layermask = self.alpha * layermask + (1 - self.alpha) * (1 - layermask)
+        # sample from distribution
         m = Bernoulli(layermask)
         res =  m.sample()
         if 1 not in res[-self.num_layers:]:
@@ -476,12 +481,12 @@ class NewTransformer(nn.Module):
         nll = self.cross_entropy(logits, targets).sum(dims[:-1])
         smoothed_nll = self.label_smoothing(logits, targets).sum(dims)
 
-        #pdb.set_trace()
+        # pdb.set_trace()
         # compute nll-based reward
         total_len = sum(batch['input_lens'])
         reward = - torch.log(smoothed_nll.sum() / total_len) + self.reward_tradeoff / torch.sum(raw_layermask)
 
-        return smoothed_nll, nll, reward
+        return smoothed_nll, nll, reward, torch.sum(raw_layermask)
 
     def encode(self, inputs):
         ''' Encode the inputs '''

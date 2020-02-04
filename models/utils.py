@@ -302,9 +302,9 @@ class Translator(object):
             )
 
             # change to store distribution
-            encoded, _, layer_mask = self.encoder(batch['inputs'])
-            self.layermasks.append(layer_mask)
-            
+            encoded, layer_mask, raw_layermask = self.encoder(batch['inputs'])
+            self.layermasks.append(raw_layermask)
+            # decode using top-k decoder layer
             beams = decoder.initialize_search(
                 [[self.sos_idx] * self.span for _ in range(len(batch['inputs']))],
                 [l + self.config.max_decode_length + self.span + 1 for l in length_basis]
