@@ -489,11 +489,11 @@ class NewTransformer(nn.Module):
         # compute nll-based reward
         total_len = sum(batch['input_lens'])
         ## -log(nll) + r / |m|_0
-        # reward = - torch.log(smoothed_nll.sum() / total_len) + self.reward_tradeoff / torch.sum(raw_layermask)
+        reward = - torch.log(smoothed_nll.sum() / total_len) + self.reward_tradeoff / torch.sum(raw_layermask)
 
         ## - nll - |m|_0
         sum_layermask = torch.sum(raw_layermask)
-        reward = - smoothed_nll.sum() / total_len - self.reward_tradeoff * sum_layermask
+        # reward = - smoothed_nll.sum() / total_len - self.reward_tradeoff * sum_layermask
 
         return smoothed_nll, nll, reward, sum_layermask
 
