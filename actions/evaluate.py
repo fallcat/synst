@@ -13,7 +13,7 @@ import signal
 import time
 import atexit
 from contextlib import ExitStack
-import pdb
+
 import torch
 from torch import nn
 from tqdm import tqdm
@@ -83,8 +83,8 @@ class Evaluator(object):
         ''' Runs one evaluation step '''
         with torch.no_grad():
             self.model.eval()
-            _, nll = self.model(batch)
-            #pdb.set_trace()
+            _, nll, reward, sum_layermask = self.model(batch)
+
             # nn.DataParallel wants to gather rather than doing a reduce_add, so the output here
             # will be a tensor of values that must be summed
             nll = nll.sum()
@@ -97,7 +97,7 @@ class Evaluator(object):
     def evaluate_epoch(self, epoch, experiment, verbose=0):
         ''' Evaluate a single epoch '''
         neg_log_likelihood = metrics.Metric('nll', metrics.format_float)
-        #pdb.set_trace()
+
         def get_description():
             mode_name = 'Test' if self.dataset.split == 'test' else 'Validate'
             description = f'{mode_name} #{epoch}'
@@ -173,3 +173,4 @@ class Evaluator(object):
                 self.watch(experiment, verbose)
             else:
                 return self.evaluate_epoch(epoch, experiment, verbose)
+
