@@ -5,6 +5,7 @@ import uuid
 import threading
 import pdb
 import torch
+import numpy as np
 from torch import nn
 
 from models.new_attention import NewAttention
@@ -327,13 +328,28 @@ class NewTransformer(nn.Module):
 
         self.reward_tradeoff = config.reward_tradeoff
 
+        self.random_layermask_p = 0.5
+
         if config.layer_mask:
+            
             if config.random_layermask:
-                self.layer_mask_predictor = lambda x: [Bernoulli(torch.ones(config.num_layers * 2 - 1) * 0.5).sample()] * 2
+                # TODO: 2-step sampling
+                # 1. sample one decoder
+                # 2. k-bernoulli for the rest layer (p=0.5)
+                def random_layermask_sampling(x):
+                    dec_sample = np.random.randint(6, 12)
+                    all_sample = Bernoulli(torch.ones(config.num_layers * 2) * self.random_layermask_p).sample()
+                    if all_sample[dec_sample] != 1:
+                        all_sample[dec_sample] = 1
+                    return [all_sample] * 2
+                self.layer_mask_predictor = random_layermask_sampling
+
             else:
+                # layermask predictor
                 self.layer_mask_predictor = LayerMaskPredictor(config.embedding_size, config.num_layers)
 
         else:
+            # not skipping 
             self.layer_mask_predictor = lambda x: [torch.ones(config.num_layers * 2 - 1)] * 2
 
     @classmethod
