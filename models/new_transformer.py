@@ -41,7 +41,7 @@ class TransformerSublayer(nn.Module):
         ''' The forward pass of the sublayer '''
         # TODO: if self.sublayer is TransformerFFN, multiply the softmask weight with value before adding residual
         if type(self.sublayer) is TransformerFFN:
-            pdb.set_trace()
+            #pdb.set_trace()
             return self.norm(inputs + gating_weight * self.dropout(self.sublayer(*sublayer_args, **sublayer_kwargs)))
         else:
             return self.norm(inputs + self.dropout(self.sublayer(*sublayer_args, **sublayer_kwargs)))
