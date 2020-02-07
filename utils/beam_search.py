@@ -202,7 +202,7 @@ class BeamSearchDecoder(object):
             else:
                 self.update_greedy(scores, indices, beam, hypothesis_map, cache=cache)
 
-    def decode(self, encoded, beams, layer_mask):
+    def decode(self, encoded, beams, raw_layermask):
         ''' Decodes the given inputs '''
         self.model.eval()
         with torch.no_grad():
@@ -216,7 +216,7 @@ class BeamSearchDecoder(object):
                 while chunks:
                     try:
                         encoded_batch, batch = chunks.pop()
-                        result = self.model(encoded_batch, batch, cache=cache, layer_mask=layer_mask)
+                        result = self.model(encoded_batch, batch, cache=cache, raw_layermask=raw_layermask)
 
                         new_cache = result.get('cache')
                         if new_cache:

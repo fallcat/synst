@@ -50,6 +50,7 @@ def main(argv=None):
     )
     print(dataloader.dataset.stats)
 
+    args.config.action_type = args.action_type
     model = args.model(args.config.model, dataloader.dataset)
     action = args.action(args.action_config, model, dataloader, args.device)
     if args.action_type == 'train' and args.action_config.early_stopping:

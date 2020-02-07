@@ -302,7 +302,7 @@ class Translator(object):
             )
 
             # change to store distribution
-            encoded, layer_mask, raw_layermask = self.encoder(batch['inputs'])
+            encoded, _, raw_layermask = self.encoder(batch['inputs'])
             self.layermasks.append(raw_layermask)
             # decode using top-k decoder layer
             beams = decoder.initialize_search(
@@ -311,7 +311,7 @@ class Translator(object):
             )
             targets = [
                 beam.best_hypothesis.sequence[self.span - 1:]
-                for beam in decoder.decode(encoded, beams, layer_mask)
+                for beam in decoder.decode(encoded, beams, raw_layermask)
             ]
 
             gold_targets = []

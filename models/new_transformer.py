@@ -39,7 +39,11 @@ class TransformerSublayer(nn.Module):
 
     def forward(self, inputs, *sublayer_args, **sublayer_kwargs): # pylint:disable=arguments-differ
         ''' The forward pass of the sublayer '''
-        return self.norm(inputs + self.dropout(self.sublayer(*sublayer_args, **sublayer_kwargs)))
+        # TODO: if self.sublayer is TransformerFFN, multiply the softmask weight with value before adding residual
+        if type(self.sublayer) is TransformerFFN:
+            return self.norm(inputs + sublayer_kwargs['gating_weight'] * self.dropout(self.sublayer(*sublayer_args, **sublayer_kwargs)))
+        else:
+            return self.norm(inputs + self.dropout(self.sublayer(*sublayer_args, **sublayer_kwargs)))
 
 
 class TransformerFFN(nn.Module):
@@ -93,7 +97,7 @@ class TransformerEncoderLayer(nn.Module):
         self.ffn.reset_parameters()
         self.self_attention.reset_parameters()
 
-    def forward(self, inputs, layer_i, word_embedding):  # pylint:disable=arguments-differ
+    def forward(self, inputs, layer_i, word_embedding, gating_weight=1):  # pylint:disable=arguments-differ
         ''' The forward pass '''
         mask = inputs['mask']
         state = inputs['state']
@@ -110,7 +114,8 @@ class TransformerEncoderLayer(nn.Module):
         if hasattr(self, 'ffn'):
             state = self.ffn(
                 state, # residual
-                state # passed to feed-forward network
+                state, # passed to feed-forward network
+                gating_weight=gating_weight
             )
 
         return {'state': state, 'mask': mask}
@@ -169,7 +174,7 @@ class TransformerDecoderLayer(nn.Module):
         if hasattr(self, 'source_attention'):
             self.source_attention.reset_parameters()
 
-    def forward(self, inputs, sources, layer_i, word_embedding): # pylint:disable=arguments-differ
+    def forward(self, inputs, sources, layer_i, word_embedding, gating_weight=1): # pylint:disable=arguments-differ
         ''' The forward pass '''
         mask = inputs['mask']
         state = inputs['state']
@@ -225,7 +230,8 @@ class TransformerDecoderLayer(nn.Module):
         if hasattr(self, 'ffn'):
             state = self.ffn(
                 state, # residual
-                state # passed to feed-forward network
+                state, # passed to feed-forward network
+                gating_weight=gating_weight
             )
 
         if self.causal and cache is not None:
@@ -266,11 +272,12 @@ class TransformerDecoderLayer(nn.Module):
         return mask[None, :dim, :dim]
 
 class LayerMaskPredictor(nn.Module):
-    def __init__(self, embedding_size, num_layers):
+    def __init__(self, embedding_size, num_layers, action_type):
         super(LayerMaskPredictor, self).__init__()
         self.num_layers = num_layers
-        self.projection = nn.Linear(embedding_size, 2 * num_layers - 1)
-        self.alpha = 0.6
+        self.projection = nn.Linear(embedding_size, 2 * num_layers)
+        # self.alpha = 0.6
+        self.action_type = action_type
         self.reset_parameters()
         
     def reset_parameters(self):
@@ -279,22 +286,29 @@ class LayerMaskPredictor(nn.Module):
         nn.init.xavier_uniform_(self.projection.weight, gain)
         nn.init.constant_(self.projection.bias, 0.)
 
-    def forward(self, enc0output):
+    def forward(self, lmp_input):
         '''
-            enc0output: [bs, L, embedding_size]
+            lmp_input: [bs, L, embedding_size]
             layermask: [2*num_layers-1]
             return: sampled layermask, raw-layermask-distribution
         '''
-        layermask = self.projection(torch.mean(enc0output,1).mean(0))
+        layermask = self.projection(torch.mean(lmp_input,1).mean(0))
         layermask = torch.sigmoid(layermask)
+        if self.action_type in ["train", "evaluate"]:
+            return None, layermask
+            
+        else:
+            return None, (layermask > 0.5).to(torch.float)
+
         # add alpha to prevent saturation
-        layermask = self.alpha * layermask + (1 - self.alpha) * (1 - layermask)
+        # layermask = self.alpha * layermask + (1 - self.alpha) * (1 - layermask)
         # sample from distribution
-        m = Bernoulli(layermask)
-        res =  m.sample()
-        if 1 not in res[-self.num_layers:]:
-            res[torch.argmax(layermask[-self.num_layers:]) + self.num_layers - 1] = 1
-        return res, layermask
+        #m = Bernoulli(layermask)
+        #res =  m.sample()
+        # if 1 not in res[-self.num_layers:]:
+        #     res[torch.argmax(layermask[-self.num_layers:]) + self.num_layers - 1] = 1
+
+        
 
 class NewTransformer(nn.Module):
     ''' The New Transformer module '''
@@ -331,7 +345,7 @@ class NewTransformer(nn.Module):
         self.random_layermask_p = 0.5
 
         if config.layer_mask:
-            
+
             if config.random_layermask:
                 # TODO: 2-step sampling
                 # 1. sample one decoder
@@ -346,7 +360,7 @@ class NewTransformer(nn.Module):
 
             else:
                 # layermask predictor
-                self.layer_mask_predictor = LayerMaskPredictor(config.embedding_size, config.num_layers)
+                self.layer_mask_predictor = LayerMaskPredictor(config.embedding_size, config.num_layers, config.action_type)
 
         else:
             # not skipping 
@@ -487,12 +501,13 @@ class NewTransformer(nn.Module):
 
     def forward(self, batch): # pylint:disable=arguments-differ
         ''' A batch of inputs and targets '''
-        encoded, layer_mask, raw_layermask = self.encode(batch['inputs'])
+
+        encoded, _, raw_layermask = self.encode(batch['inputs'])
         decoded = self.decode(
             encoded,
             right_shift(right_shift(batch['targets']), shift=self.span - 1, fill=self.sos_idx),
             input_lens=batch['input_lens'],
-            layer_mask=layer_mask
+            layer_mask=raw_layermask
         )
 
         logits = decoded['logits']
@@ -520,15 +535,15 @@ class NewTransformer(nn.Module):
             'state': word_embedding,
             'mask': inputs.eq(self.padding_idx)
         }
-        for i, encoder in enumerate(self.encoders):
-            if i == 0 or layer_mask[i-1] == 1:
-                encoded = encoder(encoded, i, word_embedding)
-            if i == 0:
-                layer_mask, raw_layermask = self.layer_mask_predictor(encoded['state'])
 
+        layer_mask, raw_layermask = self.layer_mask_predictor(encoded['state'], encoded['mask'])
+
+        for i, encoder in enumerate(self.encoders):
+            encoded = encoder(encoded, i, word_embedding, gating_weight=raw_layermask[i])
+                
         return encoded, layer_mask, raw_layermask
 
-    def decode(self, encoded, targets, decoders=None, embedding=None, cache=None, mask=None, input_lens=None, layer_mask=None):
+    def decode(self, encoded, targets, decoders=None, embedding=None, cache=None, mask=None, input_lens=None, raw_layermask=None):
         ''' Decode the encoded sequence to the targets '''
         if decoders is None:
             decoders = self.decoders
@@ -545,9 +560,7 @@ class NewTransformer(nn.Module):
             'input_lens': input_lens
         }
         for i, decoder in enumerate(decoders):
-            # print("i", i)
-            if layer_mask[len(decoders) - 1 + i] == 1:
-                decoded = decoder(decoded, encoded, i, word_embedding)
+            decoded = decoder(decoded, encoded, i, word_embedding, gating_weight=raw_layermask[len(decoders) + i])
 
         # compute projection to the vocabulary
         state = decoded['state']
