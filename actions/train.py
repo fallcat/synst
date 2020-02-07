@@ -312,12 +312,12 @@ class Trainer(object):
         # calculate gradients then run an optimization step
         loss.backward(retain_graph=True)
 
-        if not self.config.random_layermask:
-            reward.backward()
+        #if not self.config.random_layermask:
+        #    reward.backward()
 
         # need to use .item() which converts to Python scalar
         # because as a Tensor it accumulates gradients
-        return nll.item(), torch.sum(batch['target_lens']).item(), reward.item(), sum_layermask.item()
+        return nll.item(), torch.sum(batch['target_lens']).item(), 0, sum_layermask.item()
 
     def __call__(self, start_epoch, experiment, verbose=0):
         ''' Execute training '''

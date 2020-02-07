@@ -30,7 +30,7 @@ from utils import profile
 from comet_ml import Experiment
     
 # Add the following code anywhere in your machine learning file
-
+import pdb
 
 def main(argv=None):
     ''' Main entry point '''
@@ -49,8 +49,8 @@ def main(argv=None):
         args.num_devices, shuffle=args.shuffle
     )
     print(dataloader.dataset.stats)
-
-    args.config.action_type = args.action_type
+    #pdb.set_trace()
+    args.config.model.action_type = args.action_type
     model = args.model(args.config.model, dataloader.dataset)
     action = args.action(args.action_config, model, dataloader, args.device)
     if args.action_type == 'train' and args.action_config.early_stopping:

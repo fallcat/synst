@@ -37,11 +37,11 @@ class TransformerSublayer(nn.Module):
         ''' Reset parameters using xavier initialiation '''
         self.norm.reset_parameters()
 
-    def forward(self, inputs, *sublayer_args, **sublayer_kwargs): # pylint:disable=arguments-differ
+    def forward(self, inputs, gating_weight, *sublayer_args, **sublayer_kwargs): # pylint:disable=arguments-differ
         ''' The forward pass of the sublayer '''
         # TODO: if self.sublayer is TransformerFFN, multiply the softmask weight with value before adding residual
         if type(self.sublayer) is TransformerFFN:
-            return self.norm(inputs + sublayer_kwargs['gating_weight'] * self.dropout(self.sublayer(*sublayer_args, **sublayer_kwargs)))
+            return self.norm(inputs + gating_weight * self.dropout(self.sublayer(*sublayer_args, **sublayer_kwargs)))
         else:
             return self.norm(inputs + self.dropout(self.sublayer(*sublayer_args, **sublayer_kwargs)))
 
@@ -106,16 +106,15 @@ class TransformerEncoderLayer(nn.Module):
 
         if not self.no_attn:
             state = self.self_attention(
-                state,  # residual
+                state, gating_weight, # residual
                 state, state, state, mask,  # passed to multiheaded attention
                 layer_i=layer_i, word_embedding=word_embedding
             )
 
         if hasattr(self, 'ffn'):
             state = self.ffn(
-                state, # residual
-                state, # passed to feed-forward network
-                gating_weight=gating_weight
+                state, gating_weight,  # residual
+                state, # passed to feed-forward network  
             )
 
         return {'state': state, 'mask': mask}
@@ -201,7 +200,7 @@ class TransformerDecoderLayer(nn.Module):
             # print("decoder self attention")
 
             state = self.self_attention(
-                residual, # residual
+                residual, gating_weight, # residual
                 state, state, state, **kwargs # passed to multiheaded attention
             )
         else:
@@ -223,15 +222,14 @@ class TransformerDecoderLayer(nn.Module):
         if hasattr(self, 'source_attention'):
             # print("in source, state", state.shape)
             state = self.source_attention(
-                state, # residual
+                state, gating_weight, # residual
                 source, source, state, **kwargs # passed to multiheaded attention
             )
 
         if hasattr(self, 'ffn'):
             state = self.ffn(
-                state, # residual
+                state, gating_weight, # residual
                 state, # passed to feed-forward network
-                gating_weight=gating_weight
             )
 
         if self.causal and cache is not None:
@@ -294,9 +292,10 @@ class LayerMaskPredictor(nn.Module):
         '''
         layermask = self.projection(torch.mean(lmp_input,1).mean(0))
         layermask = torch.sigmoid(layermask)
+
         if self.action_type in ["train", "evaluate"]:
             return None, layermask
-            
+
         else:
             return None, (layermask > 0.5).to(torch.float)
 
@@ -344,6 +343,7 @@ class NewTransformer(nn.Module):
 
         self.random_layermask_p = 0.5
 
+
         if config.layer_mask:
 
             if config.random_layermask:
@@ -361,7 +361,7 @@ class NewTransformer(nn.Module):
             else:
                 # layermask predictor
                 self.layer_mask_predictor = LayerMaskPredictor(config.embedding_size, config.num_layers, config.action_type)
-
+                #pdb.set_trace()
         else:
             # not skipping 
             self.layer_mask_predictor = lambda x: [torch.ones(config.num_layers * 2 - 1)] * 2
@@ -507,7 +507,7 @@ class NewTransformer(nn.Module):
             encoded,
             right_shift(right_shift(batch['targets']), shift=self.span - 1, fill=self.sos_idx),
             input_lens=batch['input_lens'],
-            layer_mask=raw_layermask
+            raw_layermask=raw_layermask
         )
 
         logits = decoded['logits']
@@ -518,15 +518,15 @@ class NewTransformer(nn.Module):
 
         # pdb.set_trace()
         # compute nll-based reward
-        total_len = sum(batch['input_lens'])
+        # total_len = sum(batch['input_lens'])
         ## -log(nll) + r / |m|_0
-        reward = - torch.log(smoothed_nll.sum() / total_len) + self.reward_tradeoff / torch.sum(raw_layermask)
+        # reward = - torch.log(smoothed_nll.sum() / total_len) + self.reward_tradeoff / torch.sum(raw_layermask)
 
         ## - nll - |m|_0
         sum_layermask = torch.sum(raw_layermask)
         # reward = - smoothed_nll.sum() / total_len - self.reward_tradeoff * sum_layermask
 
-        return smoothed_nll, nll, reward, sum_layermask
+        return smoothed_nll, nll, None, sum_layermask
 
     def encode(self, inputs):
         ''' Encode the inputs '''
@@ -536,7 +536,7 @@ class NewTransformer(nn.Module):
             'mask': inputs.eq(self.padding_idx)
         }
 
-        layer_mask, raw_layermask = self.layer_mask_predictor(encoded['state'], encoded['mask'])
+        layer_mask, raw_layermask = self.layer_mask_predictor(encoded['state'])
 
         for i, encoder in enumerate(self.encoders):
             encoded = encoder(encoded, i, word_embedding, gating_weight=raw_layermask[i])
