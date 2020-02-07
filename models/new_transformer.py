@@ -41,6 +41,7 @@ class TransformerSublayer(nn.Module):
         ''' The forward pass of the sublayer '''
         # TODO: if self.sublayer is TransformerFFN, multiply the softmask weight with value before adding residual
         if type(self.sublayer) is TransformerFFN:
+            pdb.set_trace()
             return self.norm(inputs + gating_weight * self.dropout(self.sublayer(*sublayer_args, **sublayer_kwargs)))
         else:
             return self.norm(inputs + self.dropout(self.sublayer(*sublayer_args, **sublayer_kwargs)))
@@ -339,10 +340,9 @@ class NewTransformer(nn.Module):
             reduction='none'
         )
 
-        self.reward_tradeoff = config.reward_tradeoff
+        self.gating_tradeoff = config.gating_tradeoff
 
         self.random_layermask_p = 0.5
-
 
         if config.layer_mask:
 
@@ -361,7 +361,7 @@ class NewTransformer(nn.Module):
             else:
                 # layermask predictor
                 self.layer_mask_predictor = LayerMaskPredictor(config.embedding_size, config.num_layers, config.action_type)
-                #pdb.set_trace()
+                # pdb.set_trace()
         else:
             # not skipping 
             self.layer_mask_predictor = lambda x: [torch.ones(config.num_layers * 2 - 1)] * 2
@@ -526,7 +526,7 @@ class NewTransformer(nn.Module):
         sum_layermask = torch.sum(raw_layermask)
         # reward = - smoothed_nll.sum() / total_len - self.reward_tradeoff * sum_layermask
 
-        return smoothed_nll, nll, None, sum_layermask
+        return smoothed_nll + self.gating_tradeoff * sum_layermask, nll, None, sum_layermask
 
     def encode(self, inputs):
         ''' Encode the inputs '''

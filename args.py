@@ -496,10 +496,10 @@ def add_new_transformer_args(parser):
     )
 
     group.add_argument(
-        '--reward-tradeoff',
+        '--gating-tradeoff',
         type=float,
         default=2.0,
-        help='reward tradeoff'
+        help='gating tradeoff'
     )
     
     group.add_argument(
