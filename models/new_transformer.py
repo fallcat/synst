@@ -292,13 +292,15 @@ class LayerMaskPredictor(nn.Module):
             return: sampled layermask, raw-layermask-distribution
         '''
         layermask = self.projection(torch.mean(lmp_input,1).mean(0))
-        layermask = torch.sigmoid(layermask)
-
+        layermask = torch.relu(layermask)
+        #return None, layermask
         if self.action_type in ["train", "evaluate"]:
             return None, layermask
 
         else:
-            return None, (layermask > 0.5).to(torch.float)
+            #layermask[layermask < 0.0175] = 0
+            return None, layermask
+            #return None, (layermask > 0.0175).to(torch.float)
 
         # add alpha to prevent saturation
         # layermask = self.alpha * layermask + (1 - self.alpha) * (1 - layermask)
