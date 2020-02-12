@@ -42,7 +42,8 @@ class TransformerSublayer(nn.Module):
         # TODO: if self.sublayer is TransformerFFN, multiply the softmask weight with value before adding residual
         if type(self.sublayer) is TransformerFFN:
             #pdb.set_trace()
-            return self.norm(inputs + gating_weight * self.dropout(self.sublayer(*sublayer_args, **sublayer_kwargs)))
+            out_dropout = self.dropout(self.sublayer(*sublayer_args, **sublayer_kwargs))
+            return self.norm(inputs + gating_weight.view(-1, 1, 1) * out_dropout)
         else:
             return self.norm(inputs + self.dropout(self.sublayer(*sublayer_args, **sublayer_kwargs)))
 
@@ -275,7 +276,6 @@ class LayerMaskPredictor(nn.Module):
         super(LayerMaskPredictor, self).__init__()
         self.num_layers = num_layers
         self.projection = nn.Linear(embedding_size, 2 * num_layers)
-        # self.alpha = 0.6
         self.action_type = action_type
         self.reset_parameters()
         
@@ -288,29 +288,18 @@ class LayerMaskPredictor(nn.Module):
     def forward(self, lmp_input):
         '''
             lmp_input: [bs, L, embedding_size]
-            layermask: [2*num_layers-1]
+            layermask: [bs, 2*num_layers]
             return: sampled layermask, raw-layermask-distribution
         '''
-        layermask = self.projection(torch.mean(lmp_input,1).mean(0))
+        layermask = self.projection(torch.mean(lmp_input,1))
         layermask = torch.relu(layermask)
-        #return None, layermask
+
         if self.action_type in ["train", "evaluate"]:
             return None, layermask
 
         else:
-            #layermask[layermask < 0.0175] = 0
             return None, layermask
-            #return None, (layermask > 0.0175).to(torch.float)
 
-        # add alpha to prevent saturation
-        # layermask = self.alpha * layermask + (1 - self.alpha) * (1 - layermask)
-        # sample from distribution
-        #m = Bernoulli(layermask)
-        #res =  m.sample()
-        # if 1 not in res[-self.num_layers:]:
-        #     res[torch.argmax(layermask[-self.num_layers:]) + self.num_layers - 1] = 1
-
-        
 
 class NewTransformer(nn.Module):
     ''' The New Transformer module '''
@@ -503,7 +492,7 @@ class NewTransformer(nn.Module):
 
     def forward(self, batch): # pylint:disable=arguments-differ
         ''' A batch of inputs and targets '''
-        #pdb.set_trace()
+
         encoded, _, raw_layermask = self.encode(batch['inputs'])
         decoded = self.decode(
             encoded,
@@ -518,15 +507,7 @@ class NewTransformer(nn.Module):
         nll = self.cross_entropy(logits, targets).sum(dims[:-1])
         smoothed_nll = self.label_smoothing(logits, targets).sum(dims)
 
-        # pdb.set_trace()
-        # compute nll-based reward
-        # total_len = sum(batch['input_lens'])
-        ## -log(nll) + r / |m|_0
-        # reward = - torch.log(smoothed_nll.sum() / total_len) + self.reward_tradeoff / torch.sum(raw_layermask)
-
-        ## - nll - |m|_0
-        sum_layermask = torch.sum(raw_layermask)
-        # reward = - smoothed_nll.sum() / total_len - self.reward_tradeoff * sum_layermask
+        sum_layermask = torch.mean(raw_layermask, dim=0).sum()
 
         return smoothed_nll + self.gating_tradeoff * sum_layermask, nll, None, sum_layermask
 
@@ -539,9 +520,10 @@ class NewTransformer(nn.Module):
         }
 
         layer_mask, raw_layermask = self.layer_mask_predictor(encoded['state'])
+        #pdb.set_trace()
 
         for i, encoder in enumerate(self.encoders):
-            encoded = encoder(encoded, i, word_embedding, gating_weight=raw_layermask[i])
+            encoded = encoder(encoded, i, word_embedding, gating_weight=raw_layermask[:, i])
                 
         return encoded, layer_mask, raw_layermask
 
@@ -562,7 +544,7 @@ class NewTransformer(nn.Module):
             'input_lens': input_lens
         }
         for i, decoder in enumerate(decoders):
-            decoded = decoder(decoded, encoded, i, word_embedding, gating_weight=raw_layermask[len(decoders) + i])
+            decoded = decoder(decoded, encoded, i, word_embedding, gating_weight=raw_layermask[:, len(decoders) + i])
 
         # compute projection to the vocabulary
         state = decoded['state']
