@@ -38,6 +38,11 @@ class Trainer(object):
         self.validation_dataloader = dataloader
         self.last_checkpoint_time = time.time()
 
+        if self.config.freeze_layermask:
+            print('freeze layermask predictor')
+            model.layer_mask_predictor.projection.weight.requires_grad = False
+            model.layer_mask_predictor.projection.bias.requires_grad = False
+
         if 'cuda' in device.type:
             self.model = nn.DataParallel(model.cuda())
 
@@ -101,6 +106,7 @@ class Trainer(object):
             raise ValueError('Unknown optimizer!') 
 
 
+
         # Initialize the metrics
         metrics_path = os.path.join(self.config.checkpoint_directory, 'train_metrics.pt')
         self.metric_store = metrics.MetricStore(metrics_path)
@@ -121,6 +127,8 @@ class Trainer(object):
             'optimizer': self.optimizer,
             'lr_scheduler': self.lr_scheduler
         }
+
+
 
     @property
     def dataset(self):
@@ -293,8 +301,7 @@ class Trainer(object):
         ''' Calculate an optimization step '''
         self.optimizer.step()
         self.optimizer.zero_grad()
-        self.lr_scheduler.step()
-        
+        self.lr_scheduler.step()   
 
         return self.lr_scheduler.get_lr()[0]
 
@@ -311,9 +318,6 @@ class Trainer(object):
 
         # calculate gradients then run an optimization step
         loss.backward(retain_graph=True)
-
-        #if not self.config.random_layermask:
-        #    reward.backward()
 
         # need to use .item() which converts to Python scalar
         # because as a Tensor it accumulates gradients

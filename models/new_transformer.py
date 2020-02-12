@@ -503,7 +503,7 @@ class NewTransformer(nn.Module):
 
     def forward(self, batch): # pylint:disable=arguments-differ
         ''' A batch of inputs and targets '''
-
+        #pdb.set_trace()
         encoded, _, raw_layermask = self.encode(batch['inputs'])
         decoded = self.decode(
             encoded,

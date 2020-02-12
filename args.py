@@ -812,6 +812,12 @@ def add_train_args(parser):
         choices=['adam', 'sgd', 'adam-fixed'],
         help='add optimizer'
     )
+    group.add_argument(
+        '--freeze-layermask',
+        default=False,
+        action='store_true',
+        help="whether to freeze the layermask predictor, this is set to True after training entire model to converge"
+    )
 
     return group
 
