@@ -10,7 +10,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import ticker
 from collections import OrderedDict
-
+import pdb
 import torch
 from torch import nn
 from torch.nn import functional as F
@@ -303,7 +303,8 @@ class Translator(object):
 
             # change to store distribution
             encoded, _, raw_layermask = self.encoder(batch['inputs'])
-            self.layermasks.append(raw_layermask)
+            self.layermasks.append(raw_layermask[0])
+            #pdb.set_trace()
             # decode using top-k decoder layer
             beams = decoder.initialize_search(
                 [[self.sos_idx] * self.span for _ in range(len(batch['inputs']))],
