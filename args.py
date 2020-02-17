@@ -488,12 +488,12 @@ def add_new_transformer_args(parser):
         default=-1
     )
 
-    group.add_argument(
-        '--layer-mask',
-        default=False,
-        action='store_true',
-        help="Use layer mask"
-    )
+    #group.add_argument(
+     #   '--layer-mask',
+      #  default=False,
+       # action='store_true',
+       # help="Use layer mask"
+    #)
 
     group.add_argument(
         '--gating-tradeoff',
@@ -507,6 +507,20 @@ def add_new_transformer_args(parser):
         default=False,
         action='store_true',
         help="whether to use random layermask, if true, random sample layermask, not updating layermask predictor"
+    )
+
+    group.add_argument(
+        '--diversity-tradeoff',
+        type=float,
+        default=0.2,
+        help="for diversity regularizer"
+    )
+
+    group.add_argument(
+        '--layermask-type',
+        type=str,
+        choices=['noskip', 'gating'],
+        default='noskip'
     )
 
     return group

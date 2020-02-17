@@ -273,11 +273,12 @@ class TransformerDecoderLayer(nn.Module):
         return mask[None, :dim, :dim]
 
 class LayerMaskPredictor(nn.Module):
-    def __init__(self, embedding_size, num_layers, action_type):
+    def __init__(self, embedding_size, num_layers, action_type, lmp_type):
         super(LayerMaskPredictor, self).__init__()
         self.num_layers = num_layers
         self.projection = nn.Linear(embedding_size, 2 * num_layers)
         self.action_type = action_type
+        self.lmp_type = lmp_type
         self.reset_parameters()
         
     def reset_parameters(self):
@@ -292,14 +293,22 @@ class LayerMaskPredictor(nn.Module):
             layermask: [bs, 2*num_layers]
             return: sampled layermask, raw-layermask-distribution
         '''
-        layermask = self.projection(torch.mean(lmp_input,1))
-        layermask = torch.relu(layermask)
 
-        if self.action_type in ["train", "evaluate"]:
-            return None, layermask
+        if self.lmp_type == "noskip":
+            return None, torch.ones(lmp_input.size(0), self.num_layers * 2, device=torch.device("cuda"))
+
+        elif self.lmp_type == "gating":
+            layermask = self.projection(torch.mean(lmp_input,1))
+            layermask = torch.relu(layermask)
+
+            if self.action_type in ["train", "evaluate"]:
+                return None, layermask
+
+            else:
+                return None, layermask
 
         else:
-            return None, layermask
+            pass
 
 
 class NewTransformer(nn.Module):
@@ -332,31 +341,27 @@ class NewTransformer(nn.Module):
             reduction='none'
         )
 
+        self.layermask_type = config.layermask_type
         self.gating_tradeoff = config.gating_tradeoff
+        self.diversity_tradeoff = config.diversity_tradeoff
 
         self.random_layermask_p = 0.5
 
-        if config.layer_mask:
+        if config.random_layermask:
+            # TODO: 2-step sampling
+            # 1. sample one decoder
+            # 2. k-bernoulli for the rest layer (p=0.5)
+            def random_layermask_sampling(x):
+                dec_sample = np.random.randint(6, 12)
+                all_sample = Bernoulli(torch.ones(config.num_layers * 2) * self.random_layermask_p).sample()
+                if all_sample[dec_sample] != 1:
+                    all_sample[dec_sample] = 1
+                return [all_sample] * 2
+            self.layer_mask_predictor = random_layermask_sampling
 
-            if config.random_layermask:
-                # TODO: 2-step sampling
-                # 1. sample one decoder
-                # 2. k-bernoulli for the rest layer (p=0.5)
-                def random_layermask_sampling(x):
-                    dec_sample = np.random.randint(6, 12)
-                    all_sample = Bernoulli(torch.ones(config.num_layers * 2) * self.random_layermask_p).sample()
-                    if all_sample[dec_sample] != 1:
-                        all_sample[dec_sample] = 1
-                    return [all_sample] * 2
-                self.layer_mask_predictor = random_layermask_sampling
+        # layermask predictor
+        self.layer_mask_predictor = LayerMaskPredictor(config.embedding_size, config.num_layers, config.action_type, config.layermask_type)
 
-            else:
-                # layermask predictor
-                self.layer_mask_predictor = LayerMaskPredictor(config.embedding_size, config.num_layers, config.action_type)
-                # pdb.set_trace()
-        else:
-            # not skipping 
-            self.layer_mask_predictor = lambda x: [torch.ones(config.num_layers * 2 - 1)] * 2
 
     @classmethod
     def create_encoders(cls, config):
@@ -508,9 +513,25 @@ class NewTransformer(nn.Module):
         nll = self.cross_entropy(logits, targets).sum(dims[:-1])
         smoothed_nll = self.label_smoothing(logits, targets).sum(dims)
 
-        sum_layermask = torch.mean(raw_layermask, dim=0).sum()
+        # sum_layermask = torch.mean(raw_layermask, dim=1).sum()
+        sum_layermask = raw_layermask.sum(dim=1) # [bs, ]
 
-        return smoothed_nll + self.gating_tradeoff * sum_layermask, nll, None, sum_layermask
+        if self.layermask_type == "gating":
+            
+            # loss: smoothed_nll + gating_tradeoff * sum_layermask + penalize_diversity * (1 - entropy(BS))
+            layermask = (raw_layermask > 0)                                 # change to 01 mask
+            p1 = (layermask>0).sum(dim=0).float()/layermask.shape[0]        # prob of 1
+            p0 = 1 - p1                                                     # prob of 0
+            ent_bs = - p1*torch.log(p1) - p0 * torch.log(p0)                # entropy of each layer
+            ent_bs[ent_bs != ent_bs] = 0                                    # fill nan # [12, 1]
+            ent_bs = torch.mean(ent_bs)                                     # mean entropy of all layers
+            loss = smoothed_nll + self.gating_tradeoff * sum_layermask + self.diversity_tradeoff * (1 - ent_bs)
+
+        elif self.layermask_type == "noskip":
+            loss = smoothed_nll
+
+
+        return loss, nll, None, sum_layermask.mean()
 
     def encode(self, inputs):
         ''' Encode the inputs '''
