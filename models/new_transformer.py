@@ -517,10 +517,10 @@ class NewTransformer(nn.Module):
         sum_layermask = raw_layermask.sum(dim=1) # [bs, ]
 
         if self.layermask_type == "gating":
-            
             # loss: smoothed_nll + gating_tradeoff * sum_layermask + penalize_diversity * (1 - entropy(BS))
-            layermask = (raw_layermask > 0)                                 # change to 01 mask
-            p1 = (layermask>0).sum(dim=0).float()/layermask.shape[0]        # prob of 1
+            layermask = torch.sign(raw_layermask)                           # 01 mask
+            layermask = layermask.sum(dim=0)                                # sum +1
+            p1 = layermask / raw_layermask.shape[0]                             # prob of 1
             p0 = 1 - p1                                                     # prob of 0
             ent_bs = - p1*torch.log(p1) - p0 * torch.log(p0)                # entropy of each layer
             ent_bs[ent_bs != ent_bs] = 0                                    # fill nan # [12, 1]
