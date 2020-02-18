@@ -514,7 +514,8 @@ class NewTransformer(nn.Module):
         smoothed_nll = self.label_smoothing(logits, targets).sum(dims)
 
         # sum_layermask = torch.mean(raw_layermask, dim=1).sum()
-        sum_layermask = raw_layermask.sum(dim=1) # [bs, ]
+
+        sum_layermask = torch.sign(raw_layermask).sum(dim=1) # [bs, ]
 
         if self.layermask_type == "gating":
             # loss: smoothed_nll + gating_tradeoff * sum_layermask + penalize_diversity * (1 - entropy(BS))
