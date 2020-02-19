@@ -184,7 +184,7 @@ class Trainer(object):
                 
                 try:
                     
-                    nll, length, reward, sum_layermask = self.calculate_gradient(batch)
+                    nll, length, reward, sum_layermask = self.calculate_gradient(batch, experiment.curr_step)
                     did_optimize = try_optimize(i)
 
                     # record the effective number of tokens
@@ -305,7 +305,7 @@ class Trainer(object):
 
         return self.lr_scheduler.get_lr()[0]
 
-    def calculate_gradient(self, batch):
+    def calculate_gradient(self, batch, curr_step):
         ''' Runs one step of optimization '''
         # run the data through the model
         
