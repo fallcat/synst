@@ -308,8 +308,11 @@ class Trainer(object):
     def calculate_gradient(self, batch):
         ''' Runs one step of optimization '''
         # run the data through the model
+        
+        # linear scheduling of tradeoff
+        step_progress = curr_step / self.config.max_steps
         self.model.train()
-        loss, nll, reward, sum_layermask = self.model(batch)
+        loss, nll, reward, sum_layermask = self.model(batch, step_progress=step_progress)
 
         # nn.DataParallel wants to gather rather than doing a reduce_add, so the output here
         # will be a tensor of values that must be summed

@@ -499,8 +499,11 @@ class NewTransformer(nn.Module):
         if 'embeddings' in modules:
             self.embedding.reset_parameters()
 
-    def forward(self, batch): # pylint:disable=arguments-differ
+    def forward(self, batch, step_progress=0): # pylint:disable=arguments-differ
         ''' A batch of inputs and targets '''
+        """
+            step_progress = curr_step / max-step
+        """
 
         encoded, _, raw_layermask = self.encode(batch['inputs'])
         #pdb.set_trace()
@@ -527,7 +530,12 @@ class NewTransformer(nn.Module):
             raw_layermask_ = raw_layermask + eps
             layermask = (raw_layermask_) / torch.max(raw_layermask_, dim=0).values # normalize to [0, 1]
             fake_entropy = (-torch.mean(layermask * torch.log(layermask), dim=0)).clamp(-1e-16, 1)
-            loss = smoothed_nll + self.gating_tradeoff * sum_layermask + self.diversity_tradeoff * (1 - fake_entropy).mean()
+
+            # linear scheduling of tradeoffs
+            g_tradeoff = self.gating_tradeoff + (1 - self.gating_tradeoff) * step_progress
+            d_tradeoff = self.diversity_tradeoff + (1 - self.diversity_tradeoff) * step_progress
+
+            loss = smoothed_nll + g_tradeoff * sum_layermask + d_tradeoff * (1 - fake_entropy).mean()
 
         elif self.layermask_type == "noskip":
             loss = smoothed_nll
@@ -548,7 +556,7 @@ class NewTransformer(nn.Module):
 
         for i, encoder in enumerate(self.encoders):
             encoded = encoder(encoded, i, word_embedding, gating_weight=raw_layermask[:, i])
-        #pdb.set_trace()       
+                
         return encoded, layer_mask, raw_layermask
 
     def decode(self, encoded, targets, decoders=None, embedding=None, cache=None, mask=None, input_lens=None, raw_layermask=None):
