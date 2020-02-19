@@ -287,7 +287,7 @@ class LayerMaskPredictor(nn.Module):
         nn.init.xavier_uniform_(self.projection.weight, gain)
         nn.init.constant_(self.projection.bias, 0.)
 
-    def forward(self, lmp_input):
+    def forward(self, lmp_input, lmp_input_mask):
         '''
             lmp_input: [bs, L, embedding_size]
             layermask: [bs, 2*num_layers]
@@ -298,6 +298,8 @@ class LayerMaskPredictor(nn.Module):
             return None, torch.ones(lmp_input.size(0), self.num_layers * 2, device=torch.device("cuda"))
 
         elif self.lmp_type == "gating":
+            #pdb.set_trace()
+            lmp_input = lmp_input.masked_fill_(lmp_input_mask[:, :, None], 0)
             layermask = self.projection(torch.mean(lmp_input,1))
             layermask = torch.relu(layermask)
             
@@ -501,6 +503,7 @@ class NewTransformer(nn.Module):
         ''' A batch of inputs and targets '''
 
         encoded, _, raw_layermask = self.encode(batch['inputs'])
+        #pdb.set_trace()
         decoded = self.decode(
             encoded,
             right_shift(right_shift(batch['targets']), shift=self.span - 1, fill=self.sos_idx),
@@ -540,7 +543,7 @@ class NewTransformer(nn.Module):
             'mask': inputs.eq(self.padding_idx)
         }
 
-        layer_mask, raw_layermask = self.layer_mask_predictor(encoded['state'])
+        layer_mask, raw_layermask = self.layer_mask_predictor(encoded['state'], encoded['mask'])
         #pdb.set_trace()
 
         for i, encoder in enumerate(self.encoders):
