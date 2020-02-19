@@ -548,7 +548,7 @@ class NewTransformer(nn.Module):
 
         for i, encoder in enumerate(self.encoders):
             encoded = encoder(encoded, i, word_embedding, gating_weight=raw_layermask[:, i])
-                
+        #pdb.set_trace()       
         return encoded, layer_mask, raw_layermask
 
     def decode(self, encoded, targets, decoders=None, embedding=None, cache=None, mask=None, input_lens=None, raw_layermask=None):
