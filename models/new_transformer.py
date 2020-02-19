@@ -534,7 +534,7 @@ class NewTransformer(nn.Module):
             # linear scheduling of tradeoffs
             g_tradeoff = self.gating_tradeoff + (1 - self.gating_tradeoff) * step_progress
             d_tradeoff = self.diversity_tradeoff + (1 - self.diversity_tradeoff) * step_progress
-            pdb.set_trace()
+            #pdb.set_trace()
             loss = smoothed_nll + g_tradeoff * sum_layermask + d_tradeoff * (1 - fake_entropy).mean()
 
         elif self.layermask_type == "noskip":
