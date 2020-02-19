@@ -300,6 +300,7 @@ class LayerMaskPredictor(nn.Module):
         elif self.lmp_type == "gating":
             layermask = self.projection(torch.mean(lmp_input,1))
             layermask = torch.relu(layermask)
+            
 
             if self.action_type in ["train", "evaluate"]:
                 return None, layermask
@@ -515,18 +516,15 @@ class NewTransformer(nn.Module):
 
         # sum_layermask = torch.mean(raw_layermask, dim=1).sum()
 
-        sum_layermask = torch.sign(raw_layermask).sum(dim=1) # [bs, ]
+        sum_layermask = raw_layermask.sum(dim=1) # [bs, ]
 
         if self.layermask_type == "gating":
-            # loss: smoothed_nll + gating_tradeoff * sum_layermask + penalize_diversity * (1 - entropy(BS))
-            layermask = torch.sign(raw_layermask)                           # 01 mask
-            layermask = layermask.sum(dim=0)                                # sum +1
-            p1 = layermask / raw_layermask.shape[0]                             # prob of 1
-            p0 = 1 - p1                                                     # prob of 0
-            ent_bs = - p1*torch.log(p1) - p0 * torch.log(p0)                # entropy of each layer
-            ent_bs[ent_bs != ent_bs] = 0                                    # fill nan # [12, 1]
-            ent_bs = torch.mean(ent_bs)                                     # mean entropy of all layers
-            loss = smoothed_nll + self.gating_tradeoff * sum_layermask + self.diversity_tradeoff * (1 - ent_bs)
+            # loss: smoothed_nll + gating_tradeoff * sum_layermask + penalize_diversity * (-std(raw_layermask))
+            eps = 1e-16
+            raw_layermask_ = raw_layermask + eps
+            layermask = (raw_layermask_) / torch.max(raw_layermask_, dim=0).values # normalize to [0, 1]
+            fake_entropy = (-torch.mean(layermask * torch.log(layermask), dim=0)).clamp(-1e-16, 1)
+            loss = smoothed_nll + self.gating_tradeoff * sum_layermask + self.diversity_tradeoff * (1 - fake_entropy).mean()
 
         elif self.layermask_type == "noskip":
             loss = smoothed_nll
