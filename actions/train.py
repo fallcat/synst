@@ -183,7 +183,7 @@ class Trainer(object):
             for i, batch in enumerate(batches, 1):
                 
                 try:
-                    
+                    #pdb.set_trace()
                     nll, length, reward, sum_layermask = self.calculate_gradient(batch, experiment.curr_step)
                     did_optimize = try_optimize(i)
 
@@ -310,7 +310,8 @@ class Trainer(object):
         # run the data through the model
         
         # linear scheduling of tradeoff
-        step_progress = curr_step / self.config.max_steps
+        #pdb.set_trace()
+        step_progress = float(curr_step) / self.config.max_steps
         self.model.train()
         loss, nll, reward, sum_layermask = self.model(batch, step_progress=step_progress)
 
