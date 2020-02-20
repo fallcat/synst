@@ -832,6 +832,12 @@ def add_train_args(parser):
         action='store_true',
         help="whether to freeze the layermask predictor, this is set to True after training entire model to converge"
     )
+    group.add_argument(
+        '--linear-tradeoff',
+        default=False,
+        action='store_true',
+        help="use linear scheduled tradeoffs"
+    )
 
     return group
 

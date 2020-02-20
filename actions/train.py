@@ -311,7 +311,7 @@ class Trainer(object):
         
         # linear scheduling of tradeoff
         #pdb.set_trace()
-        step_progress = float(curr_step) / self.config.max_steps
+        step_progress = float(curr_step) / self.config.max_steps if self.config.linear_tradeoff else 0.0
         self.model.train()
         loss, nll, reward, sum_layermask = self.model(batch, step_progress=step_progress)
 
