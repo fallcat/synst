@@ -273,10 +273,14 @@ class TransformerDecoderLayer(nn.Module):
         return mask[None, :dim, :dim]
 
 class LayerMaskPredictor(nn.Module):
-    def __init__(self, embedding_size, num_layers, action_type, lmp_type):
+    def __init__(self, embedding_size, hidden_size, num_layers, action_type, lmp_type, dropout_p=0.1):
         super(LayerMaskPredictor, self).__init__()
         self.num_layers = num_layers
-        self.projection = nn.Linear(embedding_size, 2 * num_layers)
+        self.proj1 = nn.Linear(embedding_size, hidden_size)
+        self.proj2 = nn.Linear(hidden_size, 2 * num_layers)
+
+        self.dropout = nn.Dropout(dropout_p, inplace=True)
+
         self.action_type = action_type
         self.lmp_type = lmp_type
         self.reset_parameters()
@@ -284,8 +288,10 @@ class LayerMaskPredictor(nn.Module):
     def reset_parameters(self):
         ''' Reset parameters using xavier initialiation '''
         gain = nn.init.calculate_gain('linear')
-        nn.init.xavier_uniform_(self.projection.weight, gain)
-        nn.init.constant_(self.projection.bias, 0.)
+        nn.init.xavier_uniform_(self.proj1.weight, gain)
+        nn.init.constant_(self.proj1.bias, 0.)
+        nn.init.xavier_uniform_(self.proj2.weight, gain)
+        nn.init.constant_(self.proj2.bias, 0.)
 
     def forward(self, lmp_input, lmp_input_mask):
         '''
@@ -300,9 +306,8 @@ class LayerMaskPredictor(nn.Module):
         elif self.lmp_type == "gating":
             #pdb.set_trace()
             lmp_input = lmp_input.masked_fill_(lmp_input_mask[:, :, None], 0)
-            layermask = self.projection(torch.mean(lmp_input,1))
-            layermask = torch.relu(layermask)
-            
+            layermask = self.proj2(torch.relu(self.proj1(torch.mean(lmp_input,1))))
+            layermask = torch.relu(self.dropout(layermask))
 
             if self.action_type in ["train", "evaluate"]:
                 return None, layermask
@@ -363,7 +368,7 @@ class NewTransformer(nn.Module):
             self.layer_mask_predictor = random_layermask_sampling
 
         # layermask predictor
-        self.layer_mask_predictor = LayerMaskPredictor(config.embedding_size, config.num_layers, config.action_type, config.layermask_type)
+        self.layer_mask_predictor = LayerMaskPredictor(config.embedding_size, config.hidden_dim, config.num_layers, config.action_type, config.layermask_type)
 
 
     @classmethod
@@ -526,16 +531,23 @@ class NewTransformer(nn.Module):
 
         if self.layermask_type == "gating":
             # loss: smoothed_nll + gating_tradeoff * sum_layermask + penalize_diversity * (-std(raw_layermask))
-            eps = 1e-16
-            raw_layermask_ = raw_layermask + eps
-            layermask = (raw_layermask_) / torch.max(raw_layermask_, dim=0).values # normalize to [0, 1]
-            fake_entropy = (-torch.mean(layermask * torch.log(layermask), dim=0)).clamp(-1e-16, 1)
+
+            if self.diversity_tradeoff != 0:
+                eps = 1e-16
+                raw_layermask_ = raw_layermask + eps
+                layermask = (raw_layermask_) / torch.max(raw_layermask_, dim=0).values # normalize to [0, 1]
+                fake_entropy = (-torch.mean(layermask * torch.log(layermask), dim=0)).clamp(-1e-16, 1)
+            else:
+                fake_entropy = 0
 
             # linear scheduling of tradeoffs
             g_tradeoff = self.gating_tradeoff + (1 - self.gating_tradeoff) * step_progress
             d_tradeoff = self.diversity_tradeoff + (1 - self.diversity_tradeoff) * step_progress
-            #pdb.set_trace()
-            loss = smoothed_nll + g_tradeoff * sum_layermask + d_tradeoff * (1 - fake_entropy).mean()
+
+            if self.diversity_tradeoff != 0:
+                loss = smoothed_nll + g_tradeoff * sum_layermask + d_tradeoff * (1 - fake_entropy).mean()
+            else:
+                loss = smoothed_nll + g_tradeoff * sum_layermask
 
         elif self.layermask_type == "noskip":
             loss = smoothed_nll
