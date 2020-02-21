@@ -322,7 +322,7 @@ class LayerMaskPredictor(nn.Module):
             return None, torch.ones(lmp_input.size(0), self.num_layers * 2, device=torch.device("cuda"))
 
         elif self.lmp_type == "gating":
-            pdb.set_trace()
+            # pdb.set_trace()
             lmp_input = lmp_input.masked_fill_(lmp_input_mask[:, :, None], 0)
 
             if not self.noisy:
