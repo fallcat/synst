@@ -14,6 +14,7 @@ from models.embeddings import PositionEmbedding, TokenEmbedding
 from models.utils import LabelSmoothingLoss, Translator
 from utils import left_shift, right_shift, triu
 from torch.distributions import Bernoulli
+import torch.nn.functional as F
 
 
 class TransformerSublayer(nn.Module):
@@ -273,25 +274,41 @@ class TransformerDecoderLayer(nn.Module):
         return mask[None, :dim, :dim]
 
 class LayerMaskPredictor(nn.Module):
-    def __init__(self, embedding_size, hidden_size, num_layers, action_type, lmp_type, dropout_p=0.1):
+    def __init__(self, embedding_size, 
+                       hidden_size, 
+                       num_layers, 
+                       action_type, 
+                       lmp_type, 
+                       noisy,
+                       dropout_p=0.1):
         super(LayerMaskPredictor, self).__init__()
         self.num_layers = num_layers
-        self.proj1 = nn.Linear(embedding_size, hidden_size)
-        self.proj2 = nn.Linear(hidden_size, 2 * num_layers)
+
+        if not noisy:
+            self.proj1 = nn.Linear(embedding_size, hidden_size)
+            self.proj2 = nn.Linear(hidden_size, 2 * num_layers)
+        else:
+            self.proj1 = nn.Linear(embedding_size, 2 * num_layers)
+            self.proj_noise = nn.Linear(embedding_size, 2 * num_layers)
 
         self.dropout = nn.Dropout(dropout_p, inplace=True)
 
         self.action_type = action_type
         self.lmp_type = lmp_type
+        self.noisy=noisy
         self.reset_parameters()
         
     def reset_parameters(self):
         ''' Reset parameters using xavier initialiation '''
         gain = nn.init.calculate_gain('linear')
+
         nn.init.xavier_uniform_(self.proj1.weight, gain)
         nn.init.constant_(self.proj1.bias, 0.)
-        nn.init.xavier_uniform_(self.proj2.weight, gain)
-        nn.init.constant_(self.proj2.bias, 0.)
+        if not self.noisy:
+            nn.init.xavier_uniform_(self.proj2.weight, gain)
+            nn.init.constant_(self.proj2.bias, 0.)
+        nn.init.xavier_uniform_(self.proj_noise.weight, gain)
+        nn.init.constant_(self.proj_noise.bias, 0.)
 
     def forward(self, lmp_input, lmp_input_mask):
         '''
@@ -299,15 +316,25 @@ class LayerMaskPredictor(nn.Module):
             layermask: [bs, 2*num_layers]
             return: sampled layermask, raw-layermask-distribution
         '''
-
+        bs, L, emb = lmp_input.shape
         if self.lmp_type == "noskip":
             return None, torch.ones(lmp_input.size(0), self.num_layers * 2, device=torch.device("cuda"))
 
         elif self.lmp_type == "gating":
             #pdb.set_trace()
             lmp_input = lmp_input.masked_fill_(lmp_input_mask[:, :, None], 0)
-            layermask = self.proj2(torch.relu(self.proj1(torch.mean(lmp_input,1))))
-            layermask = torch.relu(self.dropout(layermask))
+
+            if not self.noisy:
+                layermask = self.proj2(torch.relu(self.proj1(torch.mean(lmp_input,1))))
+                layermask = torch.relu(self.dropout(layermask))
+
+            else:
+                avg_emb = torch.mean(lmp_input,1)
+                layermask = self.proj1(avg_emb)
+                noise = torch.empty(bs, self.num_layers * 2, device=torch.device("cuda")).normal_(mean=0, std=1)
+                sp = F.softplus(self.proj_noise(avg_emb))
+                layermask += noise * sp
+                layermask = self.dropout(torch.relu(layermask))
 
             if self.action_type in ["train", "evaluate"]:
                 return None, layermask
@@ -368,7 +395,12 @@ class NewTransformer(nn.Module):
             self.layer_mask_predictor = random_layermask_sampling
 
         # layermask predictor
-        self.layer_mask_predictor = LayerMaskPredictor(config.embedding_size, config.hidden_dim, config.num_layers, config.action_type, config.layermask_type)
+        self.layer_mask_predictor = LayerMaskPredictor(config.embedding_size, 
+                                                       config.hidden_dim, 
+                                                       config.num_layers, 
+                                                       config.action_type, 
+                                                       config.layermask_type,
+                                                       config.layermask_noisy)
 
 
     @classmethod

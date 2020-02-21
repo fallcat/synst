@@ -522,6 +522,12 @@ def add_new_transformer_args(parser):
         choices=['noskip', 'gating'],
         default='noskip'
     )
+    group.add_argument(
+        '--layermask-noisy',
+        default=False,
+        action='store_true',
+        help="whether to add noisy during generating layermasks"
+    )
 
     return group
 
@@ -838,6 +844,7 @@ def add_train_args(parser):
         action='store_true',
         help="use linear scheduled tradeoffs"
     )
+    
 
     return group
 
