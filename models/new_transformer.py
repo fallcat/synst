@@ -307,8 +307,9 @@ class LayerMaskPredictor(nn.Module):
         if not self.noisy:
             nn.init.xavier_uniform_(self.proj2.weight, gain)
             nn.init.constant_(self.proj2.bias, 0.)
-        nn.init.xavier_uniform_(self.proj_noise.weight, gain)
-        nn.init.constant_(self.proj_noise.bias, 0.)
+        else:
+            nn.init.xavier_uniform_(self.proj_noise.weight, gain)
+            nn.init.constant_(self.proj_noise.bias, 0.)
 
     def forward(self, lmp_input, lmp_input_mask):
         '''
@@ -321,7 +322,7 @@ class LayerMaskPredictor(nn.Module):
             return None, torch.ones(lmp_input.size(0), self.num_layers * 2, device=torch.device("cuda"))
 
         elif self.lmp_type == "gating":
-            #pdb.set_trace()
+            pdb.set_trace()
             lmp_input = lmp_input.masked_fill_(lmp_input_mask[:, :, None], 0)
 
             if not self.noisy:
