@@ -10,6 +10,7 @@ from actions.probe_evaluate import ProbeEvaluator
 from actions.probe_new_translate import ProbeNewTranslator
 from actions.probe_attn_stats import ProbeStatsGetter
 from actions.probe_off_diagonal import ProbeOffDiagonal
+from actions.iterative_train import IterativeTrainer
 
 class Pass(object):
     ''' Action that does nothing... '''

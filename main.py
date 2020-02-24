@@ -8,6 +8,7 @@ Main entry point for training the SynST
 from __future__ import print_function
 
 import sys
+import copy
 import threading
 from contextlib import ExitStack
 
@@ -28,9 +29,10 @@ from utils import profile
 
 # import comet_ml in the top of your file
 from comet_ml import Experiment
+import pdb
     
 # Add the following code anywhere in your machine learning file
-import pdb
+
 
 def main(argv=None):
     ''' Main entry point '''
@@ -49,7 +51,7 @@ def main(argv=None):
         args.num_devices, shuffle=args.shuffle
     )
     print(dataloader.dataset.stats)
-    #pdb.set_trace()
+
     args.config.model.action_type = args.action_type
     model = args.model(args.config.model, dataloader.dataset)
     action = args.action(args.action_config, model, dataloader, args.device)
@@ -59,6 +61,16 @@ def main(argv=None):
         action.validation_dataloader = get_dataloader(
             args.config.data, args.seed_fn, pin_memory,
             args.num_devices, shuffle=args.shuffle
+        )
+    # pdb.set_trace()
+    if args.action_type == "iterative_train":
+        args.config.data.split = 'valid'
+        args.config.data.max_examples = 0
+        args.config.data.batch_size = 256
+        args.config.data.batch_method = "example"
+        action.validation_dataloader = get_dataloader(
+            args.config.data, args.seed_fn, pin_memory,
+            args.num_devices, shuffle=True
         )
 
     if args.config.cuda.profile_cuda_memory:

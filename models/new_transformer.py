@@ -41,14 +41,11 @@ class TransformerSublayer(nn.Module):
     def forward(self, inputs, gating_weight, *sublayer_args, **sublayer_kwargs): # pylint:disable=arguments-differ
         ''' The forward pass of the sublayer '''
         out_dropout = self.dropout(self.sublayer(*sublayer_args, **sublayer_kwargs))
-        return self.norm(inputs + gating_weight.view(-1, 1, 1) * out_dropout)
-        # if type(self.sublayer) is TransformerFFN:
-        #     #pdb.set_trace()
-        #     out_dropout = self.dropout(self.sublayer(*sublayer_args, **sublayer_kwargs))
-        #     return self.norm(inputs + gating_weight.view(-1, 1, 1) * out_dropout)
-        # else:
-        #     return self.norm(inputs + self.dropout(self.sublayer(*sublayer_args, **sublayer_kwargs)))
-
+        if out_dropout.shape[0] != gating_weight.shape[0]:
+            beam_size = out_dropout.shape[0] // gating_weight.shape[0]
+            gating_weight = gating_weight.expand(beam_size, gating_weight.shape[0]).transpose(1,0).contiguous().view(-1)
+        ret = self.norm(inputs + gating_weight.view(-1, 1, 1) * out_dropout)
+        return ret
 
 class TransformerFFN(nn.Module):
     ''' Implements the Transformer feed-forward network '''
@@ -284,19 +281,22 @@ class LayerMaskPredictor(nn.Module):
         super(LayerMaskPredictor, self).__init__()
         self.num_layers = num_layers
 
-        if not noisy:
-            self.proj1 = nn.Linear(embedding_size, hidden_size)
-            self.proj2 = nn.Linear(hidden_size, 2 * num_layers)
+        if lmp_type != "random":
+            if not noisy:
+                self.proj1 = nn.Linear(embedding_size, hidden_size)
+                self.proj2 = nn.Linear(hidden_size, 2 * num_layers)
+            else:
+                self.proj1 = nn.Linear(embedding_size, 2 * num_layers)
+                self.proj_noise = nn.Linear(embedding_size, 2 * num_layers)
+
+            self.dropout = nn.Dropout(dropout_p, inplace=True)
+
+            self.action_type = action_type
+            self.lmp_type = lmp_type
+            self.noisy=noisy
+            self.reset_parameters()
         else:
-            self.proj1 = nn.Linear(embedding_size, 2 * num_layers)
-            self.proj_noise = nn.Linear(embedding_size, 2 * num_layers)
-
-        self.dropout = nn.Dropout(dropout_p, inplace=True)
-
-        self.action_type = action_type
-        self.lmp_type = lmp_type
-        self.noisy=noisy
-        self.reset_parameters()
+            self.sample_distribution = torch.ones(2 * num_layers, device=torch.device("cuda")) * 0.5 # init 0.5
         
     def reset_parameters(self):
         ''' Reset parameters using xavier initialiation '''
@@ -311,7 +311,7 @@ class LayerMaskPredictor(nn.Module):
             nn.init.xavier_uniform_(self.proj_noise.weight, gain)
             nn.init.constant_(self.proj_noise.bias, 0.)
 
-    def forward(self, lmp_input, lmp_input_mask):
+    def forward(self, lmp_input, lmp_input_mask, aggregate_stats=None):
         '''
             lmp_input: [bs, L, embedding_size]
             layermask: [bs, 2*num_layers]
@@ -326,7 +326,7 @@ class LayerMaskPredictor(nn.Module):
             lmp_input = lmp_input.masked_fill_(lmp_input_mask[:, :, None], 0)
 
             if not self.noisy:
-                layermask = self.proj2(torch.relu(self.proj1(torch.mean(lmp_input,1))))
+                layermask = self.proj1(torch.mean(lmp_input,1))
                 layermask = torch.relu(self.dropout(layermask))
 
             else:
@@ -343,8 +343,33 @@ class LayerMaskPredictor(nn.Module):
             else:
                 return None, layermask
 
+        elif self.lmp_type == "random":
+            return None, self.random_layermask_sampling()
+
+        elif self.lmp_type == "iterative_training":
+            layermask = self.proj1(torch.mean(lmp_input,1))
+            layermask = torch.sigmoid(layermask)
+
+            # layermask, aggregate_stats: [bs, #L]
+            # min (layermask - aggregate stats)^2
+            if aggregate_stats is not None:
+                mse_loss = ((aggregate_stats - layermask)**2).sum()
+                return mse_loss, (layermask > 0.5).float()
+            else:
+                return None, (layermask > 0.5).float()
+
         else:
             pass
+
+    def random_layermask_sampling(self):
+
+        # sample from distribution
+        all_sample = Bernoulli(torch.ones(config.num_layers * 2) * self.sample_distribution).sample()
+        # must have a decoder
+        if not any(all_sample[self.num_layers:self.num_layers*2]):
+            all_sample[np.random.randint(self.num_layers, self.num_layers*2)] = 1
+
+        return all_sample
 
 
 class NewTransformer(nn.Module):
@@ -383,17 +408,7 @@ class NewTransformer(nn.Module):
 
         self.random_layermask_p = 0.5
 
-        if config.random_layermask:
-            # TODO: 2-step sampling
-            # 1. sample one decoder
-            # 2. k-bernoulli for the rest layer (p=0.5)
-            def random_layermask_sampling(x):
-                dec_sample = np.random.randint(6, 12)
-                all_sample = Bernoulli(torch.ones(config.num_layers * 2) * self.random_layermask_p).sample()
-                if all_sample[dec_sample] != 1:
-                    all_sample[dec_sample] = 1
-                return [all_sample] * 2
-            self.layer_mask_predictor = random_layermask_sampling
+        self.layermask = None
 
         # layermask predictor
         self.layer_mask_predictor = LayerMaskPredictor(config.embedding_size, 
@@ -544,6 +559,8 @@ class NewTransformer(nn.Module):
         """
 
         encoded, _, raw_layermask = self.encode(batch['inputs'])
+        self.layermask = raw_layermask
+
         #pdb.set_trace()
         decoded = self.decode(
             encoded,
@@ -557,8 +574,6 @@ class NewTransformer(nn.Module):
         targets = left_shift(batch['targets'])
         nll = self.cross_entropy(logits, targets).sum(dims[:-1])
         smoothed_nll = self.label_smoothing(logits, targets).sum(dims)
-
-        # sum_layermask = torch.mean(raw_layermask, dim=1).sum()
 
         sum_layermask = raw_layermask.sum(dim=1) # [bs, ]
 
@@ -582,9 +597,8 @@ class NewTransformer(nn.Module):
             else:
                 loss = smoothed_nll + g_tradeoff * sum_layermask
 
-        elif self.layermask_type == "noskip":
+        else:
             loss = smoothed_nll
-
 
         return loss, nll, None, sum_layermask.mean()
 
@@ -600,7 +614,11 @@ class NewTransformer(nn.Module):
         #pdb.set_trace()
 
         for i, encoder in enumerate(self.encoders):
-            encoded = encoder(encoded, i, word_embedding, gating_weight=raw_layermask[:, i])
+            if self.layermask_type != "random":
+                encoded = encoder(encoded, i, word_embedding, gating_weight=raw_layermask[:, i])
+            else:
+                if raw_layermask[i]:
+                    encoded = encoder(encoded, i, word_embedding, gating_weight=1)
                 
         return encoded, layer_mask, raw_layermask
 
@@ -621,7 +639,11 @@ class NewTransformer(nn.Module):
             'input_lens': input_lens
         }
         for i, decoder in enumerate(decoders):
-            decoded = decoder(decoded, encoded, i, word_embedding, gating_weight=raw_layermask[:, len(decoders) + i])
+            if self.layermask_type != "random":
+                decoded = decoder(decoded, encoded, i, word_embedding, gating_weight=raw_layermask[:, len(decoders) + i])
+            else:
+                if raw_layermask[len(decoders)+i]:
+                    decoded = decoder(decoded, encoded, i, word_embedding, gating_weight=1)
 
         # compute projection to the vocabulary
         state = decoded['state']
@@ -636,3 +658,9 @@ class NewTransformer(nn.Module):
     def embed(self, inputs, token_embedding):
         ''' Embed the given inputs '''
         return self.dropout(token_embedding(inputs) + self.position_embedding(inputs))
+
+    def set_LMP_type(self, lmp_type):
+        if lmp_type not in ["noskip", 'iterative_training']:
+            print("cannot set to this type after initiliazation!")
+            exit(-1)
+        self.layer_mask_predictor.lmp_type = lmp_type

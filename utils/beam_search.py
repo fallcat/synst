@@ -2,7 +2,7 @@
 A module that implements beam search
 '''
 import torch
-
+import pdb
 import utils
 
 class BeamHypothesis(object):
@@ -70,6 +70,9 @@ class BeamSearchDecoder(object):
 
     def collate(self, encoded, beams):
         ''' Collate beams into a batch '''
+        """
+            [sent-0-beam-0, sent-0-beam-1, sent-0-beam-2, sent-0-beam-3, sent-1-beam-0,...]
+        """
         batch = []
         cache = []
         beam_map = {}
@@ -216,6 +219,7 @@ class BeamSearchDecoder(object):
                 while chunks:
                     try:
                         encoded_batch, batch = chunks.pop()
+                        #pdb.set_trace()
                         result = self.model(encoded_batch, batch, cache=cache, raw_layermask=raw_layermask)
 
                         new_cache = result.get('cache')
