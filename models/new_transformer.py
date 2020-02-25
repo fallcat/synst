@@ -356,14 +356,14 @@ class LayerMaskPredictor(nn.Module):
         elif self.lmp_type == "iterative_training":
             layermask = self.proj1(torch.mean(lmp_input,1))
             layermask = torch.sigmoid(layermask)
-            #pdb.set_trace()
+
             # layermask, aggregate_stats: [bs, #L]
             # min (layermask - aggregate stats)^2
             if aggregate_stats is not None:
                 mse_loss = ((aggregate_stats - layermask)**2).sum()
-                return mse_loss, (layermask > 0.5).float()
+                return mse_loss, Bernoulli(layermask).sample()
             else:
-                return None, (layermask > 0.5).float()
+                return None, Bernoulli(layermask).sample()
 
         else:
             pass

@@ -280,7 +280,7 @@ class IterativeTrainer(object):
         model = self.modules['model']
         # set dropout to 0
         model.eval() # dropout to 0 and no_grad
-        self.enable_train_LMP(model)
+        
         
         ssize, s_bsize = self.config.sample_size, self.config.sample_batch_size
         data_loader = iter(self.validation_dataloader) 
@@ -328,6 +328,7 @@ class IterativeTrainer(object):
         new_dist = masks / self.config.sample_times
         # train LMP with new_distribution
         # optimizer, only optimize 
+        self.enable_train_LMP(model)
         lmp_optimizer = optim.Adam(model.layer_mask_predictor.parameters(), lr=3e-3, betas=(0.9, 0.98), eps=1e-9)
         
         loss_curve = []
@@ -336,7 +337,7 @@ class IterativeTrainer(object):
             for bi, b in enumerate(batch):
                 embedding = model.embed(b['inputs'].cuda(), model.embedding)
                 padding_masks = b['inputs'].eq(model.padding_idx).cuda()
-                loss, layermask = model.layer_mask_predictor(embedding, padding_masks, aggregate_stats=new_dist[bi*s_bsize:(bi+1)*s_bsize])
+                loss, _ = model.layer_mask_predictor(embedding, padding_masks, aggregate_stats=new_dist[bi*s_bsize:(bi+1)*s_bsize])
                 loss.backward(retain_graph=True)
                 lmp_optimizer.step()
                 lmp_optimizer.zero_grad()
