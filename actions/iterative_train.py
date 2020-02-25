@@ -306,6 +306,9 @@ class IterativeTrainer(object):
         model.set_LMP_type('iterative_training')
         # sample multiple times and eval
         # init as zero, and add model.layermask each time to count frequency
+        write_fname = os.path.join(self.config.checkpoint_directory, 'lmp_train_%i.txt' % (curr_step))
+        with open(write_fname, 'w') as f:
+            f.write("Start sampling : %s\n" % datetime.datetime.now())
 
         masks = torch.zeros(ssize, 2 * len(model.encoders), device=torch.device("cuda")) # [bs, #layers]
         for st in range(self.config.sample_times):
@@ -323,6 +326,9 @@ class IterativeTrainer(object):
 
             if this_bleu > all_on_bleu:
                 masks += layermask
+
+        with open(write_fname, 'a+') as f:
+            f.write("end sampling %i at %s\n" % (st, datetime.datetime.now()))
 
         # new distribution
         new_dist = masks / self.config.sample_times
@@ -344,11 +350,10 @@ class IterativeTrainer(object):
                 avg_loss += loss.item()
             loss_curve.append(avg_loss / (bi+1))
 
-        # output new_dist and losses to file
-        with open(os.path.join(self.config.checkpoint_directory, 'lmp_train_%i.txt' % (curr_step)), 'w') as f:
-            # write new_dist
-            new_dist = np.around(new_dist.cpu().numpy(), 2).tolist()
+            # write to file
             s = ''
+        with open(write_fname, 'a+') as f:
+            new_dist = np.around(new_dist.cpu().numpy(), 2).tolist()
             for l in new_dist:
                 s += '\t'.join([str('%.5f' % x) for x in l]) + '\n'
             s += '\n'.join([str('%.5f' % x) for x in loss_curve])
