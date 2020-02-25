@@ -341,7 +341,7 @@ class IterativeTrainer(object):
                 lmp_optimizer.step()
                 lmp_optimizer.zero_grad()
                 avg_loss += loss.item()
-            loss_curve.append(avg_loss / bi)
+            loss_curve.append(avg_loss / (bi+1))
 
         # output new_dist and losses to file
         with open(os.path.join(self.config.checkpoint_directory, 'lmp_train_%i.txt' % (curr_step)), 'w') as f:
