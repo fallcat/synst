@@ -77,8 +77,10 @@ class BeamSearchDecoder(object):
         cache = []
         beam_map = {}
         encoded_batch = []
+        beam_count = []
         for i, beam in enumerate(beams):
             hypothesis_map = {}
+            cnt=0
             for hypothesis in beam.hypotheses:
                 if beam.finished_decoding(hypothesis, self.eos_idx):
                     continue
@@ -88,14 +90,18 @@ class BeamSearchDecoder(object):
                 encoded_batch.append(encoded[i])
                 hypothesis_map[hypothesis] = batch_idx
                 batch.append(hypothesis.sequence)
+                cnt += 1
 
             if hypothesis_map:
                 beam_map[beam] = hypothesis_map
 
+            beam_count.append(cnt)
+
         batch = torch.LongTensor(batch)
         encoded_batch = utils.cat(encoded_batch)
         cache = utils.cat(cache) if not self.config.disable_cache else None
-        return encoded_batch, batch, beam_map, cache
+
+        return encoded_batch, batch, beam_map, cache, beam_count
 
     def initialize_search(self, start_sequences, max_lengths=0, initial_scores=0):
         ''' Initialize a batch of beams '''
@@ -211,16 +217,30 @@ class BeamSearchDecoder(object):
         with torch.no_grad():
             encoded = utils.split_or_chunk(encoded, len(beams))
             while not self.all_done(beams):
-                encoded_batch, batch, beam_map, cache = self.collate(encoded, beams)
+                encoded_batch, batch, beam_map, cache, beam_count = self.collate(encoded, beams)
 
                 logits = []
                 updated_cache = []
-                chunks = [(encoded_batch, batch)]
+
+                # expand raw_layermask
+                assert len(raw_layermask) == len(beam_count)
+                if sum(beam_count) != raw_layermask.shape[0]:
+                    new_raw_layermask = []
+                    for eg, rtimes in zip(raw_layermask, beam_count):
+                        if rtimes == 0:
+                            continue
+                        new_raw_layermask.append(eg.repeat(rtimes, 1))
+                        #pdb.set_trace()
+                    new_raw_layermask = torch.cat(new_raw_layermask)
+                else:
+                    new_raw_layermask = raw_layermask
+
+                chunks = [(encoded_batch, batch, new_raw_layermask)]
                 while chunks:
                     try:
-                        encoded_batch, batch = chunks.pop()
-                        #pdb.set_trace()
-                        result = self.model(encoded_batch, batch, cache=cache, raw_layermask=raw_layermask)
+                        encoded_batch, batch, r_layermask = chunks.pop()
+                        
+                        result = self.model(encoded_batch, batch, cache=cache, raw_layermask=r_layermask)
 
                         new_cache = result.get('cache')
                         if new_cache:
@@ -236,9 +256,11 @@ class BeamSearchDecoder(object):
                             # sequences at once. This may for example happen early in training
                             # before the model has converged to output <EOS> tokens. Just split the
                             # current batch into two chunks and try again.
+
                             chunks.extend(zip(
                                 utils.split_or_chunk(encoded_batch, 2),
-                                utils.split_or_chunk(batch, 2)
+                                utils.split_or_chunk(batch, 2),
+                                utils.split_or_chunk(r_layermask, 2)
                             ))
 
                             # Additionally clear the cache in case the issue is related to allocator

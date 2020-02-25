@@ -41,9 +41,9 @@ class TransformerSublayer(nn.Module):
     def forward(self, inputs, gating_weight, *sublayer_args, **sublayer_kwargs): # pylint:disable=arguments-differ
         ''' The forward pass of the sublayer '''
         out_dropout = self.dropout(self.sublayer(*sublayer_args, **sublayer_kwargs))
-        if out_dropout.shape[0] != gating_weight.shape[0]:
-            beam_size = out_dropout.shape[0] // gating_weight.shape[0]
-            gating_weight = gating_weight.expand(beam_size, gating_weight.shape[0]).transpose(1,0).contiguous().view(-1)
+        # if out_dropout.shape[0] != gating_weight.shape[0]:
+        #     beam_size = out_dropout.shape[0] // gating_weight.shape[0]
+        #     gating_weight = gating_weight.expand(beam_size, gating_weight.shape[0]).transpose(1,0).contiguous().view(-1)
         ret = self.norm(inputs + gating_weight.view(-1, 1, 1) * out_dropout)
         return ret
 
@@ -240,7 +240,10 @@ class TransformerDecoderLayer(nn.Module):
             else:
                 # print("cached", cached.shape)
                 # print("state", state.shape)
-                state = cache[self.uuid] = torch.cat((cached, state), 1)
+                try:
+                    state = cache[self.uuid] = torch.cat((cached, state), 1)
+                except:
+                    pdb.set_trace()
 
         return {'state': state, 'mask': mask, 'cache': cache}
 
@@ -281,10 +284,13 @@ class LayerMaskPredictor(nn.Module):
         super(LayerMaskPredictor, self).__init__()
         self.num_layers = num_layers
 
-        if lmp_type != "random":
+        if lmp_type not in ["random"]:
             if not noisy:
-                self.proj1 = nn.Linear(embedding_size, hidden_size)
-                self.proj2 = nn.Linear(hidden_size, 2 * num_layers)
+                if lmp_type == "iterative_training":
+                    self.proj1 = nn.Linear(embedding_size, 2 * num_layers)
+                else:
+                    self.proj1 = nn.Linear(embedding_size, hidden_size)
+                    self.proj2 = nn.Linear(hidden_size, 2 * num_layers)
             else:
                 self.proj1 = nn.Linear(embedding_size, 2 * num_layers)
                 self.proj_noise = nn.Linear(embedding_size, 2 * num_layers)
@@ -305,8 +311,9 @@ class LayerMaskPredictor(nn.Module):
         nn.init.xavier_uniform_(self.proj1.weight, gain)
         nn.init.constant_(self.proj1.bias, 0.)
         if not self.noisy:
-            nn.init.xavier_uniform_(self.proj2.weight, gain)
-            nn.init.constant_(self.proj2.bias, 0.)
+            if self.lmp_type != "iterative_training":
+                nn.init.xavier_uniform_(self.proj2.weight, gain)
+                nn.init.constant_(self.proj2.bias, 0.)
         else:
             nn.init.xavier_uniform_(self.proj_noise.weight, gain)
             nn.init.constant_(self.proj_noise.bias, 0.)
@@ -602,7 +609,7 @@ class NewTransformer(nn.Module):
 
         return loss, nll, None, sum_layermask.mean()
 
-    def encode(self, inputs):
+    def encode(self, inputs, raw_layermask=None):
         ''' Encode the inputs '''
         word_embedding = self.embed(inputs, self.embedding)
         encoded = {
@@ -610,8 +617,11 @@ class NewTransformer(nn.Module):
             'mask': inputs.eq(self.padding_idx)
         }
 
-        layer_mask, raw_layermask = self.layer_mask_predictor(encoded['state'], encoded['mask'])
-        #pdb.set_trace()
+        if raw_layermask is None:
+            layer_mask, lmp_raw_layermask = self.layer_mask_predictor(encoded['state'], encoded['mask'])
+            raw_layermask = lmp_raw_layermask
+        else:
+            layer_mask = None
 
         for i, encoder in enumerate(self.encoders):
             if self.layermask_type != "random":
@@ -622,7 +632,12 @@ class NewTransformer(nn.Module):
                 
         return encoded, layer_mask, raw_layermask
 
-    def decode(self, encoded, targets, decoders=None, embedding=None, cache=None, mask=None, input_lens=None, raw_layermask=None):
+    def decode(self, encoded, targets, decoders=None, 
+                                       embedding=None, 
+                                       cache=None, 
+                                       mask=None, 
+                                       input_lens=None, 
+                                       raw_layermask=None):
         ''' Decode the encoded sequence to the targets '''
         if decoders is None:
             decoders = self.decoders
@@ -638,6 +653,22 @@ class NewTransformer(nn.Module):
             'mask': targets.eq(self.padding_idx) if mask is None else mask,
             'input_lens': input_lens
         }
+
+        # if beam_count is not None and sum(beam_count) != len(raw_layermask):
+            
+        #     # during beam search, expand layermask according to beam_count
+        #     new_raw_layermask = []
+        #     assert len(raw_layermask) == len(beam_count)
+        #     for eg, rtimes in zip(raw_layermask, beam_count):
+        #         if rtimes == 0:
+        #             continue
+        #         new_raw_layermask.append(eg.repeat(rtimes, 1))
+        #     raw_layermask = torch.cat(new_raw_layermask)
+        #     if len(raw_layermask) != encoded['state'].shape[0]:
+        #         pdb.set_trace()
+        if len(raw_layermask) != encoded['state'].shape[0]:
+            pdb.set_trace()
+
         for i, decoder in enumerate(decoders):
             if self.layermask_type != "random":
                 decoded = decoder(decoded, encoded, i, word_embedding, gating_weight=raw_layermask[:, len(decoders) + i])

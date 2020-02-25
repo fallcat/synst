@@ -10,7 +10,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import ticker
 from collections import OrderedDict
-import pdb
+
 import torch
 from torch import nn
 from torch.nn import functional as F
@@ -286,7 +286,7 @@ class Translator(object):
         ''' Get the padding index '''
         return self.dataset.padding_idx
 
-    def translate(self, batch):
+    def translate(self, batch, raw_layermask=None):
         ''' Generate with the given batch '''
         with torch.no_grad():
             if self.config.length_basis:
@@ -302,9 +302,12 @@ class Translator(object):
             )
 
             # change to store distribution
-            encoded, _, raw_layermask = self.encoder(batch['inputs'])
+            encoded, _, lmp_raw_layermask = self.encoder(batch['inputs'], raw_layermask=raw_layermask)
+
+            if raw_layermask is None:
+                raw_layermask = lmp_raw_layermask
+
             self.layermasks.append(raw_layermask[0])
-            #pdb.set_trace()
             # decode using top-k decoder layer
             beams = decoder.initialize_search(
                 [[self.sos_idx] * self.span for _ in range(len(batch['inputs']))],
