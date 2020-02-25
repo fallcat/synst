@@ -356,7 +356,7 @@ class LayerMaskPredictor(nn.Module):
         elif self.lmp_type == "iterative_training":
             layermask = self.proj1(torch.mean(lmp_input,1))
             layermask = torch.sigmoid(layermask)
-
+            #pdb.set_trace()
             # layermask, aggregate_stats: [bs, #L]
             # min (layermask - aggregate stats)^2
             if aggregate_stats is not None:

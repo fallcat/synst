@@ -66,7 +66,7 @@ def main(argv=None):
     if args.action_type == "iterative_train":
         args.config.data.split = 'valid'
         args.config.data.max_examples = 0
-        args.config.data.batch_size = 256
+        args.config.data.batch_size = args.action_config.sample_batch_size
         args.config.data.batch_method = "example"
         action.validation_dataloader = get_dataloader(
             args.config.data, args.seed_fn, pin_memory,

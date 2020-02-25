@@ -1022,6 +1022,28 @@ def add_iterative_train_args(parser):
         help="number of times to train the LMP"
     )
 
+    group.add_argument(
+        '--sample-size',
+        type=int,
+        default=250,
+        help="number of examples sampled from valid set"
+    )
+
+    group.add_argument(
+        '--sample-batch-size',
+        type=int,
+        default=50,
+        help="number of examples sampled from valid set"
+    )
+
+    group.add_argument(
+        '--step-start-iter-train',
+        type=int,
+        default=20,
+        help="step after which to start training"
+    )
+
+
     return group
 
 def add_probe_train_args(parser):

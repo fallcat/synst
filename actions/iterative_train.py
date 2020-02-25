@@ -28,6 +28,7 @@ from utils import profile, tqdm_wrap_stdout, tqdm_unwrap_stdout
 import datetime
 
 import sacrebleu
+import numpy as np
 import pdb
 
 class IterativeTrainer(object):
@@ -53,6 +54,7 @@ class IterativeTrainer(object):
         params = []
         for pname, pval in model.named_parameters():
             if 'layer_mask_predictor' in pname:
+                pval.requires_grad = False
                 continue
             params.append(pval)
 
@@ -250,8 +252,8 @@ class IterativeTrainer(object):
                     self.checkpoint(epoch, experiment.curr_step, new_best)
 
                 # sample layermask
-                if experiment.curr_step > 20 and experiment.curr_step % self.config.sample_interval == 0:
-                    self.update_layermask_predictor()
+                if experiment.curr_step >= self.config.step_start_iter_train and experiment.curr_step % self.config.sample_interval == 0 and did_optimize:
+                    self.update_layermask_predictor(experiment.curr_step)
 
                 batches.set_description_str(get_description())
                 if self.is_done(experiment, epoch):
@@ -260,47 +262,64 @@ class IterativeTrainer(object):
 
             try_optimize(i, last=True)
 
-    def update_layermask_predictor(self):
+    def enable_train_LMP(self, model):
+        for pname, pval in model.named_parameters():
+            if 'layer_mask_predictor' in pname:
+                pval.requires_grad = True
+                continue
+
+    def disable_train_LMP(self, model):
+        for pname, pval in model.named_parameters():
+            if 'layer_mask_predictor' in pname:
+                pval.requires_grad = True
+                continue
+
+    def update_layermask_predictor(self, curr_step):
 
         # sample from validation data (validation dataloader, shuffle=True, everytime only inference on first 300)
         model = self.modules['model']
         # set dropout to 0
         model.eval() # dropout to 0 and no_grad
+        self.enable_train_LMP(model)
         
-        batch = next(iter(self.validation_dataloader))
-    
+        ssize, s_bsize = self.config.sample_size, self.config.sample_batch_size
+        data_loader = iter(self.validation_dataloader) 
+        
+        iter_times = ssize // s_bsize
+        batch = [next(data_loader) for i in range(iter_times)]
+
         model.set_LMP_type('noskip')
         noskip_translator = model.translator(self.config).to(torch.device("cuda"))
-        translated = noskip_translator.translate(batch)
+        translated = [noskip_translator.translate(b) for b in batch]
         eval_batch_gold, eval_batch_gen = [], []
 
         # eval all-on
-        for i, example_id in enumerate(batch['example_ids']):
-            
-            decoded = ' '.join(self.validation_dataset.decode(translated['targets'][i], trim=True))
-            gold = ' '.join(self.validation_dataset.decode(translated['gold_targets'][i], trim=True))
-            eval_batch_gen.append(decoded)           
-            eval_batch_gold.append(gold)
+        for t in translated:
+            for i in range(len(t['targets'])):
+                decoded = ' '.join(self.validation_dataset.decode(t['targets'][i], trim=True))
+                gold = ' '.join(self.validation_dataset.decode(t['gold_targets'][i], trim=True))
+                eval_batch_gen.append(decoded)           
+                eval_batch_gold.append(gold)
         
         all_on_bleu = sacrebleu.corpus_bleu(eval_batch_gen, [eval_batch_gold], tokenize='none').score
         
         model.set_LMP_type('iterative_training')
         # sample multiple times and eval
         # init as zero, and add model.layermask each time to count frequency
-        masks = torch.zeros(i+1, 2 * len(model.encoders), device=torch.device("cuda")) # [bs, #layers]
-        for t in range(self.config.sample_times):
+
+        masks = torch.zeros(ssize, 2 * len(model.encoders), device=torch.device("cuda")) # [bs, #layers]
+        for st in range(self.config.sample_times):
             # sample layermask
             eval_batch_gen = []
             layermask = torch.empty_like(masks).random_(2)
             sample_translator = model.translator(self.config).to(torch.device("cuda"))
-            translated = sample_translator.translate(batch, raw_layermask=layermask)
-            for i, example_id in enumerate(batch['example_ids']):
-                decoded = ' '.join(self.validation_dataset.decode(translated['targets'][i], trim=True))
-                eval_batch_gen.append(decoded)
+            translated = [sample_translator.translate(b, raw_layermask=layermask[i*s_bsize:(i+1)*s_bsize]) for i, b in enumerate(batch)]
+            for t in translated:
+                for i in range(len(t['targets'])):
+                    decoded = ' '.join(self.validation_dataset.decode(t['targets'][i], trim=True))
+                    eval_batch_gen.append(decoded)
             
             this_bleu = sacrebleu.corpus_bleu(eval_batch_gen, [eval_batch_gold], tokenize='none').score
-            if t % 10 == 0:
-                print(datetime.datetime.now(), t, this_bleu, all_on_bleu)
 
             if this_bleu > all_on_bleu:
                 masks += layermask
@@ -309,19 +328,34 @@ class IterativeTrainer(object):
         new_dist = masks / self.config.sample_times
         # train LMP with new_distribution
         # optimizer, only optimize 
-        lmp_optimizer = optim.SGD(model.layer_mask_predictor.parameters(), lr=3e-3)
-        embedding = model.embed(batch['inputs'].cuda(), model.embedding)
-        padding_masks = batch['inputs'].eq(model.padding_idx).cuda()
-        for i in range(self.config.max_lmp_train_steps):
-            loss, layermask = model.layer_mask_predictor(embedding, padding_masks, aggregate_stats=new_dist)
-            loss.backward(retain_graph=True)
-            print(loss)
-            lmp_optimizer.step()
-            lmp_optimizer.zero_grad()
-        loss.backward()
+        lmp_optimizer = optim.Adam(model.layer_mask_predictor.parameters(), lr=3e-3, betas=(0.9, 0.98), eps=1e-9)
         
+        loss_curve = []
+        for i in range(self.config.max_lmp_train_steps // iter_times):
+            avg_loss = 0
+            for bi, b in enumerate(batch):
+                embedding = model.embed(b['inputs'].cuda(), model.embedding)
+                padding_masks = b['inputs'].eq(model.padding_idx).cuda()
+                loss, layermask = model.layer_mask_predictor(embedding, padding_masks, aggregate_stats=new_dist[bi*s_bsize:(bi+1)*s_bsize])
+                loss.backward(retain_graph=True)
+                lmp_optimizer.step()
+                lmp_optimizer.zero_grad()
+                avg_loss += loss.item()
+            loss_curve.append(avg_loss / bi)
+
+        # output new_dist and losses to file
+        with open(os.path.join(self.config.checkpoint_directory, 'lmp_train_%i.txt' % (curr_step)), 'w') as f:
+            # write new_dist
+            new_dist = np.around(new_dist.cpu().numpy(), 2).tolist()
+            s = ''
+            for l in new_dist:
+                s += '\t'.join([str('%.5f' % x) for x in l]) + '\n'
+            s += '\n'.join([str('%.5f' % x) for x in loss_curve])
+            f.write(s)
+
         # set dropout back to 0.1
         self.modules['model'].train()
+        self.disable_train_LMP(self.modules['model'])
 
     def should_checkpoint(self):
         ''' Function which determines if a new checkpoint should be saved '''
