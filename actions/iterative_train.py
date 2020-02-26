@@ -29,6 +29,8 @@ import datetime
 
 import sacrebleu
 import numpy as np
+from itertools import combinations
+import random
 import pdb
 
 class IterativeTrainer(object):
@@ -310,11 +312,21 @@ class IterativeTrainer(object):
         with open(write_fname, 'w') as f:
             f.write("Start sampling : %s\n" % datetime.datetime.now())
 
+        # all combinations
+        num_layer = 2 * len(model.encoders)
+        # generate all combinations
+        all_combs = sum([list(combinations(range(num_layer), k)) for k in range(1, num_layer)], [])
+        # filter those without decoder
+        all_combs = [x for x in all_combs if any(y >= num_layer//2 for y in x)]
+
         masks = torch.zeros(ssize, 2 * len(model.encoders), device=torch.device("cuda")) # [bs, #layers]
         for st in range(self.config.sample_times):
             # sample layermask
             eval_batch_gen = []
-            layermask = torch.empty_like(masks).random_(2)
+            layermask = torch.zeros_like(masks) 
+            chosen_comb = random.choice(all_combs)
+            for i in chosen_comb:
+                layermask[:, i] += 1
             sample_translator = model.translator(self.config).to(torch.device("cuda"))
             translated = [sample_translator.translate(b, raw_layermask=layermask[i*s_bsize:(i+1)*s_bsize]) for i, b in enumerate(batch)]
             for t in translated:
