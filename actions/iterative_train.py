@@ -323,13 +323,11 @@ class IterativeTrainer(object):
         for st in range(self.config.sample_times):
             # sample layermask
             eval_batch_gen = []
-            #pdb.set_trace()
             layermask = torch.zeros_like(masks) 
             chosen_comb = random.choices(all_combs, k=layermask.shape[0])
             for i, comb in enumerate(chosen_comb):
                 for j in comb:
                     layermask[i, j] += 1
-            #pdb.set_trace()
             sample_translator = model.translator(self.config).to(torch.device("cuda"))
             translated = [sample_translator.translate(b, raw_layermask=layermask[i*s_bsize:(i+1)*s_bsize]) for i, b in enumerate(batch)]
             for t in translated:
@@ -339,7 +337,7 @@ class IterativeTrainer(object):
             
             this_bleu = sacrebleu.corpus_bleu(eval_batch_gen, [eval_batch_gold], tokenize='none').score
 
-            if this_bleu > all_on_bleu:
+            if this_bleu >= all_on_bleu:
                 masks += layermask
 
         with open(write_fname, 'a+') as f:
