@@ -259,3 +259,4 @@ class ProbeBeamSearchDecoder(object):
             return {'beams': beams,
                     'decoder_attn_weights_tensors': decoder_attn_weights_tensors,
                     'enc_dec_attn_weights_tensors': enc_dec_attn_weights_tensors}
+

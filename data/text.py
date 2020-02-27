@@ -3,7 +3,7 @@ Base for text datasets.
 '''
 import collections
 from itertools import chain
-
+import pdb
 import torch
 from torch import nn
 from torch.utils.data import Dataset
@@ -96,6 +96,8 @@ class TextDataset(Dataset):
         ''' Collate the data into a batch '''
         if not data:
             return []
+        if data == [()]:
+            return []
 
         def make_batch(ids, examples):
             ''' Make a batch given a dict of lists with inputs and targets '''
@@ -116,16 +118,25 @@ class TextDataset(Dataset):
 
         def sorter(examples, key='input'):
             ''' Sort the list of examples based on the length of the sequence for the given key '''
-            return sorted(examples, key=lambda x: len(x[1][key]), reverse=True)
+            #print(examples)
+            #print(examples[0])
+            #print(examples[1])
+            #pdb.set_trace()
+            ret = sorted(examples, key=lambda x: len(x[1][key]), reverse=True)
+            return ret
 
         if any(
                 isinstance(d, tuple) and len(d) and
                 isinstance(d[0], collections.Sequence)
                 for d in data
         ):
-            if sort:
-                # Sort within each chunk
-                data = [sorter(d) for d in data]
+            try:
+                if sort:
+                    # Sort within each chunk
+                    data = [sorter(d) for d in data]
+            except:
+                print(data)
+                exit(-1)
 
             ids, examples = zip(*(flatten(d) for d in data))
             ids = chain.from_iterable(ids)
@@ -135,8 +146,12 @@ class TextDataset(Dataset):
             batch['chunk_sizes'] = [len(l) for l in data]
             return batch
         else:
-            if sort:
-                data = sorter(data)
+            try:
+                if sort:
+                    data = sorter(data)
+            except:
+                print(data)
+                exit(-1)
 
             return make_batch(*flatten(data))
 
@@ -169,8 +184,6 @@ class TextDataset(Dataset):
 
         self.load_vocab()
         self.load_text()
-        self.load_word_align_stats()
-
         return self
 
     @property
@@ -225,10 +238,6 @@ class TextDataset(Dataset):
 
         self.token2id[END_OF_SUMMARY] = len(self.id2token)
         self.id2token.append(END_OF_SUMMARY)
-
-    def load_word_align_stats(self):
-        ''' Load word align stats '''
-        raise NotImplementedError('Subclasses must implement load_text!')
 
     def add_datum(self, datum):
         ''' Add a single datum '''

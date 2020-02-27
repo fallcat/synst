@@ -21,6 +21,11 @@ from utils.probe_beam_search import ProbeBeamSearchDecoder
 MODEL_STATS = ['encoder_stats', 'decoder_stats', 'enc_dec_stats']
 STATS_TYPES = ['entropies', 'argmax_probabilities', 'argmax_distances', 'abs_argmax_distances']
 
+encoder_indices_matq = None
+decoder_indices_matq = None
+
+encoder_attended_indices = [None]*8
+decoder_attended_indices = [None]*8
 
 def restore(path, modules, num_checkpoints=1, map_location=None, strict=True):
     '''
@@ -130,7 +135,7 @@ class LabelSmoothingLoss(nn.Module):
     '''
     def __init__(self, smoothing=0.0, ignore_index=-1, reduction='sum'):
         ''' Initialize the label smoothing loss '''
-        super(LabelSmoothingLoss, self).__init__()
+        super(LabelSmoothingLoss,  self).__init__()
 
         self.reduction = reduction
         self.smoothing = smoothing
@@ -176,7 +181,6 @@ class LinearLRSchedule(object):
 class WarmupLRSchedule(object):
     '''
     Implement the learning rate schedule from Attention is All You Need
-
     This needs to be a top-level class in order to pickle it, even though a nested function would
     otherwise work.
     '''
@@ -188,8 +192,40 @@ class WarmupLRSchedule(object):
         ''' The actual learning rate schedule '''
         # the schedule doesn't allow for step to be zero (it's raised to the negative power),
         # but the input step is zero-based so just do a max with 1
+
         step = max(1, step)
         return min(step ** -0.5, step * self.warmup_steps ** -1.5)
+
+
+class WarmupLRSchedule2(object):
+    '''
+    Implement the learning rate schedule from Attention is All You Need
+    This needs to be a top-level class in order to pickle it, even though a nested function would
+    otherwise work.
+    '''
+    def __init__(self, warmup_steps=4000):
+        ''' Initialize the learning rate schedule '''
+        self.warmup_steps = warmup_steps
+
+    def __call__(self, step):
+        ''' The actual learning rate schedule '''
+        # the schedule doesn't allow for step to be zero (it's raised to the negative power),
+        # but the input step is zero-based so just do a max with 1
+
+        if step < self.warmup_steps:
+            return 1e-7 + (1e-3 - 1e-7) / self.warmup_steps * step
+        else:
+            return max(1e-3 * self.warmup_steps ** 0.5 * step ** -0.5, 1e-9)
+
+
+class DummyLRSchedule(object):
+    def __init__(self, lr):
+        ''' Initialize the learning rate schedule '''
+        self.lr = lr
+
+    def __call__(self, step):
+        ''' The actual learning rate schedule '''
+        return self.lr
 
 
 class ModuleWrapper(nn.Module):
@@ -266,7 +302,7 @@ class Translator(object):
             )
             targets = [
                 beam.best_hypothesis.sequence[self.span - 1:]
-                for beam in decoder.decode(encoded, beams, target_lens=batch['target_lens'])
+                for beam in decoder.decode(encoded, beams)
             ]
 
             gold_targets = []
@@ -282,6 +318,106 @@ class Translator(object):
 
 
 class ProbeTranslator(object):
+    ''' An object that encapsulates model evaluation '''
+    def __init__(self, config, model, dataset):
+        self.config = config
+        self.dataset = dataset
+
+        self.span = model.span
+        self.encoder = ModuleWrapper(model, 'encode')
+        self.decoder = ModuleWrapper(model, 'decode')
+
+        self.modules = {
+            'model': model
+        }
+
+        self.num_layers = sum(model.decoders[0].enc_dec_attn_config['enc_dec_attn_layer'])
+        self.num_heads = 4
+
+    def to(self, device):
+        ''' Move the translator to the specified device '''
+        if 'cuda' in device.type:
+            self.encoder = nn.DataParallel(self.encoder.cuda())
+            self.decoder = nn.DataParallel(self.decoder.cuda())
+
+        return self
+
+    @property
+    def std_dev(self):
+        return math.sqrt(self.variance)
+
+    @property
+    def sos_idx(self):
+        ''' Get the sos index '''
+        return self.dataset.sos_idx
+
+    @property
+    def eos_idx(self):
+        ''' Get the eos index '''
+        return self.dataset.eos_idx
+
+    @property
+    def padding_idx(self):
+        ''' Get the padding index '''
+        return self.dataset.padding_idx
+
+    def translate(self, batch):
+        ''' Generate with the given batch '''
+        with torch.no_grad():
+            if self.config.length_basis:
+                length_basis = batch[self.config.length_basis]
+            else:
+                length_basis = [0] * len(batch['inputs'])
+
+            decoder = BeamSearchDecoder(
+                self.decoder,
+                self.eos_idx,
+                self.config,
+                self.span
+            )
+
+            encoded, encoder_attn_weights_tensor = self.encoder(batch['inputs'])
+
+            encoder_stats = probe(encoder_attn_weights_tensor)
+
+            beams = decoder.initialize_search(
+                [[self.sos_idx] * self.span for _ in range(len(batch['inputs']))],
+                [l + self.config.max_decode_length + self.span + 1 for l in length_basis]
+            )
+            # targets = [
+            #     beam.best_hypothesis.sequence[self.span - 1:]
+            #     for beam, decoder_attn_weights_tensors, enc_dec_attn_weights_tensors in decoder.decode(encoded, beams)
+            # ]
+
+            decoder_results = decoder.decode(encoded, beams)
+            targets = [beam.best_hypothesis.sequence[self.span - 1:] for beam in decoder_results['beams']]
+
+            enc_dec_stats = [probe(enc_dec_attn_weights_tensor)
+                             for enc_dec_attn_weights_tensor in decoder_results['enc_dec_attn_weights_tensors']]
+
+            gold_targets = []
+            gold_target_lens = batch['target_lens']
+            for i, target in enumerate(batch['targets']):
+                target_len = gold_target_lens[i]
+                gold_targets.append(target[:target_len].tolist())
+
+            # print("decoder_stats")
+            # for stats_type in STATS_TYPES:
+            #     print(stats_type)
+            #     for decoder_stat in decoder_stats:
+            #         print(decoder_stat[stats_type].size())
+
+            return OrderedDict([
+                ('targets', targets),
+                ('gold_targets', gold_targets),
+            ]), {'enc_dec_stats': {stats_type: torch.cat([enc_dec_stat[stats_type].view(self.num_layers,
+                                                                                        self.num_heads,
+                                                                                        -1)
+                                                          for enc_dec_stat in enc_dec_stats], dim=-1)
+                                   for stats_type in STATS_TYPES}}
+
+
+class ProbeTranslator2(object):
     ''' An object that encapsulates model evaluation '''
     def __init__(self, config, model, dataset):
         self.config = config
@@ -441,7 +577,7 @@ class ProbeNewTranslator(object):
             else:
                 length_basis = [0] * len(batch['inputs'])
 
-            decoder = ProbeBeamSearchDecoder(
+            decoder = BeamSearchDecoder(
                 self.decoder,
                 self.eos_idx,
                 self.config,
@@ -459,8 +595,13 @@ class ProbeNewTranslator(object):
             #     for beam, decoder_attn_weights_tensors, enc_dec_attn_weights_tensors in decoder.decode(encoded, beams)
             # ]
 
-            decoder_results = decoder.decode(encoded, beams)
-            targets = [beam.best_hypothesis.sequence[self.span - 1:] for beam in decoder_results['beams']]
+            targets = [
+                beam.best_hypothesis.sequence[self.span - 1:]
+                for beam in decoder.decode(encoded, beams)
+            ]
+
+            # decoder_results = decoder.decode(encoded, beams)
+            # targets = [beam.best_hypothesis.sequence[self.span - 1:] for beam in decoder_results['beams']]
 
             gold_targets = []
             gold_target_lens = batch['target_lens']
@@ -477,9 +618,10 @@ class ProbeNewTranslator(object):
             return OrderedDict([
                 ('targets', targets),
                 ('gold_targets', gold_targets)
-            ]), {'encoder_attn_weights_tensor': encoder_attn_weights_tensor,
-                 'decoder_attn_weights_tensors': decoder_results['decoder_attn_weights_tensors'],
-                 'enc_dec_attn_weights_tensors': decoder_results['enc_dec_attn_weights_tensors']}
+            ])
+                 #   {'encoder_attn_weights_tensor': encoder_attn_weights_tensor,
+                 # 'decoder_attn_weights_tensors': decoder_results['decoder_attn_weights_tensors'],
+                 # 'enc_dec_attn_weights_tensors': decoder_results['enc_dec_attn_weights_tensors']}
 
 
 def get_final_state(x, mask, dim=1):
@@ -538,7 +680,7 @@ def save_attention(input_sentence, output_words, attentions, file_path):
     # Set up axes
     ax.set_xticklabels([''] + input_sentence.split(' ') +
                        ['<EOS>'], rotation=90)
-    ax.set_yticklabels([''] + output_words.split(' '))
+    ax.set_yticklabels([''] + output_words.split(' ') + ['<EOS>'])
 
     # Show label at every tick
     ax.xaxis.set_major_locator(ticker.MultipleLocator(1))
@@ -546,3 +688,125 @@ def save_attention(input_sentence, output_words, attentions, file_path):
 
     plt.savefig(file_path)
     plt.close('all')
+
+
+def init_indices_q(num_heads, max_len, device, attn_position):
+    if type(attn_position) is not list:
+        attn_position = [attn_position]
+    if len(attn_position) < num_heads:
+        multiply = num_heads // len(attn_position)
+        attn_position = attn_position * multiply
+
+    indices_matq = torch.zeros((1, num_heads, max_len, max_len), device=device, dtype=torch.float32, requires_grad=False)
+
+    for i, p in enumerate(attn_position):
+        if p == "center":
+            indices_matq[0, i, range(max_len), range(max_len)] = 1
+        elif p == "left":
+            indices_matq[0, i, range(1, max_len), range(max_len - 1)] = 1
+        elif p == "right":
+            indices_matq[0, i, range(max_len - 1), range(1, max_len)] = 1
+        else:
+            print("unknown position", p, attn_position)
+            exit(-1)
+    return indices_matq
+
+def init_attended_indices(num_heads, max_len, device, attn_position, attn_displacement):
+
+    if type(attn_position) is not list:
+        attn_position = [attn_position]
+    if len(attn_position) < num_heads:
+        multiply = num_heads // len(attn_position)
+        attn_position = attn_position * multiply
+
+    indices_q = torch.arange(max_len, device=device, dtype=torch.long).view(-1, 1)
+    attended_indices = torch.zeros((1, num_heads, max_len, 1), device=device, dtype=torch.long, requires_grad=False)
+    offset = max(attn_displacement)
+
+    even = [i for i in range(num_heads) if i % 2 == 0 ]
+    odd = [i for i in range(num_heads) if i % 2 != 0 ]
+
+    assert type(attn_position[0]) is str
+
+    if attn_position[0] == 'left':
+        attended_indices[:, even] += indices_q
+
+    if attn_position[1] == 'right':
+        attended_indices[:, odd] += indices_q + 2 * offset
+    
+    if attn_position[1] == 'center':
+        attended_indices[:, odd] += indices_q + offset
+
+    if attn_position[1] == 'left':
+        attended_indices[:, odd] += indices_q
+
+    # return attended_indices
+    return attended_indices
+
+def init_attended_indices_conv(num_heads, max_len, device, attn_position, attn_displacement):
+
+    if type(attn_position) is not list:
+        attn_position = [attn_position]
+    if len(attn_position) < num_heads:
+        multiply = num_heads // len(attn_position)
+        attn_position = attn_position * multiply
+
+    indices_q = torch.arange(max_len, device=device, dtype=torch.long).view(-1, 1)
+    attended_indices = torch.zeros((1, num_heads, max_len, 1), device=device, dtype=torch.long, requires_grad=False)
+    offset = attn_displacement
+
+    even = [i for i in range(num_heads) if i % 2 == 0 ]
+    odd = [i for i in range(num_heads) if i % 2 != 0 ]
+
+    assert type(attn_position[0]) is str
+
+    if attn_position[0] == 'left':
+        attended_indices[:, even] += indices_q
+
+    if attn_position[1] == 'right':
+        attended_indices[:, odd] += indices_q + 2 * offset
+    
+    if attn_position[1] == 'center':
+        attended_indices[:, odd] += indices_q + offset
+
+    if attn_position[1] == 'left':
+        attended_indices[:, odd] += indices_q
+
+    return attended_indices
+
+
+def init_indices(args):
+    if args.action_config.max_decode_length is not None:
+        global encoder_indices_matq
+        global decoder_indices_matq
+
+        global encoder_attended_indices
+        global decoder_attended_indices
+
+        print('initialize cached indicies')
+
+        if args.config.model.indexing_type == 'bmm': # indexing-bmm
+            print('init index-bmm')
+            encoder_indices_matq = init_indices_q(args.config.model.num_heads, 
+                args.action_config.max_decode_length+1, args.device, args.config.model.attn_position)
+            decoder_indices_matq = init_indices_q(args.config.model.num_heads, 
+                args.action_config.max_decode_length+1, args.device, args.config.model.dec_attn_position)
+
+        if args.config.model.indexing_type == 'gather': # indexing-torch gather
+            print('init index-gather')
+            encoder_attended_indices = init_attended_indices(args.config.model.num_heads, 
+                args.action_config.max_decode_length+1, args.device, args.config.model.attn_position,  args.config.model.attn_displacement)
+            decoder_attended_indices = init_attended_indices(args.config.model.num_heads, 
+                args.action_config.max_decode_length+1, args.device, args.config.model.dec_attn_position,  args.config.model.dec_attn_displacement)
+
+        if args.config.model.attn_indexing is False and args.config.model.attn_window > 0:
+            encoder_attended_indices = init_attended_indices_conv(args.config.model.num_heads, 
+                args.action_config.max_decode_length+1, args.device, args.config.model.attn_position,  args.config.model.attn_displacement)
+
+        if args.config.model.attn_indexing is False and args.config.model.dec_attn_window > 0:
+            decoder_attended_indices = init_attended_indices_conv(args.config.model.num_heads, 
+                args.action_config.max_decode_length+1, args.device, args.config.model.dec_attn_position,  args.config.model.dec_attn_displacement)
+
+
+
+

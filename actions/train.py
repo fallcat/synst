@@ -23,9 +23,9 @@ import args
 import metrics
 from actions.evaluate import Evaluator
 from data.parallel import chunked_scattering
-from models.utils import LinearLRSchedule, WarmupLRSchedule, checkpoint
+from models.utils import LinearLRSchedule, WarmupLRSchedule, WarmupLRSchedule2, DummyLRSchedule, checkpoint
 from utils import profile, tqdm_wrap_stdout, tqdm_unwrap_stdout
-
+import pdb
 
 class Trainer(object):
     ''' An object that encapsulates model training '''
@@ -41,30 +41,65 @@ class Trainer(object):
         if 'cuda' in device.type:
             self.model = nn.DataParallel(model.cuda())
 
-        self.optimizer = optim.Adam(model.parameters(), config.base_lr, betas=(0.9, 0.98), eps=1e-9)
-        if config.lr_scheduler == 'warmup':
+        if self.config.optimizer == "adam":
+            self.optimizer = optim.Adam(model.parameters(), config.base_lr, betas=(0.9, 0.98), eps=1e-9)
+            # self.optimizer = optim.Adam(model.parameters(), 1e-7, betas=(0.9, 0.98), eps=1e-9)
+            if config.lr_scheduler == 'warmup':
+                self.lr_scheduler = LambdaLR(
+                    self.optimizer,
+                    WarmupLRSchedule(
+                        config.warmup_steps
+                    )
+                )
+
+            elif config.lr_scheduler == 'warmup2':
+                self.lr_scheduler = LambdaLR(
+                    self.optimizer,
+                    WarmupLRSchedule2(
+                        config.warmup_steps
+                    )
+                )
+
+            elif config.lr_scheduler == 'linear':
+                self.lr_scheduler = LambdaLR(
+                    self.optimizer,
+                    LinearLRSchedule(
+                        config.base_lr,
+                        config.final_lr,
+                        config.max_steps
+                    )
+                )
+            elif config.lr_scheduler == 'exponential':
+                self.lr_scheduler = ExponentialLR(
+                    self.optimizer,
+                    config.lr_decay
+                )
+            else:
+                raise ValueError('Unknown learning rate scheduler!')
+
+        elif self.config.optimizer == "sgd":
+            print("using optimizer: SGD")
+            self.optimizer = optim.SGD(model.parameters(), lr=config.base_lr, momentum=0.9)
             self.lr_scheduler = LambdaLR(
                 self.optimizer,
-                WarmupLRSchedule(
-                    config.warmup_steps
+                DummyLRSchedule(
+                    config.base_lr
                 )
             )
-        elif config.lr_scheduler == 'linear':
+
+        elif self.config.optimizer == "adam-fixed":
+            print("using optimizer: adam with fixed learning rate")
+            self.optimizer = optim.Adam(model.parameters(), config.base_lr, betas=(0.9, 0.98), eps=1e-9)
             self.lr_scheduler = LambdaLR(
                 self.optimizer,
-                LinearLRSchedule(
-                    config.base_lr,
-                    config.final_lr,
-                    config.max_steps
+                DummyLRSchedule(
+                    config.base_lr
                 )
             )
-        elif config.lr_scheduler == 'exponential':
-            self.lr_scheduler = ExponentialLR(
-                self.optimizer,
-                config.lr_decay
-            )
+
         else:
-            raise ValueError('Unknown learning rate scheduler!')
+            raise ValueError('Unknown optimizer!') 
+
 
         # Initialize the metrics
         metrics_path = os.path.join(self.config.checkpoint_directory, 'train_metrics.pt')
@@ -73,6 +108,8 @@ class Trainer(object):
         self.metric_store.add(metrics.Metric('nll', metrics.format_float, max_history=1000))
         self.metric_store.add(metrics.Metric('lr', metrics.format_scientific, 'g', max_history=1))
         self.metric_store.add(metrics.Metric('num_tok', metrics.format_int, 'a', max_history=1000))
+        # self.metric_store.add(metrics.Metric('time_per_batch', metrics.format_float, 'g', max_history=100000))
+        # self.metric_store.add(metrics.Metric('time_total', metrics.format_float, 'g', max_history=1))
 
         if self.config.early_stopping:
             self.metric_store.add(metrics.Metric('vnll', metrics.format_float, 'g'))
@@ -130,7 +167,9 @@ class Trainer(object):
             length_per_update = 0
             num_tokens_per_update = 0
             for i, batch in enumerate(batches, 1):
+                
                 try:
+                    
                     nll, length = self.calculate_gradient(batch)
                     did_optimize = try_optimize(i)
 
@@ -152,6 +191,8 @@ class Trainer(object):
 
                         experiment.log_metric('num_tokens', num_tokens_per_update)
                         experiment.log_metric('nll', neg_log_likelihood.last_value)
+                        # experiment.log_metric('max_memory_alloc', torch.cuda.max_memory_allocated()//1024//1024)
+                        # experiment.log_metric('max_memory_cache', torch.cuda.max_memory_cached()//1024//1024)
 
                         nll_per_update = 0.
                         length_per_update = 0
@@ -163,6 +204,7 @@ class Trainer(object):
 
                         oom.update(1)
                         experiment.log_metric('oom', oom.total)
+                        #exit(-1)
                     else:
                         batches.close()
                         raise rte
@@ -233,9 +275,10 @@ class Trainer(object):
 
     def optimize(self):
         ''' Calculate an optimization step '''
-        self.lr_scheduler.step()
         self.optimizer.step()
         self.optimizer.zero_grad()
+        self.lr_scheduler.step()
+        
 
         return self.lr_scheduler.get_lr()[0]
 
@@ -283,3 +326,4 @@ class Trainer(object):
                     new_best = self.evaluate(experiment, epoch, verbose)
 
                 self.checkpoint(epoch, experiment.curr_step, new_best)
+

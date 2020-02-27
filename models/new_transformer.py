@@ -3,7 +3,7 @@ A module which implements the basic Transformer
 '''
 import uuid
 import threading
-
+import pdb
 import torch
 from torch import nn
 
@@ -68,51 +68,56 @@ class TransformerFFN(nn.Module):
 
 class TransformerEncoderLayer(nn.Module):
     ''' Implements a single encoder layer in a transformer encoder stack '''
-    def __init__(self, attn_config, num_heads, dim, hidden_dim, dropout_p=0.1):
+    def __init__(self, attn_config, num_heads, dim, hidden_dim, layer_i, dropout_p=0.1):
         ''' Initialize the transformer layer '''
         super(TransformerEncoderLayer, self).__init__()
+        self.no_attn = attn_config['no_attn']
 
-        self.ffn = TransformerSublayer(
-            TransformerFFN(dim, hidden_dim),
-            dim, dropout_p
-        )
+        if attn_config['ffn_layer'][layer_i]:
+            self.ffn = TransformerSublayer(
+                TransformerFFN(dim, hidden_dim),
+                dim, dropout_p
+            )
+            print('enc layer %i has ffn' % layer_i)
 
-        self.self_attention = TransformerSublayer(
-            NewAttention(attn_config, dim, num_heads),
-            dim, dropout_p
-        )
+        if not self.no_attn:
+            self.self_attention = TransformerSublayer(
+                NewAttention(attn_config, dim, num_heads),
+                dim, dropout_p
+            )
 
     def reset_parameters(self):
         ''' Reset the parameters of the module '''
         self.ffn.reset_parameters()
         self.self_attention.reset_parameters()
 
-    def forward(self, inputs, layer_i): # pylint:disable=arguments-differ
+    def forward(self, inputs, layer_i, word_embedding):  # pylint:disable=arguments-differ
         ''' The forward pass '''
         mask = inputs['mask']
         state = inputs['state']
 
         # print("encoder self attention")
 
-        # print("outside layer_i", layer_i)
+        if not self.no_attn:
+            state = self.self_attention(
+                state,  # residual
+                state, state, state, mask,  # passed to multiheaded attention
+                layer_i=layer_i, word_embedding=word_embedding
+            )
 
-        state = self.self_attention(
-            state, # residual
-            state, state, state, mask, # passed to multiheaded attention
-            layer_i=layer_i
-        )
-
-        state = self.ffn(
-            state, # residual
-            state # passed to feed-forward network
-        )
+        if hasattr(self, 'ffn'):
+            state = self.ffn(
+                state, # residual
+                state # passed to feed-forward network
+            )
 
         return {'state': state, 'mask': mask}
 
 
 class TransformerDecoderLayer(nn.Module):
     ''' Implements a single decoder layer in a transformer decoder stack '''
-    def __init__(self, dec_attn_config, enc_dec_attn_config, num_heads, dim, hidden_dim, causal=True, span=1, dropout_p=0.1):
+    def __init__(self, dec_attn_config, enc_dec_attn_config, num_heads, dim, hidden_dim, layer_i, causal=True, span=1,
+                 dropout_p=0.1):
         ''' Initialize the transformer layer '''
         super(TransformerDecoderLayer, self).__init__()
 
@@ -120,103 +125,117 @@ class TransformerDecoderLayer(nn.Module):
         self.causal = causal
         self.uuid = uuid.uuid4()
 
-        self.ffn = TransformerSublayer(
-            TransformerFFN(dim, hidden_dim),
-            dim, dropout_p
-        )
-
-        self.self_attention = TransformerSublayer(
-            NewAttention(dec_attn_config, dim, num_heads),
-            dim, dropout_p
-        )
-
-        # self.self_attention = TransformerSublayer(
-        #     MultiHeadedAttention(dim, num_heads),
-        #     dim, dropout_p
-        # )
-
-        # print("create source")
-
-        self.source_attention = TransformerSublayer(
-            NewAttention(enc_dec_attn_config, dim, num_heads),
-            dim, dropout_p
-        )
+        self.enc_dec_attn_config = enc_dec_attn_config
+        self.no_attn = dec_attn_config['no_attn']
 
 
-        # self.source_attention = TransformerSublayer(
-        #     MultiHeadedAttention(dim, num_heads),
-        #     dim, dropout_p
-        # )
+        if dec_attn_config['ffn_layer'][layer_i]:
+            self.ffn = TransformerSublayer(
+                TransformerFFN(dim, hidden_dim),
+                dim, dropout_p
+            )
+            print('dec layer %i has ffn' % layer_i)
+
+        if not self.no_attn:
+            self.self_attention = TransformerSublayer(
+                NewAttention(dec_attn_config, dim, num_heads),
+                dim, dropout_p
+            )
+
+        if self.enc_dec_attn_config['enc_dec_attn_layer'] == 1 or \
+                (type(self.enc_dec_attn_config['enc_dec_attn_layer'] is list) and
+                 self.enc_dec_attn_config['enc_dec_attn_layer'][layer_i] == 1):
+            if self.enc_dec_attn_config['enc_dec_attn_num_heads'] == -1:
+                src_num_heads = num_heads
+            elif type(self.enc_dec_attn_config['enc_dec_attn_num_heads']) is not list:
+                src_num_heads = self.enc_dec_attn_config['enc_dec_attn_num_heads']
+            else:
+                src_num_heads = self.enc_dec_attn_config['enc_dec_attn_num_heads'][layer_i]
+            assert src_num_heads != 0
+
+            self.source_attention = TransformerSublayer(
+                NewAttention(enc_dec_attn_config, dim, src_num_heads),
+                dim, dropout_p
+            )
+
+            print('layer %i num of src heads %i' % (layer_i, src_num_heads))
 
     def reset_parameters(self):
         ''' Reset the parameters of the module '''
         self.ffn.reset_parameters()
         self.self_attention.reset_parameters()
-        self.source_attention.reset_parameters()
+        if hasattr(self, 'source_attention'):
+            self.source_attention.reset_parameters()
 
-    def forward(self, inputs, sources, layer_i, original_targets, sequences): # pylint:disable=arguments-differ
+    def forward(self, inputs, sources, layer_i, word_embedding): # pylint:disable=arguments-differ
         ''' The forward pass '''
         mask = inputs['mask']
         state = inputs['state']
         cache = inputs.get('cache')
-        target_lens = inputs['target_lens']
+        input_lens = inputs.get('input_lens')
 
-
-        kwargs = {'layer_i': layer_i}
         decoder_position = state.shape[1] - 1
-        if self.causal and cache is not None:
-            # If caching, only want the last k=span sequence values. Requires no causal masking.
-            residual = state[:, -self.span:]
-            kwargs['num_queries'] = self.span
-            kwargs['decoder_position'] = decoder_position
+
+        if not self.no_attn:
+            kwargs = {'layer_i': layer_i}
+            if self.causal and cache is not None:
+                # If caching, only want the last k=span sequence values. Requires no causal masking.
+                residual = state[:, -self.span:]
+                kwargs['num_queries'] = self.span
+                kwargs['decoder_position'] = decoder_position
+                kwargs['word_embedding'] = word_embedding[:, -self.span:]
+            else:
+                # If not caching, use the full sequence and ensure an appropriate causal mask
+                residual = state
+                kwargs['key_mask'] = mask
+                kwargs['attention_mask'] = self.mask(state)
+                kwargs['word_embedding'] = word_embedding
+
+            # print("decoder self attention")
+
+            state = self.self_attention(
+                residual, # residual
+                state, state, state, **kwargs # passed to multiheaded attention
+            )
         else:
-            # If not caching, use the full sequence and ensure an appropriate causal mask
-            residual = state
-            kwargs['key_mask'] = mask
-            kwargs['attention_mask'] = self.mask(state)
-
-        # print("decoder self attention")
-
-        state = self.self_attention(
-            residual, # residual
-            state, state, state, **kwargs # passed to multiheaded attention
-        )
+            if self.causal and cache is not None:
+                state = state[:, -self.span:]
 
         source = sources['state']
         # print("source", source)
-        kwargs = {'key_mask': sources['mask'], 'layer_i': layer_i}
+        kwargs = {'key_mask': sources['mask'], 'layer_i': layer_i, 'input_lens': input_lens}
         if self.causal and cache is not None:
             kwargs['num_queries'] = self.span
             kwargs['decoder_position'] = decoder_position
-            kwargs['target_lens'] = target_lens
-            kwargs['original_targets'] = sequences
+            kwargs['word_embedding'] = word_embedding[:, -self.span:]
         else:
-            kwargs['original_targets'] = original_targets.cpu().numpy()
-
-            # print("kwargs['decoder_position']", kwargs['decoder_position'])
-        # print("original_targets outside", kwargs['original_targets'])
-        # print("kwargs", kwargs)
+            kwargs['word_embedding'] = word_embedding
 
         # print("decoder source attention")
 
-        state = self.source_attention(
-            state, # residual
-            source, source, state, **kwargs # passed to multiheaded attention
-        )
+        if hasattr(self, 'source_attention'):
+            # print("in source, state", state.shape)
+            state = self.source_attention(
+                state, # residual
+                source, source, state, **kwargs # passed to multiheaded attention
+            )
 
-        state = self.ffn(
-            state, # residual
-            state # passed to feed-forward network
-        )
+        if hasattr(self, 'ffn'):
+            state = self.ffn(
+                state, # residual
+                state # passed to feed-forward network
+            )
 
         if self.causal and cache is not None:
             cached = cache.get(self.uuid)
             if cached is None:
                 cache[self.uuid] = state
             else:
+                # print("cached", cached.shape)
+                # print("state", state.shape)
                 state = cache[self.uuid] = torch.cat((cached, state), 1)
 
-        return {'state': state, 'mask': mask, 'cache': cache, 'target_lens': target_lens}
+        return {'state': state, 'mask': mask, 'cache': cache}
 
     _masks = threading.local()
     def mask(self, inputs):
@@ -279,44 +298,102 @@ class NewTransformer(nn.Module):
     def create_encoders(cls, config):
         ''' Create the transformer encoders '''
         kwargs = {'dropout_p': config.dropout_p}
+
+        if config.ffn_layer == -1:
+            config.ffn_layer = [1] * config.num_layers
+        assert len(config.ffn_layer) == config.num_layers
+
         attn_config = {'attn_type': config.attn_type,
                        'attn_position': config.attn_position,
                        'attn_param': config.attn_param,
                        'attn_displacement': config.attn_displacement,
                        'num_layers': config.num_layers,
-                       'num_heads': config.num_heads}
+                       'num_heads': config.num_heads,
+                       'attn_concat': config.attn_concat,
+                       'which_attn': 'encoder',
+                       'attn_weights': config.attn_weights,
+                       'attn_score': config.attn_score,
+                       'attn_bins': config.attn_bins,
+                       'attn_threshold': config.attn_threshold,
+                       'attn_window': config.attn_window,
+                       'attn_indexing': config.enc_attn_indexing,
+                       'no_attn': config.enc_no_attn,
+                       'indexing_type': config.indexing_type,
+                       'ffn_layer': config.ffn_layer}
         args = [attn_config, config.num_heads, config.embedding_size, config.hidden_dim]
-        return nn.ModuleList([
-            TransformerEncoderLayer(*args, **kwargs)
-            for _ in range(config.num_layers)
+        encoders = nn.ModuleList([
+            TransformerEncoderLayer(*args, layer_i, **kwargs)
+            for layer_i in range(config.num_layers)
         ])
+
+        if config.tie_ffn_weights:
+            for enc in encoders[1:]:
+                if hasattr(enc, 'ffn'):
+                    enc.ffn.sublayer.hidden.weight = encoders[0].ffn.sublayer.hidden.weight
+                    enc.ffn.sublayer.output.weight = encoders[0].ffn.sublayer.output.weight
+
+        return encoders
 
     # @classmethod
     def create_decoders(self, config):
         ''' Create the transformer decoders '''
         kwargs = {'dropout_p': config.dropout_p, 'span': config.span}
+
+        if config.ffn_layer == -1:
+            config.ffn_layer = [1] * config.num_layers
+        assert len(config.ffn_layer) == config.num_layers
+
         dec_attn_config = {'attn_type': config.dec_attn_type,
                            'attn_position': config.dec_attn_position,
                            'attn_param': config.dec_attn_param,
                            'attn_displacement': config.dec_attn_displacement,
-                           'num_layers': config.dec_num_layers,
-                           'num_heads': config.dec_num_heads}
+                           'num_layers': config.num_layers,
+                           'num_heads': config.num_heads,
+                           'attn_concat': config.dec_attn_concat,
+                           'which_attn': 'decoder',
+                           'attn_weights': config.dec_attn_weights,
+                           'attn_score': config.dec_attn_score,
+                           'attn_bins': config.dec_attn_bins,
+                           'attn_threshold': config.dec_attn_threshold,
+                           'attn_window': config.dec_attn_window,
+                           'attn_indexing': config.dec_attn_indexing,
+                           'no_attn': config.dec_no_attn,
+                           'indexing_type': config.indexing_type,
+                           'ffn_layer': config.ffn_layer}
         enc_dec_attn_config = {'attn_type': config.enc_dec_attn_type,
                                'attn_position': config.enc_dec_attn_position,
                                'attn_param': config.enc_dec_attn_param,
                                'attn_displacement': config.enc_dec_attn_displacement,
-                               'num_layers': config.enc_dec_num_layers,
-                               'num_heads': config.enc_dec_num_heads,
+                               'num_layers': config.num_layers,
+                               'num_heads': config.num_heads,
                                'word_count_ratio': self.dataset.word_count_ratio,
-                               'word_align_stats': self.dataset.word_align_stats,
-                               'align_stats_bin_size': self.dataset.config.align_stats_bin_size,
-                               'use_word_align_stats': config.enc_dec_attn_align}
-        # print("enc_dec_attn_config", enc_dec_attn_config)
+                               'attn_concat': config.enc_dec_attn_concat,
+                               'which_attn': 'source',
+                               'attn_weights': config.enc_dec_attn_weights,
+                               'attn_score': config.enc_dec_attn_score,
+                               'attn_bins': config.enc_dec_attn_bins,
+                               'enc_dec_attn_layer': config.enc_dec_attn_layer,
+                               'enc_dec_attn_num_heads': config.enc_dec_attn_num_heads,
+                               'attn_threshold': config.enc_dec_attn_threshold,
+                               'attn_window': config.enc_dec_attn_window,
+                               'attn_indexing': config.enc_dec_attn_indexing,
+                               'indexing_type': config.indexing_type,
+                               'ffn_layer': config.ffn_layer
+                               }
         args = [dec_attn_config, enc_dec_attn_config, config.num_heads, config.embedding_size, config.hidden_dim]
-        return nn.ModuleList([
-            TransformerDecoderLayer(*args, **kwargs)
-            for _ in range(config.num_layers)
+        decoders = nn.ModuleList([
+            TransformerDecoderLayer(*args, layer_i, **kwargs)
+            for layer_i in range(config.num_layers)
         ])
+
+        if config.tie_ffn_weights:
+            for dec in decoders[1:]:
+                if hasattr(dec, 'ffn'):
+                    dec.ffn.sublayer.hidden.weight = decoders[0].ffn.sublayer.hidden.weight
+                    dec.ffn.sublayer.output.weight = decoders[0].ffn.sublayer.output.weight
+
+        return decoders
+
 
     @property
     def sos_idx(self):
@@ -348,6 +425,7 @@ class NewTransformer(nn.Module):
         decoded = self.decode(
             self.encode(batch['inputs']),
             right_shift(right_shift(batch['targets']), shift=self.span - 1, fill=self.sos_idx),
+            input_lens=batch['input_lens']
         )
 
         logits = decoded['logits']
@@ -355,21 +433,21 @@ class NewTransformer(nn.Module):
         targets = left_shift(batch['targets'])
         nll = self.cross_entropy(logits, targets).sum(dims[:-1])
         smoothed_nll = self.label_smoothing(logits, targets).sum(dims)
-
         return smoothed_nll, nll
 
     def encode(self, inputs):
         ''' Encode the inputs '''
+        word_embedding = self.embed(inputs, self.embedding)
         encoded = {
-            'state': self.embed(inputs, self.embedding),
+            'state': word_embedding,
             'mask': inputs.eq(self.padding_idx)
         }
         for i, encoder in enumerate(self.encoders):
-            encoded = encoder(encoded, i)
+            encoded = encoder(encoded, i, word_embedding)
 
         return encoded
 
-    def decode(self, encoded, targets, decoders=None, embedding=None, cache=None, mask=None, target_lens=None, sequences=None):
+    def decode(self, encoded, targets, decoders=None, embedding=None, cache=None, mask=None, input_lens=None):
         ''' Decode the encoded sequence to the targets '''
         if decoders is None:
             decoders = self.decoders
@@ -377,15 +455,17 @@ class NewTransformer(nn.Module):
         if embedding is None:
             embedding = self.embedding
 
+        word_embedding = self.embed(targets, embedding)
+
         decoded = {
             'cache': cache,
-            'state': self.embed(targets, embedding),
+            'state': word_embedding,
             'mask': targets.eq(self.padding_idx) if mask is None else mask,
-            'target_lens': target_lens
+            'input_lens': input_lens
         }
         for i, decoder in enumerate(decoders):
             # print("i", i)
-            decoded = decoder(decoded, encoded, i, targets, sequences)
+            decoded = decoder(decoded, encoded, i, word_embedding)
 
         # compute projection to the vocabulary
         state = decoded['state']
