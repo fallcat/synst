@@ -1,20 +1,19 @@
 #!/bin/bash
 #
-#SBATCH --job-name=407evaliwslt
+#SBATCH --job-name=01evaliwslt
 #SBATCH --partition=1080ti-short
 #SBATCH --gres=gpu:1
 #SBATCH --ntasks-per-node=24
 #SBATCH --mem=47GB
 #SBATCH -d singleton
 #SBATCH --open-mode append
-#SBATCH --exclude=node146,node114,node112,node126
-#SBATCH -o /mnt/nfs/work1/miyyer/wyou/synst/experiments/iwslt407/output_eval.txt
+#SBATCH -o /mnt/nfs/work1/miyyer/wyou/synst/experiments/iwslt01/output_eval.txt
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=wyou@cs.umass.edu
 
 BASE_PATH=/mnt/nfs/work1/miyyer
 PROJECT_PATH=$BASE_PATH/wyou/synst
-EXPERIMENT_PATH=$PROJECT_PATH/experiments/iwslt407
+EXPERIMENT_PATH=$PROJECT_PATH/experiments/iwslt01
 
 # Load in python3 and source the venv
 module load python3/3.6.6-1810
@@ -31,10 +30,12 @@ PYTHONPATH=$BASE_PATH/wyou/py36/lib/python3.6/site-packages/:$PYTHONPATH
 #  --label-smoothing 0.0 --learning-rate-scheduler linear
 
 python -u main.py --dataset iwslt_en_de --span 1 \
-  --model new_transformer --attn-param 1 --attn-type normal --attn-position left right --attn-concat 0 --attn-weights 1 --attn-score 0 --attn-displacement 1 --attn-threshold -1 --attn-window -1 \
-  --dec-attn-param 1 --dec-attn-type normal --dec-attn-position left center --dec-attn-concat 0 --dec-attn-weights 1 --dec-attn-score 0 --dec-attn-displacement 1 --dec-attn-threshold -1 --dec-attn-window -1 \
-  --enc-dec-attn-param 1 --enc-dec-attn-type learned --enc-dec-attn-position left center --enc-dec-attn-threshold -1 --enc-dec-attn-window -1 \
-  --enc-dec-attn-bins 4 --enc-dec-attn-concat 0 --enc-dec-attn-weights 1 --enc-dec-attn-score 0 --enc-dec-attn-displacement 1 \
+  --model new_transformer --attn-type learned \
+  --dec-attn-type learned \
+  --enc-dec-attn-type learned \
+  --embedding-size 288 --hidden-dim 507 --num-heads 4 --num-layers 5 \
+  --batch-size 1 --batch-method example --split dev \
+  --restore $EXPERIMENT_PATH/checkpoint.pt \
   --average-checkpoints 5 translate \
   --beam-width 4 --max-decode-length 50 --length-basis input_lens --order-output \
   --output-directory $EXPERIMENT_PATH
