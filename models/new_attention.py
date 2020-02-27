@@ -209,6 +209,7 @@ class NewAttention(nn.Module):
         queries_shape = queries.shape
         values_shape = values.shape
 
+
         # By this point the values, keys, and queries all have B * H as their first dimension
         batch_size = queries_shape[0] // self.num_heads
 
@@ -217,6 +218,37 @@ class NewAttention(nn.Module):
         # print("conv_filter", conv_filter)
         attn_type, attn_position, attn_param, attn_displacement = attn_configs
         # print("attn_type, attn_position, attn_param, attn_displacement", attn_type, attn_position, attn_param, attn_displacement)
+
+        # If we are using learned attention, then just do it the same way as multi-headed attention
+        if attn_type == 'learned' or learned:
+            logits = self.scale * torch.bmm(queries, keys.transpose(2, 1))
+
+            if mask is not None:
+                logits += mask
+
+            if key_mask is not None:
+                logits_shape = logits.shape
+                batch_size = logits_shape[0] // self.num_heads
+                logits = logits.view(batch_size, self.num_heads, logits_shape[1], logits_shape[2])
+                logits.masked_fill_(key_mask[:, None, None], float('-inf'))
+                logits = logits.view(logits_shape)
+
+            attn_weights = F.softmax(logits, dim=-1)
+
+            attended = torch.bmm(attn_weights, values)
+
+            batch_size = queries_shape[0] // self.num_heads
+
+            return attended.view(
+                batch_size,
+                self.num_heads,
+                -1,
+                self.projection_dim
+            ).transpose(2, 1).contiguous().view(
+                batch_size,
+                -1,
+                self.num_heads * self.projection_dim
+            )
 
         # simple indexing 2 - fix window size 1 - implementation: saving indices
         
@@ -325,36 +357,7 @@ class NewAttention(nn.Module):
           
             return attended.view(batch_size, self.num_heads, -1, self.projection_dim).transpose(2,1).contiguous().view(batch_size, -1, self.embed_dim)
 
-        # If we are using learned attention, then just do it the same way as multi-headed attention
-        if attn_type == 'learned' or learned:
-            logits = self.scale * torch.bmm(queries, keys.transpose(2, 1))
 
-            if mask is not None:
-                logits += mask
-
-            if key_mask is not None:
-                logits_shape = logits.shape
-                batch_size = logits_shape[0] // self.num_heads
-                logits = logits.view(batch_size, self.num_heads, logits_shape[1], logits_shape[2])
-                logits.masked_fill_(key_mask[:, None, None], float('-inf'))
-                logits = logits.view(logits_shape)
-
-            attn_weights = F.softmax(logits, dim=-1)
-
-            attended = torch.bmm(attn_weights, values)
-
-            batch_size = queries_shape[0] // self.num_heads
-
-            return attended.view(
-                        batch_size,
-                        self.num_heads,
-                        -1,
-                        self.projection_dim
-                    ).transpose(2, 1).contiguous().view(
-                        batch_size,
-                        -1,
-                        self.num_heads * self.projection_dim
-                    )
 
         # If we are learning some of the heads but not all, apply multiheaded attention to thoese heads together and
         # concat with rest of the hard-coded heads later.
