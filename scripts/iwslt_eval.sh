@@ -34,6 +34,7 @@ python -u main.py --dataset iwslt_en_de --span 1 \
   --dec-attn-type learned \
   --enc-dec-attn-type learned \
   --embedding-size 288 --hidden-dim 507 --num-heads 4 --num-layers 5 \
+  -d /mnt/nfs/work1/miyyer/wyou/iwslt -p /mnt/nfs/work1/miyyer/wyou/iwslt \
   --batch-size 1 --batch-method example --split dev \
   --restore $EXPERIMENT_PATH/checkpoint.pt \
   --average-checkpoints 5 translate \
