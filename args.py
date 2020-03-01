@@ -1049,6 +1049,13 @@ def add_iterative_train_args(parser):
         help="debug oracle"
     )
 
+    group.add_argument(
+        '--iter-train-lmp-val-n-batches',
+        type=int,
+        default=2,
+        help="training lmp with _n_ valid batches "
+    )
+
     return group
 
 def add_probe_train_args(parser):
