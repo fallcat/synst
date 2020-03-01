@@ -315,7 +315,6 @@ class IterativeTrainer(object):
         val_allon_bleu_by_sent = [sacrebleu.corpus_bleu([gen_i], [[gold_i]], tokenize='none').score for gen_i, gold_i in zip(val_allon_batch_gen, val_batch_gold)]
         print("all-on valid corpus bleu {}".format(all_on_bleu))
 
-
         model.set_LMP_type('iterative_training_debug_oracle')
         # train
         # all combinations
@@ -329,43 +328,44 @@ class IterativeTrainer(object):
         # j_start, j_size = 0, len(all_combs) // 4
         j_start, j_size = 0, len(all_combs) // 100
 
-        
-        # for each valid batch, sample and train
-        for i, val_batch in enumerate(valid_batches):
-            aggregate_stats = torch.zeros(s_bsize, len(all_combs), device=torch.device("cuda"))
-            # inference on these j_size configs
-            for ci, comb in enumerate(all_combs[j_start * j_size : (j_start+1) * j_size]):
-                layermask = torch.zeros(s_bsize, num_layer, device=torch.device("cuda")) 
-                for activate_i in comb:
-                    layermask[:, activate_i] += 1 # now the whole batch use the same mask
-                batch_gen = self.get_translated(sample_translator, [val_batch], layermask=layermask)
-                # eval bleu and store aggregate stats
-                for eval_i, (gold_i, gen_i) in enumerate(zip(val_batch_gold[i*s_bsize : (i+1)*s_bsize], batch_gen)):
-                    this_bleu = sacrebleu.corpus_bleu([gen_i], [[gold_i]], tokenize='none').score
-                    all_on_bleu = sacrebleu.corpus_bleu([val_allon_batch_gen[eval_i+i*s_bsize]], [[gold_i]], tokenize='none').score
-                    try:
-                        assert all_on_bleu == val_allon_bleu_by_sent[eval_i+i*s_bsize]
-                    except:
-                        pdb.set_trace()
-                    if this_bleu > val_allon_bleu_by_sent[eval_i+i*s_bsize]:
-                        aggregate_stats[eval_i, ci] += 1
-                        print("example {} config {}: this bleu {:.2f} all-on bleu {:.2f}" .format(eval_i, ci, this_bleu, all_on_bleu))
-            
-            neg = aggregate_stats[:, j_start * j_size : (j_start+1) * j_size]
-            neg[neg == 0] = -1
-
-            # train LMP with aggregate stats
+        # group valid batches
+        n=2
+        valid_batches = [(valid_batches[i:i+n]) for i in range(0, iter_times, n)]
+        for gi, group_val_batches in enumerate(valid_batches): # one group is responsible for optimizing j_size configs
+            agg_stats_list = []
+            for i, val_batch in enumerate(group_val_batches):
+                aggregate_stats = torch.zeros(s_bsize, len(all_combs), device=torch.device("cuda"))
+                for ci, comb in enumerate(all_combs[j_start * j_size : (j_start+1) * j_size]):
+                    layermask = torch.zeros(s_bsize, num_layer, device=torch.device("cuda")) 
+                    for activate_i in comb:
+                        layermask[:, activate_i] += 1 # now the whole batch use the same mask
+                    #pdb.set_trace()
+                    batch_gen = self.get_translated(sample_translator, [val_batch], layermask=layermask)
+                    for eval_i, (gold_i, gen_i) in enumerate(zip(val_batch_gold[(n*gi+i)*s_bsize : (n*gi+i+1)*s_bsize], batch_gen)):
+                        this_bleu = sacrebleu.corpus_bleu([gen_i], [[gold_i]], tokenize='none').score
+                        all_on_bleu = sacrebleu.corpus_bleu([val_allon_batch_gen[eval_i+(n*gi+i)*s_bsize]], [[gold_i]], tokenize='none').score
+                        try:
+                            assert all_on_bleu == val_allon_bleu_by_sent[eval_i+(n*gi+i)*s_bsize]
+                        except:
+                            pdb.set_trace()
+                        if this_bleu > val_allon_bleu_by_sent[eval_i+(n*gi+i)*s_bsize]:
+                            aggregate_stats[eval_i, ci] += 1
+                            print("example {} config {}: this bleu {:.2f} all-on bleu {:.2f}" .format(eval_i, ci, this_bleu, all_on_bleu))
+                neg = aggregate_stats[:, j_start * j_size : (j_start+1) * j_size]
+                neg[neg == 0] = -1
+                agg_stats_list.append(aggregate_stats)
             self.enable_train_LMP(model)
             lmp_optimizer = optim.Adam(model.layer_mask_predictor.parameters(), lr=1e-4, betas=(0.9, 0.98), eps=1e-9)
-            for i in range(self.config.max_lmp_train_steps):
-                embedding = model.embed(val_batch['inputs'].cuda(), model.embedding)
-                padding_masks = val_batch['inputs'].eq(model.padding_idx).cuda()
-                loss, _ = model.layer_mask_predictor(embedding, padding_masks, aggregate_stats=aggregate_stats)
-                loss.backward()
-                lmp_optimizer.step()
-                lmp_optimizer.zero_grad()
-                if i % 500 == 0:
-                    print("{} {}".format(i, loss.item()))
+            for i in range(self.config.max_lmp_train_steps // len(group_val_batches)):
+                for batch, stats in zip(group_val_batches, agg_stats_list):
+                    embedding = model.embed(batch['inputs'].cuda(), model.embedding)
+                    padding_masks = batch['inputs'].eq(model.padding_idx).cuda()
+                    loss, _ = model.layer_mask_predictor(embedding, padding_masks, aggregate_stats=stats)
+                    loss.backward()
+                    lmp_optimizer.step()
+                    lmp_optimizer.zero_grad()
+                    if i % 200 == 0:
+                        print("{} {}".format(i, loss.item()))
             self.disable_train_LMP(model)
             # test LMP on test set
             # only test the configs that optimized
@@ -376,10 +376,58 @@ class IterativeTrainer(object):
             test_batch_bleu = sacrebleu.corpus_bleu(test_batch_gen, [test_batch_gold], tokenize='none').score
             print("test corpus bleu: {:.2f}".format(test_batch_bleu))
             print("percent >= : {}".format(sum([int(a >= b) for a, b in zip(test_batch_bleu_by_sent, test_allon_bleu_by_sent)]) / len(test_allon_batch_gen)))
+            j_start += 1
+        
+        # # for each valid batch, sample and train
+        # for i, val_batch in enumerate(valid_batches):
+        #     aggregate_stats = torch.zeros(s_bsize, len(all_combs), device=torch.device("cuda"))
+        #     # inference on these j_size configs
+        #     for ci, comb in enumerate(all_combs[j_start * j_size : (j_start+1) * j_size]):
+        #         layermask = torch.zeros(s_bsize, num_layer, device=torch.device("cuda")) 
+        #         for activate_i in comb:
+        #             layermask[:, activate_i] += 1 # now the whole batch use the same mask
+        #         batch_gen = self.get_translated(sample_translator, [val_batch], layermask=layermask)
+        #         # eval bleu and store aggregate stats
+        #         for eval_i, (gold_i, gen_i) in enumerate(zip(val_batch_gold[i*s_bsize : (i+1)*s_bsize], batch_gen)):
+        #             this_bleu = sacrebleu.corpus_bleu([gen_i], [[gold_i]], tokenize='none').score
+        #             all_on_bleu = sacrebleu.corpus_bleu([val_allon_batch_gen[eval_i+i*s_bsize]], [[gold_i]], tokenize='none').score
+        #             try:
+        #                 assert all_on_bleu == val_allon_bleu_by_sent[eval_i+i*s_bsize]
+        #             except:
+        #                 pdb.set_trace()
+        #             if this_bleu > val_allon_bleu_by_sent[eval_i+i*s_bsize]:
+        #                 aggregate_stats[eval_i, ci] += 1
+        #                 print("example {} config {}: this bleu {:.2f} all-on bleu {:.2f}" .format(eval_i, ci, this_bleu, all_on_bleu))
+            
+        #     neg = aggregate_stats[:, j_start * j_size : (j_start+1) * j_size]
+        #     neg[neg == 0] = -1
 
-            if i % 2 == 0:
-                j_start += 1
-                continue
+        #     # train LMP with aggregate stats
+        #     self.enable_train_LMP(model)
+        #     lmp_optimizer = optim.Adam(model.layer_mask_predictor.parameters(), lr=1e-4, betas=(0.9, 0.98), eps=1e-9)
+        #     for i in range(self.config.max_lmp_train_steps):
+        #         embedding = model.embed(val_batch['inputs'].cuda(), model.embedding)
+        #         padding_masks = val_batch['inputs'].eq(model.padding_idx).cuda()
+        #         loss, _ = model.layer_mask_predictor(embedding, padding_masks, aggregate_stats=aggregate_stats)
+        #         loss.backward()
+        #         lmp_optimizer.step()
+        #         lmp_optimizer.zero_grad()
+        #         if i % 500 == 0:
+        #             print("{} {}".format(i, loss.item()))
+        #     self.disable_train_LMP(model)
+        #     # test LMP on test set
+        #     # only test the configs that optimized
+
+        #     model.set_LMP_config_range(0, (j_start+1) * j_size)
+        #     test_batch_gen = self.get_translated(sample_translator, test_batches)
+        #     test_batch_bleu_by_sent = [sacrebleu.corpus_bleu([gen_i], [[gold_i]], tokenize='none').score for gen_i, gold_i in zip(test_batch_gen, test_batch_gold)]
+        #     test_batch_bleu = sacrebleu.corpus_bleu(test_batch_gen, [test_batch_gold], tokenize='none').score
+        #     print("test corpus bleu: {:.2f}".format(test_batch_bleu))
+        #     print("percent >= : {}".format(sum([int(a >= b) for a, b in zip(test_batch_bleu_by_sent, test_allon_bleu_by_sent)]) / len(test_allon_batch_gen)))
+
+        #     if i % 2 == 0:
+        #         j_start += 1
+        #         continue
 
 
     def enable_train_LMP(self, model):
