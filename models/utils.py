@@ -10,7 +10,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import ticker
 from collections import OrderedDict
-
+import pdb
 import torch
 from torch import nn
 from torch.nn import functional as F
@@ -71,7 +71,7 @@ def restore(path, modules, num_checkpoints=1, map_location=None, strict=True):
 
     for name, obj in modules.items():
         if isinstance(obj, nn.Module):
-            obj.load_state_dict(state[name], strict=strict)
+            obj.load_state_dict(state[name], strict=False)
         else:
             obj.load_state_dict(state[name])
 

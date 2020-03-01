@@ -63,7 +63,8 @@ def main(argv=None):
             args.num_devices, shuffle=args.shuffle
         )
     # pdb.set_trace()
-    if args.action_type == "iterative_train":
+
+    if args.action_type == "iterative_train" and not args.action_config.debug:
         args.config.data.split = 'valid'
         args.config.data.max_examples = 0
         args.config.data.batch_size = args.action_config.sample_batch_size
@@ -72,6 +73,17 @@ def main(argv=None):
             args.config.data, args.seed_fn, pin_memory,
             args.num_devices, shuffle=True
         )
+
+    if args.action_type == "iterative_train" and args.action_config.debug: # if debug oracle-sample based experiment, train on valid and test on test
+        args.config.data.split = 'test'
+        args.config.data.max_examples = 0
+        args.config.data.batch_size = args.action_config.sample_batch_size
+        args.config.data.batch_method = "example"
+        action.validation_dataloader = get_dataloader(
+            args.config.data, args.seed_fn, pin_memory,
+            args.num_devices, shuffle=True
+        )
+
 
     if args.config.cuda.profile_cuda_memory:
         print('Profiling CUDA memory')

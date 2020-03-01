@@ -519,7 +519,7 @@ def add_new_transformer_args(parser):
     group.add_argument(
         '--layermask-type',
         type=str,
-        choices=['noskip', 'gating', 'iterative_training'],
+        choices=['noskip', 'gating', 'iterative_training','iterative_training_debug_oracle'],
         default='noskip'
     )
     group.add_argument(
@@ -1042,7 +1042,12 @@ def add_iterative_train_args(parser):
         default=20,
         help="step after which to start training"
     )
-
+    group.add_argument(
+        '--debug',
+        default=False,
+        action='store_true',
+        help="debug oracle"
+    )
 
     return group
 

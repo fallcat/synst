@@ -6,6 +6,7 @@ import threading
 import pdb
 import torch
 import numpy as np
+import random
 from torch import nn
 
 from models.new_attention import NewAttention
@@ -15,6 +16,7 @@ from models.utils import LabelSmoothingLoss, Translator
 from utils import left_shift, right_shift, triu
 from torch.distributions import Bernoulli
 import torch.nn.functional as F
+from itertools import combinations
 
 
 class TransformerSublayer(nn.Module):
@@ -284,10 +286,29 @@ class LayerMaskPredictor(nn.Module):
         super(LayerMaskPredictor, self).__init__()
         self.num_layers = num_layers
 
+        #### for debugging oracle
+        # all combinations
+        num_layer = 2 * num_layers
+        # generate all combinations
+        all_combs = sum([list(combinations(range(num_layer), k)) for k in range(1, num_layer)], [])
+        # filter those without decoder
+        all_combs = [x for x in all_combs if any(y >= num_layer//2 for y in x)]
+        random.Random(42).shuffle(all_combs)
+        self.all_configs = torch.zeros(len(all_combs), num_layer, device=torch.device("cuda"))
+        for ci, c in enumerate(all_combs):
+            for cii in c:
+                self.all_configs[ci, cii] += 1
+
+        # config range: while training with samples, only optimize certain range; during test time, need to know which range is optimized
+        self.config_start = 0
+        self.config_end = -1
+
         if lmp_type not in ["random"]:
             if not noisy:
                 if lmp_type == "iterative_training":
                     self.proj1 = nn.Linear(embedding_size, 2 * num_layers)
+                elif lmp_type == "iterative_training_debug_oracle":
+                    self.proj1 = nn.Linear(embedding_size, len(all_combs))
                 else:
                     self.proj1 = nn.Linear(embedding_size, hidden_size)
                     self.proj2 = nn.Linear(hidden_size, 2 * num_layers)
@@ -300,6 +321,7 @@ class LayerMaskPredictor(nn.Module):
             self.action_type = action_type
             self.lmp_type = lmp_type
             self.noisy=noisy
+
             self.reset_parameters()
         else:
             self.sample_distribution = torch.ones(2 * num_layers, device=torch.device("cuda")) * 0.5 # init 0.5
@@ -311,7 +333,7 @@ class LayerMaskPredictor(nn.Module):
         nn.init.xavier_uniform_(self.proj1.weight, gain)
         nn.init.constant_(self.proj1.bias, 0.)
         if not self.noisy:
-            if self.lmp_type != "iterative_training":
+            if "iterative_training" not in self.lmp_type:
                 nn.init.xavier_uniform_(self.proj2.weight, gain)
                 nn.init.constant_(self.proj2.bias, 0.)
         else:
@@ -365,6 +387,23 @@ class LayerMaskPredictor(nn.Module):
             else:
                 return None, Bernoulli(layermask).sample()
 
+        elif self.lmp_type == "iterative_training_debug_oracle":
+            # contrastive loss training
+            layermask = self.proj1(torch.mean(lmp_input,1))
+            layermask = torch.tanh(layermask)
+            if aggregate_stats is not None:
+                # aggregate stats: +1 positive, -1 negative, 0 not training; 1. mask untrained 2. min MSE between stats and predicted
+                masks = (~aggregate_stats.eq(0).cuda()).float()
+                contrastive = ((layermask * masks - aggregate_stats)**2).sum(dim=1)
+                return contrastive.mean(), None
+            else:
+                ret = torch.zeros(layermask.shape[0], self.num_layers * 2, device=torch.device("cuda"))
+                # get the most probable config
+                ci = torch.argmax(layermask[self.config_start:self.config_end], dim=1)
+                # generate layermask
+                for li, l in enumerate(ci):
+                    ret[li] += self.all_configs[l]
+                return None, ret
         else:
             pass
 
@@ -408,6 +447,7 @@ class NewTransformer(nn.Module):
             ignore_index=self.padding_idx,
             reduction='none'
         )
+
 
         self.layermask_type = config.layermask_type
         self.gating_tradeoff = config.gating_tradeoff
@@ -691,7 +731,12 @@ class NewTransformer(nn.Module):
         return self.dropout(token_embedding(inputs) + self.position_embedding(inputs))
 
     def set_LMP_type(self, lmp_type):
-        if lmp_type not in ["noskip", 'iterative_training']:
+        if lmp_type not in ["noskip", 'iterative_training', 'iterative_training_debug_oracle']:
             print("cannot set to this type after initiliazation!")
             exit(-1)
         self.layer_mask_predictor.lmp_type = lmp_type
+
+    def set_LMP_config_range(self, start, end):
+        
+        self.layer_mask_predictor.config_start = start
+        self.layer_mask_predictor.config_end = end
