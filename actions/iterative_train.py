@@ -359,6 +359,7 @@ class IterativeTrainer(object):
                 agg_stats_list.append(aggregate_stats)
             self.enable_train_LMP(model)
             lmp_optimizer = optim.Adam(model.layer_mask_predictor.parameters(), lr=self.config.base_lr, betas=(0.9, 0.98), eps=1e-9)
+            b_flag = False
             for i in range(self.config.max_lmp_train_steps // len(group_val_batches)):
                 for batch, stats in zip(group_val_batches, agg_stats_list):
                     embedding = model.embed(batch['inputs'].cuda(), model.embedding)
@@ -369,6 +370,11 @@ class IterativeTrainer(object):
                     lmp_optimizer.zero_grad()
                     if i % 200 == 0:
                         print("{} {}".format(i, loss.item()))
+                    if loss.item() < 0.3:
+                        b_flag = True
+                        break
+                if b_flag:
+                    break
             self.disable_train_LMP(model)
             # test LMP on test set
             # only test the configs that optimized
