@@ -130,9 +130,9 @@ class IterativeTrainer(object):
         self.metric_store.add(metrics.Metric('num_tok', metrics.format_int, 'a', max_history=1000))
         self.metric_store.add(metrics.Metric('reward', metrics.format_float, max_history=1000))
         self.metric_store.add(metrics.Metric('layermask', metrics.format_float, 'g', max_history=1))
-        self.metric_store.add(metrics.Metric('test_bleu', metrics.format_float, 'g', max_history=1))
-        self.metric_store.add(metrics.Metric('combined_test_bleu', metrics.format_float, 'g', max_history=1))
-        self.metric_store.add(metrics.Metric('percent_ge', metrics.format_float, 'g', max_history=1))
+        self.metric_store.add(metrics.Metric('test_bleu', metrics.format_float, 'g', max_history=1000))
+        self.metric_store.add(metrics.Metric('combined_test_bleu', metrics.format_float, 'g', max_history=1000))
+        self.metric_store.add(metrics.Metric('percent_ge', metrics.format_float, 'g', max_history=1000))
         # self.metric_store.add(metrics.Metric('time_per_batch', metrics.format_float, 'g', max_history=100000))
         # self.metric_store.add(metrics.Metric('time_total', metrics.format_float, 'g', max_history=1))
 
