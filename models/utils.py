@@ -327,7 +327,7 @@ class Translator(object):
             return OrderedDict([
                 ('targets', targets),
                 ('gold_targets', gold_targets)
-            ])
+            ]), lmp_raw_layermask
 
 
 class ProbeTranslator(object):

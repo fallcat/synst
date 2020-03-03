@@ -1056,6 +1056,13 @@ def add_iterative_train_args(parser):
         help="training lmp with _n_ valid batches "
     )
 
+    group.add_argument(
+        '--iter-train-n-configs', 
+        type=int,
+        default=100,
+        help="train how many configs once"
+    )
+
     return group
 
 def add_probe_train_args(parser):
