@@ -186,7 +186,7 @@ class IterativeTrainer(object):
             self.dataloader,
             unit='batch',
             dynamic_ncols=True,
-            desc=get_description(),
+            desc="",#get_description(),
             file=sys.stdout # needed to make tqdm_wrap_stdout work
         )
 
@@ -278,22 +278,22 @@ class IterativeTrainer(object):
 
         translated = []
         masks = []
-        for b in batches:
+        for bi, b in enumerate(batches):
             t, m = translator.translate(b, raw_layermask=layermask)
             translated.append(t)
             masks.append(m)
 
         eval_batch_gen = []
+        eval_batch_gold = []
         # eval all-on
         for t in translated:
             for i in range(len(t['targets'])):
-                if gold:
-                    decoded = ' '.join(self.validation_dataset.decode(t['gold_targets'][i], trim=True))
-                else:
-                    decoded = ' '.join(self.validation_dataset.decode(t['targets'][i], trim=True))
+                decoded = ' '.join(self.validation_dataset.decode(t['gold_targets'][i], trim=True))
+                eval_batch_gold.append(decoded)  
+                decoded = ' '.join(self.validation_dataset.decode(t['targets'][i], trim=True))
                 eval_batch_gen.append(decoded)  
 
-        return eval_batch_gen, masks   
+        return eval_batch_gold, eval_batch_gen, masks   
 
     def oracle_sample_experiment(self, experiment):
         
@@ -312,17 +312,15 @@ class IterativeTrainer(object):
         iter_times = ssize // s_bsize
         test_batches = [next(test_dataloader) for i in range(iter_times)]
         valid_batches = [next(valid_dataloader) for i in range(iter_times)]
-        # pdb.set_trace()
 
         model.set_LMP_type('noskip')
         noskip_translator = model.translator(self.config).to(torch.device("cuda"))
-        test_batch_gold, _ = self.get_translated(noskip_translator, test_batches, gold=True)
-        test_allon_batch_gen, _ = self.get_translated(noskip_translator, test_batches)
+        test_batch_gold, test_allon_batch_gen, _ = self.get_translated(noskip_translator, test_batches, gold=True)
+        assert len(test_allon_batch_gen) == 1999
         all_on_bleu = sacrebleu.corpus_bleu(test_allon_batch_gen, [test_batch_gold], tokenize='none').score
         test_allon_bleu_by_sent = [sacrebleu.corpus_bleu([gen_i], [[gold_i]], tokenize='none').score for gen_i, gold_i in zip(test_allon_batch_gen, test_batch_gold)]
         
-        val_batch_gold, _ = self.get_translated(noskip_translator, valid_batches, gold=True)
-        val_allon_batch_gen, _ = self.get_translated(noskip_translator, valid_batches)
+        val_batch_gold, val_allon_batch_gen, _ = self.get_translated(noskip_translator, valid_batches, gold=True)
         all_on_val_bleu = sacrebleu.corpus_bleu(val_allon_batch_gen, [val_batch_gold], tokenize='none').score
         val_allon_bleu_by_sent = [sacrebleu.corpus_bleu([gen_i], [[gold_i]], tokenize='none').score for gen_i, gold_i in zip(val_allon_batch_gen, val_batch_gold)]
 
@@ -333,28 +331,34 @@ class IterativeTrainer(object):
         # train
         # all combinations
         num_layer = 2 * len(model.encoders)
-        # generate all combinations
-        all_combs = sum([list(combinations(range(num_layer), k)) for k in range(1, num_layer)], [])
+        # generate all combinations, update: also included the all-on config
+        all_combs = sum([list(combinations(range(num_layer), k)) for k in range(1, num_layer+1)], [])
         # filter those without decoder
         all_combs = [x for x in all_combs if any(y >= num_layer//2 for y in x)]
         random.Random(42).shuffle(all_combs)
+        # get the index of all-on config
+        ci_allon = all_combs.index(tuple(i for i in range(num_layer)))
+        print("all-on config ci: %i" % ci_allon)
+
         sample_translator = model.translator(self.config).to(torch.device("cuda"))
-        # j_start, j_size = 0, len(all_combs) // 4
-        # j_start, j_size = 0, len(all_combs) // 100
         j_start, j_size = 0, self.config.iter_train_n_configs
 
         # group valid batches
         n = self.config.iter_train_lmp_val_n_batches
         valid_batches = [(valid_batches[i:i+n]) for i in range(0, iter_times, n)]
         for gi, group_val_batches in enumerate(valid_batches): # one group is responsible for optimizing j_size configs
+            # use (gi*n-1)th batch as the validation set for lmp training
+            lmp_val_batch = valid_batches[-1][-1]
+            # get "ground truth"
             agg_stats_list = []
             for i, val_batch in enumerate(group_val_batches):
                 aggregate_stats = torch.zeros(s_bsize, len(all_combs), device=torch.device("cuda"))
+                # get "ground truth" for these j_size configs
                 for ci, comb in enumerate(all_combs[j_start * j_size : (j_start+1) * j_size]):
                     layermask = torch.zeros(s_bsize, num_layer, device=torch.device("cuda")) 
                     for activate_i in comb:
                         layermask[:, activate_i] += 1 # now the whole batch use the same mask
-                    batch_gen, _ = self.get_translated(sample_translator, [val_batch], layermask=layermask)
+                    _, batch_gen, _ = self.get_translated(sample_translator, [val_batch], layermask=layermask)
                     for eval_i, (gold_i, gen_i) in enumerate(zip(val_batch_gold[(n*gi+i)*s_bsize : (n*gi+i+1)*s_bsize], batch_gen)):
                         this_bleu = sacrebleu.corpus_bleu([gen_i], [[gold_i]], tokenize='none').score
                         all_on_bleu = sacrebleu.corpus_bleu([val_allon_batch_gen[eval_i+(n*gi+i)*s_bsize]], [[gold_i]], tokenize='none').score
@@ -363,37 +367,51 @@ class IterativeTrainer(object):
                         except:
                             pdb.set_trace()
                         if this_bleu > val_allon_bleu_by_sent[eval_i+(n*gi+i)*s_bsize]:
-                            aggregate_stats[eval_i, ci] += 1
+                            aggregate_stats[eval_i, ci + j_start * j_size] += 1
                             # print("batch {} example {} config {}: this bleu {:.2f} all-on bleu {:.2f}" .format(i, eval_i, ci, this_bleu, all_on_bleu))
+                # set all all-on config to 1
+                aggregate_stats[:, ci_allon] = 1
                 neg = aggregate_stats[:, j_start * j_size : (j_start+1) * j_size]
                 neg[neg == 0] = -1
                 agg_stats_list.append(aggregate_stats)
             self.enable_train_LMP(model)
             lmp_optimizer = optim.Adam(model.layer_mask_predictor.parameters(), lr=self.config.base_lr, betas=(0.9, 0.98), eps=1e-9)
             b_flag = False
+            prev_percent = -sys.maxsize
             for i in range(self.config.max_lmp_train_steps // len(group_val_batches)):
-                for batch, stats in zip(group_val_batches, agg_stats_list):
+                for zi, (batch, stats) in enumerate(zip(group_val_batches, agg_stats_list)):
                     embedding = model.embed(batch['inputs'].cuda(), model.embedding)
                     padding_masks = batch['inputs'].eq(model.padding_idx).cuda()
-                    loss, _ = model.layer_mask_predictor(embedding, padding_masks, aggregate_stats=stats)
+                    loss, _ = model.layer_mask_predictor(embedding, padding_masks, aggregate_stats=stats) # stats after the second iteration should be 30~60 0but still 0-30
                     loss.backward()
                     lmp_optimizer.step()
                     lmp_optimizer.zero_grad()
                     if i % 200 == 0:
-                        print("{} {}".format(i, loss.item()))
-                    if loss.item() < 0.3:
-                        b_flag = True
-                        break
+                        # validation + early stopping
+                        self.disable_train_LMP(model)
+                        model.set_LMP_config_range(0, (j_start+1) * j_size)
+                        lmp_val_batch_gold, lmp_val_batch_gen, lmp_val_batch_masks  = self.get_translated(sample_translator, [lmp_val_batch])
+                        lmp_val_allon_batch_gen = val_allon_batch_gen[-s_bsize:]
+                        # get percent_G
+                        lmp_gen_bleu = [sacrebleu.corpus_bleu([gen_i], [[gold_i]], tokenize='none').score for gen_i, gold_i in zip(lmp_val_batch_gen, lmp_val_batch_gold)]
+                        lmp_allon_bleu = [sacrebleu.corpus_bleu([gen_i], [[gold_i]], tokenize='none').score for gen_i, gold_i in zip(lmp_val_allon_batch_gen, lmp_val_batch_gold)]
+                        this_percent = sum([int(a >= b) for a, b in zip(lmp_gen_bleu, lmp_allon_bleu)]) / len(lmp_val_batch_gold)
+                        # compare the logged validation percentage 
+                        if prev_percent > this_percent:
+                            b_flag = True
+                            #print(prev_percent, this_percent)
+                            break
+                        else:
+                            self.enable_train_LMP(model)
+                            if zi == len(group_val_batches) - 1:
+                                prev_percent = this_percent
                 if b_flag:
                     break
             self.disable_train_LMP(model)
             # test LMP on test set
             # only test the configs that optimized
-
             model.set_LMP_config_range(0, (j_start+1) * j_size)
-
-            test_batch_gen, test_batch_masks = self.get_translated(sample_translator, test_batches)
-            
+            _, test_batch_gen, test_batch_masks = self.get_translated(sample_translator, test_batches)
             test_batch_bleu_by_sent = [sacrebleu.corpus_bleu([gen_i], [[gold_i]], tokenize='none').score for gen_i, gold_i in zip(test_batch_gen, test_batch_gold)]
             test_batch_bleu = sacrebleu.corpus_bleu(test_batch_gen, [test_batch_gold], tokenize='none').score
             print("==========lmp using 0 ~ {} configs===========".format((j_start+1) * j_size))
@@ -403,7 +421,10 @@ class IterativeTrainer(object):
             combined_test_gen = [test_batch_gen[i] if test_batch_bleu_by_sent[i] > test_allon_bleu_by_sent[i] else test_allon_batch_gen[i] for i in range(len(test_batch_gen))]
             combined_test_bleu = sacrebleu.corpus_bleu(combined_test_gen, [test_batch_gold], tokenize='none').score
             print("combined test corpus bleu: {:.2f}".format(combined_test_bleu))
-            print("layer selection ratio: {}".format(sum([a.sum(dim=0) for a in test_batch_masks])/(len(test_batch_masks) * test_batch_masks[0].shape[0])))
+            ratio = sum([a.sum(dim=0) for a in test_batch_masks])/(len(test_batch_masks) * test_batch_masks[0].shape[0])
+            print("layer selection ratio: {}".format(np.around(ratio.cpu().numpy(), 2).tolist()))
+            all_on_masks = sum([(m.sum(dim=1) == num_layer).sum() for m in test_batch_masks])
+            print("all-on ratio: {}".format(all_on_masks.item() / (s_bsize * len(test_batch_masks)))) # what percent of the test set selecting all-on config
             experiment.log_metric("test_bleu", test_batch_bleu)
             experiment.log_metric("combined_test_bleu", combined_test_bleu)
             experiment.log_metric("percent_ge", percent_g)
@@ -627,6 +648,7 @@ class IterativeTrainer(object):
             experiment.log_current_epoch(epoch)
             while not self.is_done(experiment, epoch):
                 experiment.log_current_epoch(epoch)
+                print("============epoch %i===========" % epoch)
                 self.train_epoch(epoch, experiment, verbose)
                 experiment.log_epoch_end(epoch)
                 epoch += 1

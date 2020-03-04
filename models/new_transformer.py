@@ -282,6 +282,7 @@ class LayerMaskPredictor(nn.Module):
                        action_type, 
                        lmp_type, 
                        noisy,
+                       allon_threshold,
                        dropout_p=0.1):
         super(LayerMaskPredictor, self).__init__()
         self.num_layers = num_layers
@@ -290,7 +291,7 @@ class LayerMaskPredictor(nn.Module):
         # all combinations
         num_layer = 2 * num_layers
         # generate all combinations
-        all_combs = sum([list(combinations(range(num_layer), k)) for k in range(1, num_layer)], [])
+        all_combs = sum([list(combinations(range(num_layer), k)) for k in range(1, num_layer+1)], [])
         # filter those without decoder
         all_combs = [x for x in all_combs if any(y >= num_layer//2 for y in x)]
         random.Random(42).shuffle(all_combs)
@@ -298,10 +299,16 @@ class LayerMaskPredictor(nn.Module):
         for ci, c in enumerate(all_combs):
             for cii in c:
                 self.all_configs[ci, cii] += 1
+        self.ci_allon = all_combs.index(tuple(i for i in range(num_layer)))
+        self.all_configs_sum_layer = self.all_configs.sum(dim=1) # len(all_combs) x 1
+        print("all-on config ci: %i" % self.ci_allon)
 
         # config range: while training with samples, only optimize certain range; during test time, need to know which range is optimized
         self.config_start = 0
         self.config_end = -1
+        self.allon_threshold = allon_threshold
+        #pdb.set_trace()
+        print("all-on threshold %f" % self.allon_threshold)
 
         if lmp_type not in ["random"]:
             if not noisy:
@@ -399,7 +406,21 @@ class LayerMaskPredictor(nn.Module):
             else:
                 ret = torch.zeros(layermask.shape[0], self.num_layers * 2, device=torch.device("cuda"))
                 # get the most probable config
-                ci = torch.argmax(layermask[self.config_start:self.config_end], dim=1)
+                # filter out configs with threshold, how do we decide the threshold??
+                # update: changing to filter layermask (max-0.1, max), find the ci with fewest num of layers
+                # get max_val of predicted layermask
+                layermask_max, _ = layermask[:, self.config_start:self.config_end].max(dim=1)
+                # get configs with predicted values in [max-0.1, max] 
+                layermask_filtered = (layermask + 0.1 >= layermask_max[:, None]).float() * self.all_configs_sum_layer
+                # set the rest to infinity
+                layermask_filtered[layermask_filtered == 0] = float("inf")
+                # select configs in [max-0.1, max] that has fewest number of layer
+                _, ci = torch.min(layermask_filtered[:, self.config_start:self.config_end], dim=1)
+                # compare this with all-on config, if the value is smaller than all-on by a large margin, then choose all-on
+                ci_lmp_val = layermask[range(layermask.shape[0]), ci]
+                ci[ci_lmp_val < self.allon_threshold] = self.ci_allon 
+                #print("selecting all on: %i" % (ci == self.ci_allon).sum().item())
+                # ci[ci_lmp_val < layermask[:, self.ci_allon]] = self.ci_allon
                 # generate layermask
                 for li, l in enumerate(ci):
                     ret[li] += self.all_configs[l]
@@ -463,7 +484,8 @@ class NewTransformer(nn.Module):
                                                        config.num_layers, 
                                                        config.action_type, 
                                                        config.layermask_type,
-                                                       config.layermask_noisy)
+                                                       config.layermask_noisy,
+                                                       config.allon_threshold)
 
 
     @classmethod
@@ -694,18 +716,6 @@ class NewTransformer(nn.Module):
             'input_lens': input_lens
         }
 
-        # if beam_count is not None and sum(beam_count) != len(raw_layermask):
-            
-        #     # during beam search, expand layermask according to beam_count
-        #     new_raw_layermask = []
-        #     assert len(raw_layermask) == len(beam_count)
-        #     for eg, rtimes in zip(raw_layermask, beam_count):
-        #         if rtimes == 0:
-        #             continue
-        #         new_raw_layermask.append(eg.repeat(rtimes, 1))
-        #     raw_layermask = torch.cat(new_raw_layermask)
-        #     if len(raw_layermask) != encoded['state'].shape[0]:
-        #         pdb.set_trace()
         if len(raw_layermask) != encoded['state'].shape[0]:
             pdb.set_trace()
 
