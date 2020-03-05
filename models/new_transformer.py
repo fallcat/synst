@@ -401,7 +401,7 @@ class LayerMaskPredictor(nn.Module):
             if aggregate_stats is not None:
                 # aggregate stats: +1 positive, -1 negative, 0 not training; 1. mask untrained 2. min MSE between stats and predicted
                 masks = (~aggregate_stats.eq(0).cuda()).float()
-                contrastive = ((layermask * masks - aggregate_stats)**2).sum(dim=1)
+                contrastive = ((layermask * masks - aggregate_stats)**2).mean(dim=1)
                 return contrastive.mean(), None
             else:
                 ret = torch.zeros(layermask.shape[0], self.num_layers * 2, device=torch.device("cuda"))
