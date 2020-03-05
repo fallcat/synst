@@ -373,7 +373,10 @@ class IterativeTrainer(object):
                             # print("batch {} example {} config {}: this bleu {:.2f} all-on bleu {:.2f}" .format(i, eval_i, ci, this_bleu, all_on_bleu))
                 # set all all-on config to 1
                 aggregate_stats[:, ci_allon] = 1
-                neg = aggregate_stats[:, j_start * j_size : (j_start+1) * j_size]
+                if len(val_batch['inputs']) % s_bsize != 0:
+                    neg = aggregate_stats[:-1, j_start * j_size : (j_start+1) * j_size]
+                else:
+                    neg = aggregate_stats[:, j_start * j_size : (j_start+1) * j_size]
                 neg[neg == 0] = -1
                 agg_stats_list.append(aggregate_stats)
             self.enable_train_LMP(model)
@@ -388,7 +391,7 @@ class IterativeTrainer(object):
                     loss.backward()
                     lmp_optimizer.step()
                     lmp_optimizer.zero_grad()
-                    if i % 400 == 0:
+                    if i % 200 == 0:
                         # validation + early stopping
                         self.disable_train_LMP(model)
                         model.set_LMP_config_range(0, (j_start+1) * j_size)
