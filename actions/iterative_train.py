@@ -380,7 +380,7 @@ class IterativeTrainer(object):
             lmp_optimizer = optim.Adam(model.layer_mask_predictor.parameters(), lr=self.config.base_lr, betas=(0.9, 0.98), eps=1e-9)
             b_flag = False
             prev_percent = -sys.maxsize
-            for i in range(self.config.max_lmp_train_steps // len(group_val_batches)):
+            for i in range(self.config.max_lmp_train_steps):
                 for zi, (batch, stats) in enumerate(zip(group_val_batches, agg_stats_list)):
                     embedding = model.embed(batch['inputs'].cuda(), model.embedding)
                     padding_masks = batch['inputs'].eq(model.padding_idx).cuda()
@@ -388,7 +388,7 @@ class IterativeTrainer(object):
                     loss.backward()
                     lmp_optimizer.step()
                     lmp_optimizer.zero_grad()
-                    if i % 200 == 0:
+                    if i % 400 == 0:
                         # validation + early stopping
                         self.disable_train_LMP(model)
                         model.set_LMP_config_range(0, (j_start+1) * j_size)
@@ -398,14 +398,14 @@ class IterativeTrainer(object):
                         lmp_gen_bleu = [sacrebleu.corpus_bleu([gen_i], [[gold_i]], tokenize='none').score for gen_i, gold_i in zip(lmp_val_batch_gen, lmp_val_batch_gold)]
                         lmp_allon_bleu = [sacrebleu.corpus_bleu([gen_i], [[gold_i]], tokenize='none').score for gen_i, gold_i in zip(lmp_val_allon_batch_gen, lmp_val_batch_gold)]
                         this_percent = sum([int(a >= b) for a, b in zip(lmp_gen_bleu, lmp_allon_bleu)]) / len(lmp_val_batch_gold)
+                        print(i, loss.item(), this_percent)
                         # compare the logged validation percentage 
-                        if prev_percent > this_percent:
+                        if prev_percent > this_percent + 0.15:
                             b_flag = True
-                            #print(prev_percent, this_percent)
                             break
                         else:
                             self.enable_train_LMP(model)
-                            if zi == len(group_val_batches) - 1:
+                            if zi == len(group_val_batches) - 1 and this_percent >= prev_percent:
                                 prev_percent = this_percent
                 if b_flag:
                     break
@@ -430,7 +430,8 @@ class IterativeTrainer(object):
             experiment.log_metric("test_bleu", test_batch_bleu)
             experiment.log_metric("combined_test_bleu", combined_test_bleu)
             experiment.log_metric("percent_ge", percent_g)
-            j_start += 1
+            if not self.config.optimize_the_same:
+                j_start += 1
 
         # store generated
         with open(os.path.join(self.config.checkpoint_directory, 'lmp_only_translated.txt'), 'w') as f:

@@ -1068,6 +1068,13 @@ def add_iterative_train_args(parser):
         help="train how many configs once"
     )
 
+    group.add_argument(
+        '--optimize-the-same', 
+        default=False,
+        action='store_true',
+        help="whether to optimize the same set of configs every validation batch"
+    )
+
     return group
 
 def add_probe_train_args(parser):
