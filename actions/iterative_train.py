@@ -403,7 +403,7 @@ class IterativeTrainer(object):
                         this_percent = sum([int(a >= b) for a, b in zip(lmp_gen_bleu, lmp_allon_bleu)]) / len(lmp_val_batch_gold)
                         print('{} {} {}'.format(i, loss.item(), this_percent))
                         # compare the logged validation percentage 
-                        if prev_percent > this_percent:
+                        if prev_percent > this_percent or loss < 0.5:
                             b_flag = True
                             break
                         else:
