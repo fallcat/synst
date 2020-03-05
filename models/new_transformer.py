@@ -283,6 +283,7 @@ class LayerMaskPredictor(nn.Module):
                        lmp_type, 
                        noisy,
                        allon_threshold,
+                       potential_threshold,
                        dropout_p=0.1):
         super(LayerMaskPredictor, self).__init__()
         self.num_layers = num_layers
@@ -307,7 +308,7 @@ class LayerMaskPredictor(nn.Module):
         self.config_start = 0
         self.config_end = -1
         self.allon_threshold = allon_threshold
-        #pdb.set_trace()
+        self.potential_threshold = potential_threshold
         print("all-on threshold %f" % self.allon_threshold)
 
         if lmp_type not in ["random"]:
@@ -389,7 +390,7 @@ class LayerMaskPredictor(nn.Module):
             # layermask, aggregate_stats: [bs, #L]
             # min (layermask - aggregate stats)^2
             if aggregate_stats is not None:
-                mse_loss = ((aggregate_stats - layermask)**2).sum()
+                mse_loss = ((aggregate_stats - layermask)**2).mean()
                 return mse_loss, Bernoulli(layermask).sample()
             else:
                 return None, Bernoulli(layermask).sample()
@@ -411,7 +412,7 @@ class LayerMaskPredictor(nn.Module):
                 # get max_val of predicted layermask
                 layermask_max, _ = layermask[:, self.config_start:self.config_end].max(dim=1)
                 # get configs with predicted values in [max-0.1, max] 
-                layermask_filtered = (layermask + 0.1 >= layermask_max[:, None]).float() * self.all_configs_sum_layer
+                layermask_filtered = (layermask + self.potential_threshold >= layermask_max[:, None]).float() * self.all_configs_sum_layer
                 # set the rest to infinity
                 layermask_filtered[layermask_filtered == 0] = float("inf")
                 # select configs in [max-0.1, max] that has fewest number of layer
@@ -485,7 +486,8 @@ class NewTransformer(nn.Module):
                                                        config.action_type, 
                                                        config.layermask_type,
                                                        config.layermask_noisy,
-                                                       config.allon_threshold)
+                                                       config.allon_threshold,
+                                                       config.potential_threshold)
 
 
     @classmethod

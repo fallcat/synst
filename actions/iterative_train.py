@@ -316,7 +316,7 @@ class IterativeTrainer(object):
         model.set_LMP_type('noskip')
         noskip_translator = model.translator(self.config).to(torch.device("cuda"))
         test_batch_gold, test_allon_batch_gen, _ = self.get_translated(noskip_translator, test_batches, gold=True)
-        assert len(test_allon_batch_gen) == 1999
+        #assert len(test_allon_batch_gen) == 1999
         all_on_bleu = sacrebleu.corpus_bleu(test_allon_batch_gen, [test_batch_gold], tokenize='none').score
         test_allon_bleu_by_sent = [sacrebleu.corpus_bleu([gen_i], [[gold_i]], tokenize='none').score for gen_i, gold_i in zip(test_allon_batch_gen, test_batch_gold)]
         

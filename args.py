@@ -534,6 +534,14 @@ def add_new_transformer_args(parser):
         default=0.3,
         help="threshold smaller than which will switch to all-on config"
     )
+
+    group.add_argument(
+        '--potential-threshold',
+        type=float,
+        default=0.1,
+        help="threshold smaller than which will switch to all-on config"
+    )
+
     return group
 
 
