@@ -358,6 +358,8 @@ class IterativeTrainer(object):
                     layermask = torch.zeros(s_bsize, num_layer, device=torch.device("cuda")) 
                     for activate_i in comb:
                         layermask[:, activate_i] += 1 # now the whole batch use the same mask
+                    if len(val_batch['inputs']) % s_bsize != 0:
+                        layermask = layermask[:-1, :]
                     _, batch_gen, _ = self.get_translated(sample_translator, [val_batch], layermask=layermask)
                     for eval_i, (gold_i, gen_i) in enumerate(zip(val_batch_gold[(n*gi+i)*s_bsize : (n*gi+i+1)*s_bsize], batch_gen)):
                         this_bleu = sacrebleu.corpus_bleu([gen_i], [[gold_i]], tokenize='none').score
