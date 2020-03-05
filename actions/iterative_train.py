@@ -401,9 +401,9 @@ class IterativeTrainer(object):
                         lmp_gen_bleu = [sacrebleu.corpus_bleu([gen_i], [[gold_i]], tokenize='none').score for gen_i, gold_i in zip(lmp_val_batch_gen, lmp_val_batch_gold)]
                         lmp_allon_bleu = [sacrebleu.corpus_bleu([gen_i], [[gold_i]], tokenize='none').score for gen_i, gold_i in zip(lmp_val_allon_batch_gen, lmp_val_batch_gold)]
                         this_percent = sum([int(a >= b) for a, b in zip(lmp_gen_bleu, lmp_allon_bleu)]) / len(lmp_val_batch_gold)
-                        print(i, loss.item(), this_percent)
+                        print('{} {} {}'.format(i, loss.item(), this_percent))
                         # compare the logged validation percentage 
-                        if prev_percent > this_percent + 0.15:
+                        if prev_percent > this_percent:
                             b_flag = True
                             break
                         else:
