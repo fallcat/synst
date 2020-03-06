@@ -1083,6 +1083,20 @@ def add_iterative_train_args(parser):
         help="whether to optimize the same set of configs every validation batch"
     )
 
+    group.add_argument(
+        '--loss_func',
+        type=str,
+        default="binary_cls",
+        help="objective for optimizing layermask-predictor"
+    )
+
+    group.add_argument(
+        '--max-train-lmp-epochs',
+        type=int,
+        default=500,
+        help='Maximum number of epochs for training the layermask predictor'
+    )
+
     return group
 
 def add_probe_train_args(parser):
