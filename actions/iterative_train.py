@@ -371,7 +371,7 @@ class IterativeTrainer(object):
                             pdb.set_trace()
                         if this_bleu > val_allon_bleu_by_sent[eval_i+(n*gi+i)*s_bsize]:
                             aggregate_stats[eval_i, ci + j_start * j_size] += 1
-                            print("batch {} example {} config {}: this bleu {:.2f} all-on bleu {:.2f}" .format(i, eval_i, ci, this_bleu, all_on_bleu))
+                            #print("batch {} example {} config {}: this bleu {:.2f} all-on bleu {:.2f}" .format(i, eval_i, ci, this_bleu, all_on_bleu))
                 # set all all-on config to 1
                 aggregate_stats[:, ci_allon] = 1
                 if len(val_batch['inputs']) % s_bsize != 0:
