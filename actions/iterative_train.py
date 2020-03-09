@@ -16,7 +16,6 @@ from contextlib import ExitStack
 import torch
 from torch import nn
 from torch import optim
-from torch.utils.data import DataLoader
 from torch.optim.lr_scheduler import LambdaLR, ExponentialLR
 from tqdm import tqdm
 
@@ -33,8 +32,8 @@ import numpy as np
 from itertools import combinations
 import random
 import pdb
+import logging
 import pickle
-
 
 class IterativeTrainer(object):
     ''' An object that encapsulates model training '''
@@ -194,8 +193,7 @@ class IterativeTrainer(object):
 
         with tqdm_wrap_stdout():
             if self.config.debug: # only for debug
-                # self.oracle_sample_experiment(experiment)
-                self.oracle_fix_experiment(epoch, experiment, self.config.loss_func)
+                self.oracle_sample_experiment(experiment)
                 return
 
         with tqdm_wrap_stdout():
@@ -277,7 +275,7 @@ class IterativeTrainer(object):
 
             try_optimize(i, last=True)
 
-    def get_translated(self, translator, batches, layermask=None):
+    def get_translated(self, translator, batches, gold=False, layermask=None):
 
         translated = []
         masks = []
@@ -295,7 +293,6 @@ class IterativeTrainer(object):
                 eval_batch_gold.append(decoded)  
                 decoded = ' '.join(self.validation_dataset.decode(t['targets'][i], trim=True))
                 eval_batch_gen.append(decoded)  
-
 
         return eval_batch_gold, eval_batch_gen, masks   
 
@@ -316,15 +313,15 @@ class IterativeTrainer(object):
         iter_times = ssize // s_bsize
         test_batches = [next(test_dataloader) for i in range(iter_times)]
         valid_batches = [next(valid_dataloader) for i in range(iter_times)]
-        pdb.set_trace()
+
         model.set_LMP_type('noskip')
         noskip_translator = model.translator(self.config).to(torch.device("cuda"))
-        test_batch_gold, test_allon_batch_gen, _ = self.get_translated(noskip_translator, test_batches)
-        assert len(test_allon_batch_gen) == 1999
+        test_batch_gold, test_allon_batch_gen, _ = self.get_translated(noskip_translator, test_batches, gold=True)
+        #assert len(test_allon_batch_gen) == 1999
         all_on_bleu = sacrebleu.corpus_bleu(test_allon_batch_gen, [test_batch_gold], tokenize='none').score
         test_allon_bleu_by_sent = [sacrebleu.corpus_bleu([gen_i], [[gold_i]], tokenize='none').score for gen_i, gold_i in zip(test_allon_batch_gen, test_batch_gold)]
         
-        val_batch_gold, val_allon_batch_gen, _ = self.get_translated(noskip_translator, valid_batches)
+        val_batch_gold, val_allon_batch_gen, _ = self.get_translated(noskip_translator, valid_batches, gold=True)
         all_on_val_bleu = sacrebleu.corpus_bleu(val_allon_batch_gen, [val_batch_gold], tokenize='none').score
         val_allon_bleu_by_sent = [sacrebleu.corpus_bleu([gen_i], [[gold_i]], tokenize='none').score for gen_i, gold_i in zip(val_allon_batch_gen, val_batch_gold)]
 
@@ -374,7 +371,7 @@ class IterativeTrainer(object):
                             pdb.set_trace()
                         if this_bleu > val_allon_bleu_by_sent[eval_i+(n*gi+i)*s_bsize]:
                             aggregate_stats[eval_i, ci + j_start * j_size] += 1
-                            # print("batch {} example {} config {}: this bleu {:.2f} all-on bleu {:.2f}" .format(i, eval_i, ci, this_bleu, all_on_bleu))
+                            print("batch {} example {} config {}: this bleu {:.2f} all-on bleu {:.2f}" .format(i, eval_i, ci, this_bleu, all_on_bleu))
                 # set all all-on config to 1
                 aggregate_stats[:, ci_allon] = 1
                 if len(val_batch['inputs']) % s_bsize != 0:
@@ -434,11 +431,35 @@ class IterativeTrainer(object):
             print("layer selection ratio: {}".format(np.around(ratio.cpu().numpy(), 2).tolist()))
             all_on_masks = sum([(m.sum(dim=1) == num_layer).sum() for m in test_batch_masks])
             print("all-on ratio: {}".format(all_on_masks.item() / (s_bsize * len(test_batch_masks)))) # what percent of the test set selecting all-on config
+            filter_allon = [m.sum(dim=1) != num_layer for m in test_batch_masks] #filter_allon[0].float()[:, None] * test_batch_masks[0]
+            non_allon_configs = [m.float()[:, None]*lm for m, lm in zip(filter_allon, test_batch_masks)]
+            non_allon_config_layers = sum([m.sum() for m in non_allon_configs])
+            print("average #layer non-all-on config {}".format(non_allon_config_layers / (s_bsize * len(test_batch_masks) - all_on_masks.item())))
+
+            #TODO: non-allon configs, corpus bleu of generated and all-on config
+            filter_allon = torch.cat(filter_allon)
+            non_allon_gen = [test_batch_gen[i]  for i in range(len(test_batch_gen)) if filter_allon[i]]
+            non_allon_allon = [test_allon_batch_gen[i] for i in range(len(test_batch_gen)) if filter_allon[i] ]
+            non_allon_gold = [test_batch_gold[i] for i in range(len(test_batch_gen)) if filter_allon[i] ]
+            non_allon_gen_bleu = sacrebleu.corpus_bleu(non_allon_gen, [non_allon_gold], tokenize='none').score
+            non_allon_allon_bleu = sacrebleu.corpus_bleu(non_allon_allon, [non_allon_gold], tokenize='none').score
+            print("non-allon config: bleu using layers selected by LMP {}".format(non_allon_gen_bleu))
+            print("non-allon config: bleu using layers selected by LMP {}".format(non_allon_allon_bleu))
+
             experiment.log_metric("test_bleu", test_batch_bleu)
             experiment.log_metric("combined_test_bleu", combined_test_bleu)
             experiment.log_metric("percent_ge", percent_g)
             if not self.config.optimize_the_same:
                 j_start += 1
+            with open(os.path.join(self.config.checkpoint_directory, 'lmp_jstart_{}_store.txt'.format(j_start*j_size)), 'wb') as f:
+                pickle.dump(
+                  {
+                    'test_batch_gen': test_batch_gen,
+                    'test_batch_masks': test_batch_masks,
+                    'test_allon_batch_gen': test_allon_batch_gen,
+                    'test_batch_gold': test_batch_gold,
+                  }, f)
+                  
 
         # store generated
         with open(os.path.join(self.config.checkpoint_directory, 'lmp_only_translated.txt'), 'w') as f:
@@ -449,130 +470,6 @@ class IterativeTrainer(object):
             for line in combined_test_gen:
                 f.write(line + '\n')
 
-    def load_lmp_data(self, loss_func):
-        """
-            if split is train, return both train and valid dataloader
-            if split is test, return synst-test iterator
-        """
-        FILE_NAME = "/mnt/nfs/work1/miyyer/simengsun/data/small_enro/valid.iter.all"
-
-        with open(FILE_NAME, 'rb') as f:
-            data = pickle.load(f)
-
-        if loss_func == "binary_cls":
-            data = list(zip(data['avg_emb'], data['y1'].float(), data['y2'][:, -1]))
-
-        elif loss_func == "regr":
-            # change y1 to -1 and +1
-            data['y1'][data['y1'] == 0] = -1
-            data = list(zip(data['avg_emb'], data['y1'].float(), data['y2'][:, -1]))
-
-        else:
-            # TODO: rescale the bleu scores
-            data['y2'] /= a.max(dim=1)[0][:, None]
-            data = list(zip(data['avg_emb'], data['y2'], data['y2'][:, -1]))
-
-        train_data, val_data = data[:-200], data[-200:]
-        train_dataloader = DataLoader(train_data, batch_size=50, pin_memory=True, shuffle=True)
-        valid_dataloader = DataLoader(val_data, batch_size=50, pin_memory=True)
-        return train_dataloader, valid_dataloader
-
-
-
-    def oracle_fix_experiment(self, epoch, experiment, 
-                              loss_func="binary_cls", 
-                              max_num_layer=6):
-        """
-        Input:
-            experiment
-            loss_func: choose from "binary_cls", "regr", "scaled_regr", "rank"
-            max_num_layer: only optimize configs with equal or less number of layers
-        """
-
-        model = self.modules['model']
-        # set dropout to 0
-        model.eval() # dropout to 0 and no_grad
-        num_layer = 2 * len(model.encoders)
-
-        train_dataloader, valid_dataloader = self.load_lmp_data(loss_func)
-        test_dataloader = self.validation_dataloader
-        # test_batches = iter(test_dataloader)
-        test_batches = [a for ai, a in enumerate(iter(test_dataloader)) if ai < 2]
-
-        model.set_LMP_type('noskip')
-        noskip_translator = model.translator(self.config).to(torch.device("cuda"))
-
-        test_gold, test_allon_gen, _ = self.get_translated(noskip_translator, test_batches)
-        # assert len(test_allon_gen) == 1999
-        test_allon_bleu = sacrebleu.corpus_bleu(test_allon_gen, [test_gold], tokenize='none').score
-        test_allon_bleu_by_sent = [sacrebleu.corpus_bleu([gen_i], [[gold_i]], tokenize='none').score for gen_i, gold_i in zip(test_allon_gen, test_gold)]
-        print(test_allon_bleu)
-
-        model.set_LMP_type('iterative_training_debug_oracle')
-        sample_translator = model.translator(self.config).to(torch.device("cuda"))
-        lmp_optimizer = optim.Adam(model.layer_mask_predictor.parameters(), lr=self.config.base_lr, betas=(0.9, 0.98), eps=1e-9)
-        lr_scheduler = LambdaLR(lmp_optimizer,
-                            LinearLRSchedule(
-                                self.config.base_lr,
-                                self.config.final_lr,
-                                self.config.max_train_lmp_epochs * 36
-                            )
-                       )
-
-        self.enable_train_LMP(model)
-        for epoch in range(epoch, epoch+self.config.max_train_lmp_epochs):
-
-            val_losses = []
-            train_batches = iter(train_dataloader)
-            for bi, batch in enumerate(train_batches):
-                x, y, _ = batch
-                train_loss, _ = model.layer_mask_predictor(None, None, avg_embedding=x.cuda(), aggregate_stats=y.cuda())
-                train_loss.backward()
-                lmp_optimizer.step()
-                lmp_optimizer.zero_grad()
-                lr_scheduler.step()
-                
-                if bi % 5 == 0:
-                    # eval
-                    with torch.no_grad():
-                        val_batches = iter(valid_dataloader)
-                        val_loss = 0
-                        for v_bi, v_batch in enumerate(val_batches):
-                            x, y, _ = batch
-                            loss, _ = model.layer_mask_predictor(None, None, avg_embedding=x.cuda(), aggregate_stats=y.cuda())
-                            val_loss += loss
-                        val_loss /= v_bi+1
-                        print('train {} val {}'.format(train_loss.item(), val_loss.item()))
-
-                        if len(val_losses) < 5:
-                            val_losses.append(val_loss)
-                        else:
-                            if all([val_loss > v for v in val_losses]):
-                                break
-                            else:
-                                val_losses.pop(0)
-                                val_losses.append(val_loss)
-
-            # test on test set
-            # test_batches = iter(test_dataloader)
-            _, test_gen, test_masks = self.get_translated(sample_translator, test_batches)
-            test_gen_bleu_by_sent = [sacrebleu.corpus_bleu([gen_i], [[gold_i]], tokenize='none').score for gen_i, gold_i in zip(test_gen, test_gold)]
-            test_gen_bleu = sacrebleu.corpus_bleu(test_gen, [test_gold], tokenize='none').score
-            print("==========epoch {}===========".format(epoch))
-            print("test corpus bleu: {:.2f}".format(test_gen_bleu))
-            percent_g = sum([int(a >= b) for a, b in zip(test_gen_bleu_by_sent, test_allon_bleu_by_sent)]) / len(test_allon_gen)
-            print("percent >= : {}".format(percent_g))
-            combined_test_gen = [test_gen[i] if test_gen_bleu_by_sent[i] > test_allon_bleu_by_sent[i] else test_allon_gen[i] for i in range(len(test_gen))]
-            combined_test_bleu = sacrebleu.corpus_bleu(combined_test_gen, [test_gold], tokenize='none').score
-            print("combined test corpus bleu: {:.2f}".format(combined_test_bleu))
-            ratio = sum([a.sum(dim=0) for a in test_masks])/(len(test_masks) * test_masks[0].shape[0])
-            print("layer selection ratio: {}".format(np.around(ratio.cpu().numpy(), 2).tolist()))
-            all_on_masks = sum([(m.sum(dim=1) == num_layer).sum() for m in test_masks])
-            total_masks = sum([m.shape[0] for m in test_masks])
-            print("all-on ratio: {}".format(all_on_masks.item() / total_masks)) # what percent of the test set selecting all-on config
-            experiment.log_metric("test_bleu", test_gen_bleu)
-            experiment.log_metric("combined_test_bleu", combined_test_bleu)
-            experiment.log_metric("percent_ge", percent_g)
 
     def enable_train_LMP(self, model):
         for pname, pval in model.named_parameters():
