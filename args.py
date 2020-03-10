@@ -706,7 +706,7 @@ def add_data_args(parser):
         '--split',
         type=str,
         default='train',
-        choices=['train', 'valid', 'test', 'dev'],
+        choices=['train', 'valid', 'test', 'dev','valid-train', 'valid-val'],
         help='Location for the preprocessed data'
     )
     group.add_argument(

@@ -31,7 +31,7 @@ class TextDataset(Dataset):
         self.reserved_range = len(self.id2token)
 
         if config.itertrain_data != 'none':
-            self.itertrain_data = self.load_itertrain(config.itertrain_data, config.loss_func)
+            self.itertrain_data = self.load_itertrain(config.itertrain_data, config.loss_func, itertrain_val=config.itertrain_val,)
         else:
             self.itertrain_data = None
 
@@ -102,25 +102,25 @@ class TextDataset(Dataset):
 
         batch[field_name + '_lens'] = torch.LongTensor([len(sequence) for sequence in values])
 
-    def load_itertrain(self, itertrain_data, loss_func):
+    def load_itertrain(self, itertrain_data, loss_func, itertrain_val=False):
 
         with open(itertrain_data, 'rb') as f:
             data = pickle.load(f)
-        itertrain_data = {}
-
+        
         y1, y2 = [], []
-        for i in range(len(data['example_ids'])):
-            ei = data['example_ids'].index(i)
-            y1.append(data['y1'][ei])
-            y2.append(data['y2'][ei])
+        valid_data_range = len(data['example_ids']) if not itertrain_val else 199
+        for i in range(valid_data_range):
+            ei = data['example_ids'].index(i) if not itertrain_val else data['example_ids'].index(i+1800)
+            if 'valid.iter.all' in itertrain_data:
+                y1.append(data['y1'][ei, :-1])
+                y2.append(data['y2'][ei, :-1])
+            else:
+                y1.append(data['y1'][ei])
+                y2.append(data['y2'][ei])
 
+        itertrain_data = {}
         itertrain_data['y1'] = torch.stack(y1).float()
         itertrain_data['y2'] = torch.stack(y2)
-
-        # if loss_func == "regr":
-        #     itertrain_data['y1'][itertrain_data['y1'] == 0] = -1
-        # else:
-        #     pass
 
         return itertrain_data
 

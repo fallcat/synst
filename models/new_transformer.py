@@ -370,6 +370,7 @@ class LayerMaskPredictor(nn.Module):
         
         # not skipping
         if self.lmp_type == "noskip":
+            print("noskip")
             return None, torch.ones(lmp_input.size(0), self.num_layers * 2, device=torch.device("cuda"))
 
         # use lmp
@@ -385,7 +386,7 @@ class LayerMaskPredictor(nn.Module):
                 return loss, None
 
             elif loss_func == "regr":
-                lmp_input = lmp_input.masked_fill_(lmp_input_mask[:, :, None], 0)
+                #lmp_input = lmp_input.masked_fill_(lmp_input_mask[:, :, None], 0)
                 # lmp_input = lmp_input.masked_fill_(~lmp_input_mask[:, :, None], 1)
                 layermask = self.proj1(torch.mean(lmp_input,1))
                 layermask = torch.sigmoid(layermask)
@@ -428,7 +429,7 @@ class LayerMaskPredictor(nn.Module):
                 return None, ret
 
             elif loss_func == "regr":
-                lmp_input = lmp_input.masked_fill_(lmp_input_mask[:, :, None], 0)
+                #lmp_input = lmp_input.masked_fill_(lmp_input_mask[:, :, None], 0)
                 # lmp_input = lmp_input.masked_fill_(~lmp_input_mask[:, :, None], 1)
                 layermask = self.proj1(torch.mean(lmp_input,1))
                 layermask = torch.sigmoid(layermask)

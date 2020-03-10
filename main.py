@@ -82,12 +82,23 @@ def main(argv=None):
         )
 
     if args.action_type == "iterative_train" and args.action_config.debug: # if debug oracle-sample based experiment, train on valid and test on test
+        args.config.data.split = 'valid-val'
+        args.config.data.max_examples = 0
+        args.config.data.batch_size = args.action_config.sample_batch_size
+        args.config.data.batch_method = "example"
+        args.config.data.itertrain_val = True
+        action.validation_dataloader = get_dataloader(
+            args.config.data, args.seed_fn, pin_memory,
+            args.num_devices, shuffle=False
+        )
+
         args.config.data.split = 'test'
         args.config.data.max_examples = 0
         args.config.data.batch_size = args.action_config.sample_batch_size
         args.config.data.batch_method = "example"
         args.config.data.itertrain_data = "none"
-        action.validation_dataloader = get_dataloader(
+        args.config.data.itertrain_val = False
+        action.test_dataloader = get_dataloader(
             args.config.data, args.seed_fn, pin_memory,
             args.num_devices, shuffle=False
         )
