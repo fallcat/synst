@@ -542,6 +542,20 @@ def add_new_transformer_args(parser):
         help="threshold smaller than which will switch to all-on config"
     )
 
+    group.add_argument(
+        '--shuffle-lmp-configs',
+        default=False,
+        action="store_true",
+        help="whether to shuffle the configs, used for optimizing the selected config range"
+    )
+
+    group.add_argument(
+        "--num-configs",
+        default=4032,
+        type=int,
+        help="number of configs to optimize"
+    )
+
     return group
 
 
@@ -700,6 +714,21 @@ def add_data_args(parser):
         type=int,
         default=4,
         help='Bin size for word align stats'
+    )
+
+    group.add_argument(
+        '--loss_func',
+        type=str,
+        default="binary_cls",
+        help="objective for optimizing layermask-predictor"
+    )
+
+    group.add_argument(
+        '--itertrain-data',
+        type=str,
+        default="none",
+        #default="/mnt/nfs/work1/miyyer/simengsun/data/small_enro/valid.iter.50",
+        help="location for the itertrain data"
     )
 
     return group
@@ -1081,13 +1110,6 @@ def add_iterative_train_args(parser):
         default=False,
         action='store_true',
         help="whether to optimize the same set of configs every validation batch"
-    )
-
-    group.add_argument(
-        '--loss_func',
-        type=str,
-        default="binary_cls",
-        help="objective for optimizing layermask-predictor"
     )
 
     group.add_argument(

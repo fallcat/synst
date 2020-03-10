@@ -46,13 +46,21 @@ def main(argv=None):
 
     profile_cuda_memory = args.config.cuda.profile_cuda_memory
     pin_memory = 'cuda' in args.device.type and not profile_cuda_memory
-    dataloader = get_dataloader(
-        args.config.data, args.seed_fn, pin_memory,
-        args.num_devices, shuffle=args.shuffle
-    )
-    print(dataloader.dataset.stats)
+
+    if args.action_type == "iterative_train" and args.action_config.debug:
+        dataloader = get_dataloader(
+            args.config.data, args.seed_fn, pin_memory,
+            args.num_devices, shuffle=False
+        )
+    else:
+        dataloader = get_dataloader(
+            args.config.data, args.seed_fn, pin_memory,
+            args.num_devices, shuffle=args.shuffle
+        )
+        print(dataloader.dataset.stats)
 
     args.config.model.action_type = args.action_type
+    args.action_config.loss_func = args.config.data.loss_func
     model = args.model(args.config.model, dataloader.dataset)
     action = args.action(args.action_config, model, dataloader, args.device)
     if args.action_type == 'train' and args.action_config.early_stopping:
@@ -63,7 +71,6 @@ def main(argv=None):
             args.num_devices, shuffle=args.shuffle
         )
     # pdb.set_trace()
-
     if args.action_type == "iterative_train" and not args.action_config.debug:
         args.config.data.split = 'valid'
         args.config.data.max_examples = 0
@@ -79,9 +86,10 @@ def main(argv=None):
         args.config.data.max_examples = 0
         args.config.data.batch_size = args.action_config.sample_batch_size
         args.config.data.batch_method = "example"
+        args.config.data.itertrain_data = "none"
         action.validation_dataloader = get_dataloader(
             args.config.data, args.seed_fn, pin_memory,
-            args.num_devices, shuffle=True
+            args.num_devices, shuffle=False
         )
 
 

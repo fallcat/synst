@@ -3,13 +3,15 @@ Base for text datasets.
 '''
 import collections
 from itertools import chain
-import pdb
+
 import torch
 from torch import nn
 from torch.utils.data import Dataset
-
+import pdb
 import metrics
+import pickle
 
+import torch.nn.functional as F
 
 PAD = '<PAD>'
 START_OF_SUMMARY = '<SOS>'
@@ -24,10 +26,15 @@ class TextDataset(Dataset):
         self.skipped = 0
         self.token2id = {}
         self.id2token = []
-        self.word_align_stats = []
         self.split = split
         self.config = config
         self.reserved_range = len(self.id2token)
+
+        if config.itertrain_data != 'none':
+            self.itertrain_data = self.load_itertrain(config.itertrain_data, config.loss_func)
+        else:
+            self.itertrain_data = None
+
 
     def __len__(self):
         ''' Get the length of the dataset '''
@@ -90,13 +97,36 @@ class TextDataset(Dataset):
         ''' Collate a specific field '''
         batch[field_name + 's'] = nn.utils.rnn.pad_sequence(
             values, batch_first=True, padding_value=self.padding_idx)
+        # padding
+        batch[field_name + 's'] = F.pad(batch[field_name + 's'], (0, 1, 0, 0), value=self.padding_idx)
+
         batch[field_name + '_lens'] = torch.LongTensor([len(sequence) for sequence in values])
+
+    def load_itertrain(self, itertrain_data, loss_func):
+
+        with open(itertrain_data, 'rb') as f:
+            data = pickle.load(f)
+        itertrain_data = {}
+
+        y1, y2 = [], []
+        for i in range(len(data['example_ids'])):
+            ei = data['example_ids'].index(i)
+            y1.append(data['y1'][ei])
+            y2.append(data['y2'][ei])
+
+        itertrain_data['y1'] = torch.stack(y1).float()
+        itertrain_data['y2'] = torch.stack(y2)
+
+        # if loss_func == "regr":
+        #     itertrain_data['y1'][itertrain_data['y1'] == 0] = -1
+        # else:
+        #     pass
+
+        return itertrain_data
 
     def collate(self, data, sort=False):
         ''' Collate the data into a batch '''
         if not data:
-            return []
-        if data == [()]:
             return []
 
         def make_batch(ids, examples):
@@ -105,6 +135,10 @@ class TextDataset(Dataset):
             batch = {'example_ids': ids}
             for key, values in examples.items():
                 self.collate_field(batch, key, values)
+
+            if self.itertrain_data is not None:
+                batch['y1'] = self.itertrain_data['y1'][batch['example_ids'], :]
+                batch['y2'] = self.itertrain_data['y2'][batch['example_ids'], :]
 
             return batch
 
@@ -118,25 +152,16 @@ class TextDataset(Dataset):
 
         def sorter(examples, key='input'):
             ''' Sort the list of examples based on the length of the sequence for the given key '''
-            #print(examples)
-            #print(examples[0])
-            #print(examples[1])
-            #pdb.set_trace()
-            ret = sorted(examples, key=lambda x: len(x[1][key]), reverse=True)
-            return ret
+            return sorted(examples, key=lambda x: len(x[1][key]), reverse=True)
 
         if any(
                 isinstance(d, tuple) and len(d) and
                 isinstance(d[0], collections.Sequence)
                 for d in data
         ):
-            try:
-                if sort:
-                    # Sort within each chunk
-                    data = [sorter(d) for d in data]
-            except:
-                print(data)
-                exit(-1)
+            if sort:
+                # Sort within each chunk
+                data = [sorter(d) for d in data]
 
             ids, examples = zip(*(flatten(d) for d in data))
             ids = chain.from_iterable(ids)
@@ -146,12 +171,8 @@ class TextDataset(Dataset):
             batch['chunk_sizes'] = [len(l) for l in data]
             return batch
         else:
-            try:
-                if sort:
-                    data = sorter(data)
-            except:
-                print(data)
-                exit(-1)
+            if sort:
+                data = sorter(data)
 
             return make_batch(*flatten(data))
 
@@ -184,6 +205,7 @@ class TextDataset(Dataset):
 
         self.load_vocab()
         self.load_text()
+
         return self
 
     @property
@@ -253,3 +275,4 @@ class TextDataset(Dataset):
         return ((self.max_input_length and len(datum['input']) > self.max_input_length) or
                 (self.max_target_length and len(datum['target']) > self.max_target_length) or
                 (self.config.max_examples and len(self) >= self.config.max_examples))
+
