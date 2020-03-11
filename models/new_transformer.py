@@ -44,10 +44,12 @@ class TransformerSublayer(nn.Module):
     def forward(self, inputs, gating_weight, *sublayer_args, **sublayer_kwargs): # pylint:disable=arguments-differ
         ''' The forward pass of the sublayer '''
         out_dropout = self.dropout(self.sublayer(*sublayer_args, **sublayer_kwargs))
-        # if out_dropout.shape[0] != gating_weight.shape[0]:
-        #     beam_size = out_dropout.shape[0] // gating_weight.shape[0]
-        #     gating_weight = gating_weight.expand(beam_size, gating_weight.shape[0]).transpose(1,0).contiguous().view(-1)
-        ret = self.norm(inputs + gating_weight.view(-1, 1, 1) * out_dropout)
+        # ret = self.norm(inputs + gating_weight.view(-1, 1, 1) * out_dropout)
+        ret = self.norm(inputs + gating_weight[:, None, None] * out_dropout)
+        skip = inputs * (1-gating_weight)[:, None, None]
+        ret = gating_weight[:, None, None] * ret + skip
+        if 0 in gating_weight:
+            pdb.set_trace()
         return ret
 
 class TransformerFFN(nn.Module):
@@ -287,6 +289,7 @@ class LayerMaskPredictor(nn.Module):
                        potential_threshold,
                        shuffle_configs,
                        num_configs,
+                       loss_func,
                        dropout_p=0.1):
         super(LayerMaskPredictor, self).__init__()
         self.num_layers = num_layers
@@ -324,10 +327,7 @@ class LayerMaskPredictor(nn.Module):
                 if lmp_type == "iterative_training":
                     self.proj1 = nn.Linear(embedding_size, 2 * num_layers)
                 elif lmp_type == "iterative_training_debug_oracle":
-                    if num_configs != 4032:
-                        self.proj1 = nn.Linear(embedding_size, len(all_combs)-1)
-                    else:
-                        self.proj1 = nn.Linear(embedding_size, len(all_combs))
+                    self.proj1 = nn.Linear(embedding_size, len(all_combs)-1)
                 else:
                     self.prosj1 = nn.Linear(embedding_size, hidden_size)
                     self.proj2 = nn.Linear(hidden_size, 2 * num_layers)
@@ -346,6 +346,10 @@ class LayerMaskPredictor(nn.Module):
             self.reset_parameters()
         else:
             self.sample_distribution = torch.ones(2 * num_layers, device=torch.device("cuda")) * 0.5 # init 0.5
+
+        if self.lmp_type == "iterative_training_debug_oracle":
+            self.loss_func = loss_func
+        self.eval = False
         
     def reset_parameters(self):
         ''' Reset parameters using xavier initialiation '''
@@ -361,7 +365,7 @@ class LayerMaskPredictor(nn.Module):
             nn.init.xavier_uniform_(self.proj_noise.weight, gain)
             nn.init.constant_(self.proj_noise.bias, 0.)
 
-    def forward(self, lmp_input, lmp_input_mask, eval=False, aggregate_stats=None, loss_func='binary_cls'):
+    def forward(self, lmp_input, lmp_input_mask, aggregate_stats=None):
         '''
             lmp_input: [bs, L, embedding_size]
             layermask: [bs, 2*num_layers]
@@ -374,29 +378,33 @@ class LayerMaskPredictor(nn.Module):
             return None, torch.ones(lmp_input.size(0), self.num_layers * 2, device=torch.device("cuda"))
 
         # use lmp
-        if not eval:
-            if loss_func == 'binary_cls':
+        if not self.eval:
+            if self.loss_func == 'binary_cls':
 
                 lmp_input = lmp_input.masked_fill_(lmp_input_mask[:, :, None], 0)
                 layermask = self.proj1(torch.mean(lmp_input,1))
                 layermask = torch.sigmoid(layermask)
                 loss = self.bce_loss(layermask, aggregate_stats)
-                loss = loss.mean()
+                loss = loss.mean(dim=1).mean()
 
                 return loss, None
 
-            elif loss_func == "regr":
-                #lmp_input = lmp_input.masked_fill_(lmp_input_mask[:, :, None], 0)
+            elif self.loss_func == "regr":
+                # lmp_input = lmp_input.masked_fill_(lmp_input_mask[:, :, None], 0)
                 # lmp_input = lmp_input.masked_fill_(~lmp_input_mask[:, :, None], 1)
                 layermask = self.proj1(torch.mean(lmp_input,1))
                 layermask = torch.sigmoid(layermask)
                 loss = ((layermask - aggregate_stats)**2).mean(dim=1).mean()
                 return loss, None
 
-            elif loss_func == "scaled_regr":
-                pass
+            elif self.loss_func == "scaled_regr":
+                lmp_input = lmp_input.masked_fill_(lmp_input_mask[:, :, None], 0)
+                layermask = self.proj1(torch.mean(lmp_input,1))
+                layermask = torch.sigmoid(layermask)
+                loss = ((layermask - aggregate_stats)**2).mean(dim=1).mean()
+                return loss, None
 
-            elif loss_func == "rank":
+            elif self.loss_func == "rank":
                 pass
 
             else:
@@ -406,33 +414,19 @@ class LayerMaskPredictor(nn.Module):
         else:
             bs, L, emb = lmp_input.shape
 
-            assert aggregate_stats is None
+            # assert aggregate_stats is None
 
-            if loss_func == 'binary_cls':
+            if self.loss_func == 'binary_cls':
                 
                 lmp_input = lmp_input.masked_fill_(lmp_input_mask[:, :, None], 0)
                 layermask = self.proj1(torch.mean(lmp_input,1))
                 layermask = torch.sigmoid(layermask)
-                ret = torch.zeros(layermask.shape[0], self.num_layers * 2, device=torch.device("cuda"))
-                max_val, _ = layermask.max(dim=1)
-                # filter configs within range (max-potential_threshold, max)
-                if len(self.all_configs_sum_layer) != 4032:
-                    filtered = (layermask + self.potential_threshold >= max_val[:, None]).float() * self.all_configs_sum_layer[:-1]
-                else:
-                    filtered = (layermask + self.potential_threshold >= max_val[:, None]).float() * self.all_configs_sum_layer
-                filtered[filtered == 0] = float("inf")
-                _, ci = torch.min(filtered, dim=1)
-                ci_val = layermask[range(bs), ci]
-                ci[ci_val < self.allon_threshold] = self.ci_allon
-                ret = self.all_configs[ci]
 
-                return None, ret
+                if aggregate_stats is not None:
+                    loss = self.bce_loss(layermask, aggregate_stats)
+                    loss = loss.mean(dim=1).mean()
+                    return loss, None
 
-            elif loss_func == "regr":
-                #lmp_input = lmp_input.masked_fill_(lmp_input_mask[:, :, None], 0)
-                # lmp_input = lmp_input.masked_fill_(~lmp_input_mask[:, :, None], 1)
-                layermask = self.proj1(torch.mean(lmp_input,1))
-                layermask = torch.sigmoid(layermask)
                 ret = torch.zeros(layermask.shape[0], self.num_layers * 2, device=torch.device("cuda"))
                 max_val, _ = layermask.max(dim=1)
                 # filter configs within range (max-potential_threshold, max)
@@ -441,13 +435,70 @@ class LayerMaskPredictor(nn.Module):
                 _, ci = torch.min(filtered, dim=1)
                 ci_val = layermask[range(bs), ci]
                 ci[ci_val < self.allon_threshold] = self.ci_allon
+                # ci[ci_val < max_val.mean().item() - 2*self.potential_threshold] = self.ci_allon
                 ret = self.all_configs[ci]
+
                 return None, ret
 
-            elif loss_func == "scaled_regr":
-                pass
+            elif self.loss_func == "regr":
 
-            elif loss_func == "rank":
+                # lmp_input = lmp_input.masked_fill_(lmp_input_mask[:, :, None], 0)
+                # lmp_input = lmp_input.masked_fill_(~lmp_input_mask[:, :, None], 1)
+                layermask = self.proj1(torch.mean(lmp_input,1))
+                layermask = torch.sigmoid(layermask)
+
+                if aggregate_stats is not None:
+                    loss = ((layermask - aggregate_stats)**2).mean(dim=1).mean()
+                    return loss, None
+
+                ret = torch.zeros(layermask.shape[0], self.num_layers * 2, device=torch.device("cuda"))
+                max_val, _ = layermask.max(dim=1)
+                # filter configs within range (max-potential_threshold, max)
+                filtered = (layermask + self.potential_threshold >= max_val[:, None]).float() * self.all_configs_sum_layer[:-1]
+                filtered[filtered == 0] = float("inf")
+                _, ci = torch.min(filtered, dim=1)
+                ci_val = layermask[range(bs), ci]
+
+                print("{:.2f} {:.2f} {:.2f} {:.2f}".format(ci_val.mean().item(), ci_val.max().item(), ci_val.min().item(), max_val.mean().item() - 2*self.potential_threshold))
+                ci[ci_val < self.allon_threshold] = self.ci_allon
+                
+                # if aggregate_stats is not None:
+                #     print(max_val.mean().item() - 2*self.potential_threshold)
+                #     z = layermask * aggregate_stats
+                #     zz =  layermask * (1-aggregate_stats)
+                #     for i in range(z.shape[0]):
+                #         top_k_good, _ = torch.topk(z[i], 5)
+                #         top_k_bad, _ = torch.topk(zz[i], 5)
+                #         print('{} {}'.format(top_k_good, top_k_bad))
+                #     pdb.set_trace()
+                #     return 1, None
+
+                # ci[ci_val < max_val.mean().item() - 2*self.potential_threshold] = self.ci_allon
+                ret = self.all_configs[ci]
+
+                return None, ret
+
+            elif self.loss_func == "scaled_regr":
+                lmp_input = lmp_input.masked_fill_(lmp_input_mask[:, :, None], 0)
+                layermask = self.proj1(torch.mean(lmp_input,1))
+                layermask = torch.sigmoid(layermask)
+                if aggregate_stats is not None:
+                    loss = ((layermask - aggregate_stats)**2).mean(dim=1).mean()
+                    return loss, None
+                ret = torch.zeros(layermask.shape[0], self.num_layers * 2, device=torch.device("cuda"))
+                max_val, _ = layermask.max(dim=1)
+                # filter configs within range (max-potential_threshold, max)
+                filtered = (layermask + self.potential_threshold >= max_val[:, None]).float() * self.all_configs_sum_layer[:-1]
+                filtered[filtered == 0] = float("inf")
+                _, ci = torch.min(filtered, dim=1)
+                ci_val = layermask[range(bs), ci]
+                print("{:.2f} {:.2f} {:.2f} {:.2f}".format(ci_val.mean().item(), ci_val.max().item(), ci_val.min().item(), max_val.mean().item() - 2*self.potential_threshold))
+                ci[ci_val < self.allon_threshold] = self.ci_allon
+                ret = self.all_configs[ci]
+
+                return None, ret
+
+            elif self.loss_func == "rank":
                 pass
 
             else:
@@ -514,7 +565,8 @@ class NewTransformer(nn.Module):
                                                        config.allon_threshold,
                                                        config.potential_threshold,
                                                        config.shuffle_lmp_configs,
-                                                       config.num_configs)
+                                                       config.num_configs,
+                                                       config.loss_func)
 
 
     @classmethod
@@ -687,7 +739,7 @@ class NewTransformer(nn.Module):
         }
 
         if raw_layermask is None:
-            layer_mask, lmp_raw_layermask = self.layer_mask_predictor(encoded['state'], encoded['mask'], eval=True)
+            layer_mask, lmp_raw_layermask = self.layer_mask_predictor(encoded['state'], encoded['mask'])
             raw_layermask = lmp_raw_layermask
         else:
             layer_mask = None
