@@ -441,7 +441,6 @@ class IterativeTrainer(object):
             all_on_masks = sum([(m.sum(dim=1) == num_layer).sum() for m in test_batch_masks])
             print("all-on ratio: {}".format(all_on_masks.item() / (s_bsize * len(test_batch_masks)))) # what percent of the test set selecting all-on config
             # TODO: add stats on average num layers chosen when choosing non-all-on config
-            pdb.set_trace()
             filter_allon = [m.sum(dim=1) != num_layer for m in test_batch_masks]
             non_allon_configs = [m*lm for m, lm in zip(filter_allon, test_batch_masks)]
             non_allon_configs = sum([m.sum(dim=1) for m in non_allon_configs])
@@ -509,21 +508,10 @@ class IterativeTrainer(object):
         model = self.modules['model']
         # set dropout to 0
         model.eval() # dropout to 0 and no_grad
-
-        model.set_LMP_type('iterative_training_debug_oracle')
-        sample_translator = model.translator(self.config).to(torch.device("cuda"))
-        for bi, batch in enumerate(iter(self.dataloader)):
-            # for bi, batch in enumerate(total_batches[:-2]):
-
-                res = sample_translator.translate(batch, raw_layermask=torch.tensor([[1., 0., 1., 1., 1., 1., 1., 1., 1., 0., 0., 1.]])) #model.layer_mask_predictor.all_configs[0:1])
-                print(' '.join(self.validation_dataset.decode(res[0]['targets'][0])))
-                print(' '.join(self.validation_dataset.decode(res[0]['gold_targets'][0])))
-                pdb.set_trace()
-
         num_layer = 2 * len(model.encoders)
         test_dataloader = self.test_dataloader
         test_batches = [a for ai, a in enumerate(iter(test_dataloader)) if ai < 2]
-        # test_batches = [a for ai, a in enumerate(iter(test_dataloader))]
+        #test_batches = [a for ai, a in enumerate(iter(test_dataloader))]
         model.set_LMP_type('noskip')
         noskip_translator = model.translator(self.config).to(torch.device("cuda"))
         test_gold, test_allon_gen, _ = self.get_translated(noskip_translator, test_batches)
@@ -549,11 +537,6 @@ class IterativeTrainer(object):
             for bi, batch in enumerate(iter(self.dataloader)):
             # for bi, batch in enumerate(total_batches[:-2]):
 
-                res = sample_translator.translate(batch, raw_layermask=model.layer_mask_predictor.all_configs[0:1])
-                print(' '.join(self.validation_dataset.decode(res[0]['targets'][0])))
-                print(' '.join(self.validation_dataset.decode(res[0]['gold_targets'][0])))
-                pdb.set_trace()
-
                 embedding = model.embed(batch['inputs'].cuda(), model.embedding).detach()
                 padding_masks = batch['inputs'].eq(model.padding_idx).cuda()
                 train_loss, _ = model.layer_mask_predictor(embedding, padding_masks, aggregate_stats=batch['y1'].cuda())
@@ -575,21 +558,12 @@ class IterativeTrainer(object):
                             val_loss += loss
                         print("epoch {} step {} train loss {} val loss {} ".format(epoch_i, bi, train_loss.item(), val_loss.item()/(vi+1)))
 
-                        # val_gold, val_gen, val_masks = self.get_translated(sample_translator, valid_batches)
-                        # gen_bleu = [sacrebleu.corpus_bleu([gen_i], [[gold_i]]).score for gen_i, gold_i in zip(val_gen, val_gold)]
-                        # allon_bleu = [sacrebleu.corpus_bleu([gen_i], [[gold_i]]).score for gen_i, gold_i in zip(val_allon, val_gold)]
-                        # this_percent = sum([int(a>=b) for a, b in zip(gen_bleu, allon_bleu)]) / len(gen_bleu)
-                        # all_on_masks = sum([(m.sum(dim=1) == num_layer).sum() for m in val_masks])
-                        # total_num = sum([m.shape[0] for m in val_masks])
-                        # selected_layers = sum([m.sum() for m in val_masks]) / total_num
-                        # print("epoch {} step {} train loss {} validation percent >= {} all-on ratio {} average layers {:.2f}".format(epoch_i, bi, train_loss.item(), this_percent, all_on_masks / float(total_num), selected_layers))
                     self.enable_train_LMP(model)
 
             # test on test set
             self.disable_train_LMP(model)
             with torch.no_grad():
-                
-
+                #pdb.set_trace()
                 _, test_gen, test_masks = self.get_translated(sample_translator, test_batches)
                 test_gen_bleu_by_sent = [sacrebleu.corpus_bleu([gen_i], [[gold_i]], tokenize='none').score for gen_i, gold_i in zip(test_gen, test_gold)]
                 test_gen_bleu = sacrebleu.corpus_bleu(test_gen, [test_gold], tokenize='none').score
@@ -605,9 +579,22 @@ class IterativeTrainer(object):
                 all_on_masks = sum([(m.sum(dim=1) == num_layer).sum() for m in test_masks])
                 total_masks = sum([m.shape[0] for m in test_masks])
                 print("all-on ratio: {}".format(all_on_masks.item() / float(total_masks))) # what percent of the test set selecting all-on config
-                # experiment.log_metric("test_bleu", test_gen_bleu)
-                # experiment.log_metric("combined_test_bleu", combined_test_bleu)
-                # experiment.log_metric("percent_ge", percent_g)
+                
+                filter_allon = [m.sum(dim=1) != num_layer for m in test_masks] #filter_allon[0].float()[:, None] * test_batch_masks[0]
+                non_allon_configs = [m.float()[:, None]*lm for m, lm in zip(filter_allon, test_masks)]
+                non_allon_config_layers = sum([m.sum() for m in non_allon_configs])
+                print("average #layer non-all-on config {}".format(non_allon_config_layers / (total_masks - all_on_masks.item())))
+
+                #TODO: non-allon configs, corpus bleu of generated and all-on config
+                filter_allon = torch.cat(filter_allon)
+                non_allon_gen = [test_gen[i]  for i in range(len(test_gen)) if filter_allon[i]]
+                non_allon_allon = [test_allon_gen[i] for i in range(len(test_allon_gen)) if filter_allon[i] ]
+                non_allon_gold = [test_gold[i] for i in range(len(test_gold)) if filter_allon[i] ]
+                non_allon_gen_bleu = sacrebleu.corpus_bleu(non_allon_gen, [non_allon_gold], tokenize='none').score
+                non_allon_allon_bleu = sacrebleu.corpus_bleu(non_allon_allon, [non_allon_gold], tokenize='none').score
+                print("non-allon config: bleu using layers selected by LMP {}".format(non_allon_gen_bleu))
+                print("non-allon config: bleu using layers selected by LMP {}".format(non_allon_allon_bleu))
+
             self.enable_train_LMP(model)
 
     def enable_train_LMP(self, model):

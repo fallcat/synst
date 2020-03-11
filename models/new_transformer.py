@@ -44,11 +44,11 @@ class TransformerSublayer(nn.Module):
     def forward(self, inputs, gating_weight, *sublayer_args, **sublayer_kwargs): # pylint:disable=arguments-differ
         ''' The forward pass of the sublayer '''
         out_dropout = self.dropout(self.sublayer(*sublayer_args, **sublayer_kwargs))
-        # ret = self.norm(inputs + gating_weight.view(-1, 1, 1) * out_dropout)
-        # ret = self.norm(inputs + gating_weight[:, None, None] * out_dropout)
-        # skip = inputs * (1-gating_weight)[:, None, None]
-        # ret = gating_weight[:, None, None] * ret + skip
-        ret = self.norm(inputs + out_dropout)
+        ret = self.norm(inputs + gating_weight.view(-1, 1, 1) * out_dropout)
+        ret = self.norm(inputs + gating_weight[:, None, None] * out_dropout)
+        skip = inputs * (1-gating_weight)[:, None, None]
+        ret = gating_weight[:, None, None] * ret + skip
+        # ret = self.norm(inputs + out_dropout)
         return ret
 
 class TransformerFFN(nn.Module):
@@ -310,6 +310,21 @@ class LayerMaskPredictor(nn.Module):
         for ci, c in enumerate(all_combs):
             for cii in c:
                 self.all_configs[ci, cii] += 1
+
+
+        """
+        To be deleted later, adding this because oracle result has label shift
+        e.g. [0., 0., 1., 1., 1., 1., 1., 1., 0., 0., 1., 1.] change to [1., 0., 1., 1., 1., 1., 1., 1., 1., 0., 0., 1.]
+        1. first layer always 1
+        2. decoder layer shift backward by 1
+        """
+        self.all_configs[:, 0] = 1
+        self.all_configs[:, self.num_layers:] = self.all_configs[:, self.num_layers-1:-1]
+        """
+        To be deleted
+        """
+
+
         self.ci_allon = all_combs.index(tuple(i for i in range(num_layer)))
         self.all_configs_sum_layer = self.all_configs.sum(dim=1) # len(all_combs) x 1
         print("all-on config ci: %i" % self.ci_allon)
@@ -373,7 +388,6 @@ class LayerMaskPredictor(nn.Module):
         
         # not skipping
         if self.lmp_type == "noskip":
-            print("noskip")
             return None, torch.ones(lmp_input.size(0), self.num_layers * 2, device=torch.device("cuda"))
 
         # use lmp
@@ -389,7 +403,8 @@ class LayerMaskPredictor(nn.Module):
                 return loss, None
 
             elif self.loss_func == "regr":
-                # lmp_input = lmp_input.masked_fill_(lmp_input_mask[:, :, None], 0)
+                # pdb.set_trace()
+                lmp_input = lmp_input.masked_fill_(lmp_input_mask[:, :, None], 0)
                 # lmp_input = lmp_input.masked_fill_(~lmp_input_mask[:, :, None], 1)
                 layermask = self.proj1(torch.mean(lmp_input,1))
                 layermask = torch.sigmoid(layermask)
@@ -425,7 +440,7 @@ class LayerMaskPredictor(nn.Module):
                     loss = self.bce_loss(layermask, aggregate_stats)
                     loss = loss.mean(dim=1).mean()
                     return loss, None
-
+                #pdb.set_trace()
                 ret = torch.zeros(layermask.shape[0], self.num_layers * 2, device=torch.device("cuda"))
                 max_val, _ = layermask.max(dim=1)
                 # filter configs within range (max-potential_threshold, max)
@@ -434,6 +449,7 @@ class LayerMaskPredictor(nn.Module):
                 _, ci = torch.min(filtered, dim=1)
                 ci_val = layermask[range(bs), ci]
                 ci[ci_val < self.allon_threshold] = self.ci_allon
+                print("{:.2f} {:.2f} {:.2f} {:.2f}".format(ci_val.mean().item(), ci_val.max().item(), ci_val.min().item(), max_val.mean().item() - 2*self.potential_threshold))
                 # ci[ci_val < max_val.mean().item() - 2*self.potential_threshold] = self.ci_allon
                 ret = self.all_configs[ci]
 
@@ -441,7 +457,7 @@ class LayerMaskPredictor(nn.Module):
 
             elif self.loss_func == "regr":
 
-                # lmp_input = lmp_input.masked_fill_(lmp_input_mask[:, :, None], 0)
+                lmp_input = lmp_input.masked_fill_(lmp_input_mask[:, :, None], 0)
                 # lmp_input = lmp_input.masked_fill_(~lmp_input_mask[:, :, None], 1)
                 layermask = self.proj1(torch.mean(lmp_input,1))
                 layermask = torch.sigmoid(layermask)
@@ -460,17 +476,6 @@ class LayerMaskPredictor(nn.Module):
 
                 print("{:.2f} {:.2f} {:.2f} {:.2f}".format(ci_val.mean().item(), ci_val.max().item(), ci_val.min().item(), max_val.mean().item() - 2*self.potential_threshold))
                 ci[ci_val < self.allon_threshold] = self.ci_allon
-                
-                # if aggregate_stats is not None:
-                #     print(max_val.mean().item() - 2*self.potential_threshold)
-                #     z = layermask * aggregate_stats
-                #     zz =  layermask * (1-aggregate_stats)
-                #     for i in range(z.shape[0]):
-                #         top_k_good, _ = torch.topk(z[i], 5)
-                #         top_k_bad, _ = torch.topk(zz[i], 5)
-                #         print('{} {}'.format(top_k_good, top_k_bad))
-                #     pdb.set_trace()
-                #     return 1, None
 
                 # ci[ci_val < max_val.mean().item() - 2*self.potential_threshold] = self.ci_allon
                 ret = self.all_configs[ci]
@@ -738,18 +743,19 @@ class NewTransformer(nn.Module):
         }
 
         print(self.layermask_type)
-        #pdb.set_trace()
+
         if raw_layermask is None:
             layer_mask, lmp_raw_layermask = self.layer_mask_predictor(encoded['state'], encoded['mask'])
             raw_layermask = lmp_raw_layermask
+            #pdb.set_trace()
         else:
             layer_mask = None
 
         for i, encoder in enumerate(self.encoders):
             if self.layermask_type != "random":
-                #if 0 in raw_layermask[:, i]:
-                #    print("skip layer %i" % i )
-                #    continue
+                # if 0 in raw_layermask[:, i]:
+                #     print("skip layer %i" % i )
+                #     continue
                 encoded = encoder(encoded, i, word_embedding, gating_weight=raw_layermask[:, i])
             else:
                 if raw_layermask[0][i]:
@@ -779,25 +785,23 @@ class NewTransformer(nn.Module):
             'input_lens': input_lens
         }
 
-        #if len(raw_layermask) != encoded['state'].shape[0]:
-        #    pdb.set_trace()
-        #pdb.set_trace()
+        if len(raw_layermask) != encoded['state'].shape[0]:
+            pdb.set_trace()
+
         for i, decoder in enumerate(decoders):
             if self.layermask_type != "random":
-                #if 0 in raw_layermask[:, len(decoders) + i]:
-                #    print("skip layer %i" % (len(decoders) + i) )
-                #    continue
+                # if 0 in raw_layermask[:, len(decoders) + i]:
+                #     print("skip layer %i" % (len(decoders) + i) )
+                #     continue
                 decoded = decoder(decoded, encoded, i, word_embedding, gating_weight=raw_layermask[:, len(decoders) + i])
             else:
-                #pdb.set_trace()
                 if raw_layermask[0][len(decoders)+i]:
                     decoded = decoder(decoded, encoded, i, word_embedding, gating_weight=1)
- 
+
         # compute projection to the vocabulary
         state = decoded['state']
         if cache is not None:
             state = state[:, -self.span:]
-        #pdb.set_trace()
         return {
             'cache': decoded.get('cache'),
             'logits': embedding(state, transpose=True).transpose(2, 1),  # transpose to B x C x ...
