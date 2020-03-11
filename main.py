@@ -60,7 +60,9 @@ def main(argv=None):
         print(dataloader.dataset.stats)
 
     args.config.model.action_type = args.action_type
-    args.action_config.loss_func = args.config.data.loss_func
+    args.config.model.loss_func = args.config.data.loss_func
+    args.action_config.disable_cache = True
+    print("loss func %s" % args.config.model.loss_func)
     model = args.model(args.config.model, dataloader.dataset)
     action = args.action(args.action_config, model, dataloader, args.device)
     if args.action_type == 'train' and args.action_config.early_stopping:

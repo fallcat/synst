@@ -10,7 +10,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import ticker
 from collections import OrderedDict
-import pdb
+
 import torch
 from torch import nn
 from torch.nn import functional as F
@@ -71,7 +71,10 @@ def restore(path, modules, num_checkpoints=1, map_location=None, strict=True):
 
     for name, obj in modules.items():
         if isinstance(obj, nn.Module):
-            obj.load_state_dict(state[name], strict=False)
+            if name not in model_state:
+                obj.load_state_dict(state[name], strict=False)
+            else:
+                obj.load_state_dict(state[name], strict=strict)
         else:
             obj.load_state_dict(state[name])
 
@@ -286,7 +289,7 @@ class Translator(object):
         ''' Get the padding index '''
         return self.dataset.padding_idx
 
-    def translate(self, batch, raw_layermask=None):
+    def translate(self, batch, raw_layermask=None, loss_func="binary_cls"):
         ''' Generate with the given batch '''
         with torch.no_grad():
             if self.config.length_basis:

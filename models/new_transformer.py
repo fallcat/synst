@@ -48,8 +48,8 @@ class TransformerSublayer(nn.Module):
         ret = self.norm(inputs + gating_weight[:, None, None] * out_dropout)
         skip = inputs * (1-gating_weight)[:, None, None]
         ret = gating_weight[:, None, None] * ret + skip
-        if 0 in gating_weight:
-            pdb.set_trace()
+        #if 0 in gating_weight:
+        #    pdb.set_trace()
         return ret
 
 class TransformerFFN(nn.Module):
@@ -743,9 +743,13 @@ class NewTransformer(nn.Module):
             raw_layermask = lmp_raw_layermask
         else:
             layer_mask = None
+        #print(raw_layermask)
 
         for i, encoder in enumerate(self.encoders):
             if self.layermask_type != "random":
+                #if 0 in raw_layermask[:, i]:
+                #    print("continue")
+                #    continue
                 encoded = encoder(encoded, i, word_embedding, gating_weight=raw_layermask[:, i])
             else:
                 if raw_layermask[i]:
@@ -780,6 +784,9 @@ class NewTransformer(nn.Module):
 
         for i, decoder in enumerate(decoders):
             if self.layermask_type != "random":
+                #if 0 in raw_layermask[:, len(decoders) + i]:
+                #    print("continue")
+                #    continue
                 decoded = decoder(decoded, encoded, i, word_embedding, gating_weight=raw_layermask[:, len(decoders) + i])
             else:
                 if raw_layermask[len(decoders)+i]:
