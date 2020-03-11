@@ -509,6 +509,17 @@ class IterativeTrainer(object):
         model = self.modules['model']
         # set dropout to 0
         model.eval() # dropout to 0 and no_grad
+
+        model.set_LMP_type('iterative_training_debug_oracle')
+        sample_translator = model.translator(self.config).to(torch.device("cuda"))
+        for bi, batch in enumerate(iter(self.dataloader)):
+            # for bi, batch in enumerate(total_batches[:-2]):
+
+                res = sample_translator.translate(batch, raw_layermask=torch.tensor([[0., 0., 1., 1., 1., 1., 1., 1., 0., 0., 1., 1.]])) #model.layer_mask_predictor.all_configs[0:1])
+                print(' '.join(self.validation_dataset.decode(res[0]['targets'][0])))
+                print(' '.join(self.validation_dataset.decode(res[0]['gold_targets'][0])))
+                pdb.set_trace()
+
         num_layer = 2 * len(model.encoders)
         test_dataloader = self.test_dataloader
         test_batches = [a for ai, a in enumerate(iter(test_dataloader)) if ai < 2]

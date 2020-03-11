@@ -45,11 +45,10 @@ class TransformerSublayer(nn.Module):
         ''' The forward pass of the sublayer '''
         out_dropout = self.dropout(self.sublayer(*sublayer_args, **sublayer_kwargs))
         # ret = self.norm(inputs + gating_weight.view(-1, 1, 1) * out_dropout)
-        ret = self.norm(inputs + gating_weight[:, None, None] * out_dropout)
-        skip = inputs * (1-gating_weight)[:, None, None]
-        ret = gating_weight[:, None, None] * ret + skip
-        #if 0 in gating_weight:
-        #    pdb.set_trace()
+        # ret = self.norm(inputs + gating_weight[:, None, None] * out_dropout)
+        # skip = inputs * (1-gating_weight)[:, None, None]
+        # ret = gating_weight[:, None, None] * ret + skip
+        ret = self.norm(inputs + out_dropout)
         return ret
 
 class TransformerFFN(nn.Module):
@@ -329,7 +328,7 @@ class LayerMaskPredictor(nn.Module):
                 elif lmp_type == "iterative_training_debug_oracle":
                     self.proj1 = nn.Linear(embedding_size, len(all_combs)-1)
                 else:
-                    self.prosj1 = nn.Linear(embedding_size, hidden_size)
+                    self.proj1 = nn.Linear(embedding_size, hidden_size)
                     self.proj2 = nn.Linear(hidden_size, 2 * num_layers)
             else:
                 self.proj1 = nn.Linear(embedding_size, 2 * num_layers)
@@ -738,21 +737,22 @@ class NewTransformer(nn.Module):
             'mask': inputs.eq(self.padding_idx)
         }
 
+        print(self.layermask_type)
+
         if raw_layermask is None:
             layer_mask, lmp_raw_layermask = self.layer_mask_predictor(encoded['state'], encoded['mask'])
             raw_layermask = lmp_raw_layermask
         else:
             layer_mask = None
-        #print(raw_layermask)
 
         for i, encoder in enumerate(self.encoders):
             if self.layermask_type != "random":
-                #if 0 in raw_layermask[:, i]:
-                #    print("continue")
-                #    continue
+                if 0 in raw_layermask[:, i]:
+                    print("skip layer %i" % i )
+                    continue
                 encoded = encoder(encoded, i, word_embedding, gating_weight=raw_layermask[:, i])
             else:
-                if raw_layermask[i]:
+                if raw_layermask[0][i]:
                     encoded = encoder(encoded, i, word_embedding, gating_weight=1)
                 
         return encoded, layer_mask, raw_layermask
@@ -779,17 +779,18 @@ class NewTransformer(nn.Module):
             'input_lens': input_lens
         }
 
-        if len(raw_layermask) != encoded['state'].shape[0]:
-            pdb.set_trace()
-
+        #if len(raw_layermask) != encoded['state'].shape[0]:
+        #    pdb.set_trace()
+        pdb.set_trace()
         for i, decoder in enumerate(decoders):
             if self.layermask_type != "random":
-                #if 0 in raw_layermask[:, len(decoders) + i]:
-                #    print("continue")
-                #    continue
+                if 0 in raw_layermask[:, len(decoders) + i]:
+                    print("skip layer %i" % (len(decoders) + i) )
+                    continue
                 decoded = decoder(decoded, encoded, i, word_embedding, gating_weight=raw_layermask[:, len(decoders) + i])
             else:
-                if raw_layermask[len(decoders)+i]:
+                #pdb.set_trace()
+                if raw_layermask[0][len(decoders)+i]:
                     decoded = decoder(decoded, encoded, i, word_embedding, gating_weight=1)
 
         # compute projection to the vocabulary
@@ -808,10 +809,11 @@ class NewTransformer(nn.Module):
 
 
     def set_LMP_type(self, lmp_type):
-        if lmp_type not in ["noskip", 'iterative_training', 'iterative_training_debug_oracle']:
+        if lmp_type not in ["random", "noskip", 'iterative_training', 'iterative_training_debug_oracle']:
             print("cannot set to this type after initiliazation!")
             exit(-1)
         self.layer_mask_predictor.lmp_type = lmp_type
+        self.layermask_type = lmp_type
 
     def set_LMP_config_range(self, start, end):
         
