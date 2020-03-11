@@ -515,7 +515,7 @@ class IterativeTrainer(object):
         for bi, batch in enumerate(iter(self.dataloader)):
             # for bi, batch in enumerate(total_batches[:-2]):
 
-                res = sample_translator.translate(batch, raw_layermask=torch.tensor([[0., 0., 1., 1., 1., 1., 1., 1., 0., 0., 1., 1.]])) #model.layer_mask_predictor.all_configs[0:1])
+                res = sample_translator.translate(batch, raw_layermask=torch.tensor([[1., 0., 1., 1., 1., 1., 1., 1., 1., 0., 0., 1.]])) #model.layer_mask_predictor.all_configs[0:1])
                 print(' '.join(self.validation_dataset.decode(res[0]['targets'][0])))
                 print(' '.join(self.validation_dataset.decode(res[0]['gold_targets'][0])))
                 pdb.set_trace()

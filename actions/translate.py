@@ -99,7 +99,7 @@ class Translator(object):
         # num bpe tokens
         num_src_bpe_tokens = batch['input_lens']
         target_text = ' '.join(self.dataset.decode(batch['targets'][0].numpy().tolist(), trim=not verbose))
-        combination = torch.tensor([[0., 0., 1., 1., 1., 1., 1., 1., 0., 0., 1., 1.]])
+        combination = torch.tensor([[1., 0., 1., 1., 1., 1., 1., 1., 1., 0., 0., 1.]])
         sequences, _ = self.translator.translate(batch, raw_layermask=combination)
         decoded_text = ' '.join(self.dataset.decode(sequences['targets'][0], trim=not verbose))
         print(decoded_text)

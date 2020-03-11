@@ -738,7 +738,7 @@ class NewTransformer(nn.Module):
         }
 
         print(self.layermask_type)
-
+        #pdb.set_trace()
         if raw_layermask is None:
             layer_mask, lmp_raw_layermask = self.layer_mask_predictor(encoded['state'], encoded['mask'])
             raw_layermask = lmp_raw_layermask
@@ -747,9 +747,9 @@ class NewTransformer(nn.Module):
 
         for i, encoder in enumerate(self.encoders):
             if self.layermask_type != "random":
-                if 0 in raw_layermask[:, i]:
-                    print("skip layer %i" % i )
-                    continue
+                #if 0 in raw_layermask[:, i]:
+                #    print("skip layer %i" % i )
+                #    continue
                 encoded = encoder(encoded, i, word_embedding, gating_weight=raw_layermask[:, i])
             else:
                 if raw_layermask[0][i]:
@@ -781,23 +781,23 @@ class NewTransformer(nn.Module):
 
         #if len(raw_layermask) != encoded['state'].shape[0]:
         #    pdb.set_trace()
-        pdb.set_trace()
+        #pdb.set_trace()
         for i, decoder in enumerate(decoders):
             if self.layermask_type != "random":
-                if 0 in raw_layermask[:, len(decoders) + i]:
-                    print("skip layer %i" % (len(decoders) + i) )
-                    continue
+                #if 0 in raw_layermask[:, len(decoders) + i]:
+                #    print("skip layer %i" % (len(decoders) + i) )
+                #    continue
                 decoded = decoder(decoded, encoded, i, word_embedding, gating_weight=raw_layermask[:, len(decoders) + i])
             else:
                 #pdb.set_trace()
                 if raw_layermask[0][len(decoders)+i]:
                     decoded = decoder(decoded, encoded, i, word_embedding, gating_weight=1)
-
+ 
         # compute projection to the vocabulary
         state = decoded['state']
         if cache is not None:
             state = state[:, -self.span:]
-
+        #pdb.set_trace()
         return {
             'cache': decoded.get('cache'),
             'logits': embedding(state, transpose=True).transpose(2, 1),  # transpose to B x C x ...
