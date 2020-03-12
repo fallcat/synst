@@ -34,6 +34,8 @@ from itertools import combinations
 import random
 import pdb
 import pickle
+import jsonlines
+import json
 
 
 class IterativeTrainer(object):
@@ -127,17 +129,24 @@ class IterativeTrainer(object):
         # Initialize the metrics
         metrics_path = os.path.join(self.config.checkpoint_directory, 'train_metrics.pt')
         self.metric_store = metrics.MetricStore(metrics_path)
-        self.metric_store.add(metrics.Metric('oom', metrics.format_int, 't'))
-        self.metric_store.add(metrics.Metric('nll', metrics.format_float, max_history=1000))
-        self.metric_store.add(metrics.Metric('lr', metrics.format_scientific, 'g', max_history=1))
-        self.metric_store.add(metrics.Metric('num_tok', metrics.format_int, 'a', max_history=1000))
-        self.metric_store.add(metrics.Metric('reward', metrics.format_float, max_history=1000))
-        self.metric_store.add(metrics.Metric('layermask', metrics.format_float, 'g', max_history=1))
-        self.metric_store.add(metrics.Metric('test_bleu', metrics.format_float, 'g', max_history=1000))
-        self.metric_store.add(metrics.Metric('combined_test_bleu', metrics.format_float, 'g', max_history=1000))
-        self.metric_store.add(metrics.Metric('percent_ge', metrics.format_float, 'g', max_history=1000))
+        # self.metric_store.add(metrics.Metric('oom', metrics.format_int, 't'))
+        # self.metric_store.add(metrics.Metric('nll', metrics.format_float, max_history=1000))
+        # self.metric_store.add(metrics.Metric('lr', metrics.format_scientific, 'g', max_history=1))
+        # self.metric_store.add(metrics.Metric('num_tok', metrics.format_int, 'a', max_history=1000))
+        # self.metric_store.add(metrics.Metric('reward', metrics.format_float, max_history=1000))
+        # self.metric_store.add(metrics.Metric('layermask', metrics.format_float, 'g', max_history=1))
+        # self.metric_store.add(metrics.Metric('test_bleu', metrics.format_float, 'g', max_history=1000))
+        # self.metric_store.add(metrics.Metric('combined_test_bleu', metrics.format_float, 'g', max_history=1000))
+        # self.metric_store.add(metrics.Metric('percent_ge', metrics.format_float, 'g', max_history=1000))
         # self.metric_store.add(metrics.Metric('time_per_batch', metrics.format_float, 'g', max_history=100000))
         # self.metric_store.add(metrics.Metric('time_total', metrics.format_float, 'g', max_history=1))
+        self.metric_store.add(metrics.Metric('train_loss', metrics.format_float, max_history=1000))
+        self.metric_store.add(metrics.Metric('val_loss', metrics.format_float, max_history=1000))
+        self.metric_store.add(metrics.Metric('percent_ge', metrics.format_float, max_history=1))
+        self.metric_store.add(metrics.Metric('test_bleu', metrics.format_float, max_history=1))
+        self.metric_store.add(metrics.Metric('num_layer', metrics.format_float, max_history=1))
+
+
 
         if self.config.early_stopping:
             self.metric_store.add(metrics.Metric('vnll', metrics.format_float, 'g'))
@@ -152,7 +161,7 @@ class IterativeTrainer(object):
         self.lmp_lr_scheduler = LambdaLR(self.lmp_optimizer, LinearLRSchedule(
                                 self.config.base_lr,
                                 1e-4,
-                                self.config.max_train_lmp_epochs * 36))
+                                self.config.max_train_lmp_epochs * 1999 / config.batch_size))
 
 
     @property
@@ -162,12 +171,14 @@ class IterativeTrainer(object):
 
     def train_epoch(self, epoch, experiment, verbose=0):
         ''' Run one training epoch '''
-        oom = self.metric_store['oom']
-        learning_rate = self.metric_store['lr']
-        num_tokens = self.metric_store['num_tok']
-        neg_log_likelihood = self.metric_store['nll']
-        rl_reward = self.metric_store['reward']
-        log_layermask = self.metric_store['layermask']
+        # oom = self.metric_store['oom']
+        # learning_rate = self.metric_store['lr']
+        # num_tokens = self.metric_store['num_tok']
+        # neg_log_likelihood = self.metric_store['nll']
+        # rl_reward = self.metric_store['reward']
+        # log_layermask = self.metric_store['layermask']
+
+
 
         def try_optimize(i, last=False):
             # optimize if:
@@ -441,6 +452,7 @@ class IterativeTrainer(object):
             all_on_masks = sum([(m.sum(dim=1) == num_layer).sum() for m in test_batch_masks])
             print("all-on ratio: {}".format(all_on_masks.item() / (s_bsize * len(test_batch_masks)))) # what percent of the test set selecting all-on config
             # TODO: add stats on average num layers chosen when choosing non-all-on config
+            #pdb.set_trace()
             filter_allon = [m.sum(dim=1) != num_layer for m in test_batch_masks]
             non_allon_configs = [m*lm for m, lm in zip(filter_allon, test_batch_masks)]
             non_allon_configs = sum([m.sum(dim=1) for m in non_allon_configs])
@@ -459,36 +471,6 @@ class IterativeTrainer(object):
         with open(os.path.join(self.config.checkpoint_directory, 'lmp_combined_translated.txt'), 'w') as f:
             for line in combined_test_gen:
                 f.write(line + '\n')
-
-    def load_lmp_data(self, loss_func):
-        """
-            if split is train, return both train and valid dataloader
-            if split is test, return synst-test iterator
-        """
-        FILE_NAME = "/mnt/nfs/work1/miyyer/simengsun/data/small_enro/valid.iter.50"
-
-        with open(FILE_NAME, 'rb') as f:
-            data = pickle.load(f)
-
-        if loss_func == "binary_cls":
-            data = list(zip(data['avg_emb'], data['y1'].float(), data['y2'][:, -1]))
-
-        elif loss_func == "regr":
-            # change y1 to -1 and +1
-            data['y1'][data['y1'] == 0] = -1
-            data = list(zip(data['avg_emb'], data['y1'].float(), data['y2'][:, -1]))
-
-        else:
-            # TODO: rescale the bleu scores
-            data['y2'] /= a.max(dim=1)[0][:, None]
-            data = list(zip(data['avg_emb'], data['y2'], data['y2'][:, -1]))
-
-        train_data, val_data = data[:-200], data[-200:]
-        train_dataloader = DataLoader(train_data, batch_size=50, pin_memory=True, shuffle=True)
-        valid_dataloader = DataLoader(val_data, batch_size=50, pin_memory=True)
-        return train_dataloader, valid_dataloader
-
-
 
     def oracle_fix_experiment(self, epoch, experiment, 
                               loss_func="binary_cls", 
@@ -511,7 +493,7 @@ class IterativeTrainer(object):
         num_layer = 2 * len(model.encoders)
         test_dataloader = self.test_dataloader
         test_batches = [a for ai, a in enumerate(iter(test_dataloader)) if ai < 2]
-        #test_batches = [a for ai, a in enumerate(iter(test_dataloader))]
+        # test_batches = [a for ai, a in enumerate(iter(test_dataloader))]
         model.set_LMP_type('noskip')
         noskip_translator = model.translator(self.config).to(torch.device("cuda"))
         test_gold, test_allon_gen, _ = self.get_translated(noskip_translator, test_batches)
@@ -531,11 +513,19 @@ class IterativeTrainer(object):
         sample_translator = model.translator(self.config).to(torch.device("cuda"))
         self.enable_train_LMP(model)
 
+
+        train_losses = self.metric_store['train_loss']
+        val_losses = self.metric_store['val_loss']
+        percent_ges = self.metric_store['percent_ge']
+        test_bleus = self.metric_store['test_bleu']
+        average_num_layers = self.metric_store['num_layer']
         for epoch_i in range(epoch, epoch+self.config.max_train_lmp_epochs):
 
-            val_losses = []
+            # TODO: storing averaged val_loss, train_loss in one epoch and other stats into file
+            # TODO: add comet metric tracking
             for bi, batch in enumerate(iter(self.dataloader)):
             # for bi, batch in enumerate(total_batches[:-2]):
+                experiment.set_step(experiment.curr_step + 1)
 
                 embedding = model.embed(batch['inputs'].cuda(), model.embedding).detach()
                 padding_masks = batch['inputs'].eq(model.padding_idx).cuda()
@@ -544,7 +534,9 @@ class IterativeTrainer(object):
                 self.lmp_optimizer.step()
                 self.lmp_optimizer.zero_grad()
                 self.lmp_lr_scheduler.step()
-                # print(train_loss)
+                
+                train_losses.update(train_loss.item())
+                experiment.log_metric('train_loss', train_losses.last_value)
 
                 if bi % 20 == 0:
                     # # if True:
@@ -556,14 +548,18 @@ class IterativeTrainer(object):
                             padding_masks = v_batch['inputs'].eq(model.padding_idx).cuda()
                             loss, _ = model.layer_mask_predictor(embedding, padding_masks, aggregate_stats=v_batch['y1'].cuda())
                             val_loss += loss
-                        print("epoch {} step {} train loss {} val loss {} ".format(epoch_i, bi, train_loss.item(), val_loss.item()/(vi+1)))
+                        val_loss = val_loss.item()/(vi+1)
+                        print("epoch {} step {} train loss {:.4f} val loss {:.4f} lr {}".format(epoch_i, bi, train_loss.item(), val_loss, self.lmp_lr_scheduler.get_lr()[0]))
+
+                    val_losses.update(val_loss)
+                    experiment.log_metric('val_loss', val_losses.last_value)
 
                     self.enable_train_LMP(model)
 
             # test on test set
             self.disable_train_LMP(model)
             with torch.no_grad():
-                #pdb.set_trace()
+                
                 _, test_gen, test_masks = self.get_translated(sample_translator, test_batches)
                 test_gen_bleu_by_sent = [sacrebleu.corpus_bleu([gen_i], [[gold_i]], tokenize='none').score for gen_i, gold_i in zip(test_gen, test_gold)]
                 test_gen_bleu = sacrebleu.corpus_bleu(test_gen, [test_gold], tokenize='none').score
@@ -583,9 +579,11 @@ class IterativeTrainer(object):
                 filter_allon = [m.sum(dim=1) != num_layer for m in test_masks] #filter_allon[0].float()[:, None] * test_batch_masks[0]
                 non_allon_configs = [m.float()[:, None]*lm for m, lm in zip(filter_allon, test_masks)]
                 non_allon_config_layers = sum([m.sum() for m in non_allon_configs])
-                print("average #layer non-all-on config {}".format(non_allon_config_layers / (total_masks - all_on_masks.item())))
+                print("average #layer non-all-on config example {}".format(non_allon_config_layers / (total_masks - all_on_masks.item())))
+                #TODO: add total average #layer
+                total_selected_layers = sum([m.sum().item() for m in test_masks])
+                print("average #layer all {}".format(total_selected_layers / float(total_masks)))
 
-                #TODO: non-allon configs, corpus bleu of generated and all-on config
                 filter_allon = torch.cat(filter_allon)
                 non_allon_gen = [test_gen[i]  for i in range(len(test_gen)) if filter_allon[i]]
                 non_allon_allon = [test_allon_gen[i] for i in range(len(test_allon_gen)) if filter_allon[i] ]
@@ -594,6 +592,30 @@ class IterativeTrainer(object):
                 non_allon_allon_bleu = sacrebleu.corpus_bleu(non_allon_allon, [non_allon_gold], tokenize='none').score
                 print("non-allon config: bleu using layers selected by LMP {}".format(non_allon_gen_bleu))
                 print("non-allon config: bleu using layers selected by LMP {}".format(non_allon_allon_bleu))
+
+                percent_ges.update(percent_g)
+                test_bleus.update(test_gen_bleu)
+                average_num_layers.update(total_selected_layers)
+                experiment.log_metric('percent_ge', percent_ges.last_value)
+                experiment.log_metric('test_bleu', test_bleus.last_value)
+                experiment.log_metric('num_layer', average_num_layers.last_value)
+
+                fname = os.path.join(self.config.checkpoint_directory, 'iter_train_metrics.jsonl')
+                with jsonlines.open(fname, 'a') as f:
+                    obj = {
+                            'epoch': epoch_i,
+                            'train_loss': train_losses.last_value,
+                            'val_loss': val_losses.last_value,
+                            'test_bleu': test_gen_bleu,
+                            'num_layer': total_selected_layers,
+                            'percent_ge': percent_g,
+                            'all_on_ratio': all_on_masks.item() / float(total_masks),
+                            'non_all_on_num_layer': non_allon_config_layers.item() / (total_masks - all_on_masks.item()), 
+                            'non_all_on_examples_lmp_bleu': non_allon_gen_bleu,
+                            "non_all_on_examples_allon_bleu": non_allon_allon_bleu,
+                            "layer_selection_ratio": np.around(ratio.cpu().numpy(), 2).tolist()
+                        }
+                    f.write(json.dumps(obj, indent=4))
 
             self.enable_train_LMP(model)
 
@@ -801,18 +823,19 @@ class IterativeTrainer(object):
             stack.enter_context(chunked_scattering())
             stack.enter_context(experiment.train())
 
-            if start_epoch > 0 or experiment.curr_step > 0:
-                # TODO: Hacky approach to decide if the metric store should be loaded. Revisit later
-                self.metric_store = self.metric_store.load()
+            # if start_epoch > 0 or experiment.curr_step > 0:
+            #     # TODO: Hacky approach to decide if the metric store should be loaded. Revisit later
+            #     self.metric_store = self.metric_store.load()
 
             epoch = start_epoch
             experiment.log_current_epoch(epoch)
-            while not self.is_done(experiment, epoch):
-                experiment.log_current_epoch(epoch)
-                print("============epoch %i===========" % epoch)
-                self.train_epoch(epoch, experiment, verbose)
-                experiment.log_epoch_end(epoch)
-                epoch += 1
+            self.train_epoch(epoch, experiment, verbose)
+            # while not self.is_done(experiment, epoch):
+            #     experiment.log_current_epoch(epoch)
+            #     print("============epoch %i===========" % epoch)
+            #     self.train_epoch(epoch, experiment, verbose)
+            #     experiment.log_epoch_end(epoch)
+            #     epoch += 1
 
             if self.stopped_early:
                 print('Stopping early!')

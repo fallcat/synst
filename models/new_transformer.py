@@ -394,7 +394,7 @@ class LayerMaskPredictor(nn.Module):
         if not self.eval:
             if self.loss_func == 'binary_cls':
 
-                lmp_input = lmp_input.masked_fill_(lmp_input_mask[:, :, None], 0)
+                # lmp_input = lmp_input.masked_fill_(lmp_input_mask[:, :, None], 0)
                 layermask = self.proj1(torch.mean(lmp_input,1))
                 layermask = torch.sigmoid(layermask)
                 loss = self.bce_loss(layermask, aggregate_stats)
@@ -404,7 +404,7 @@ class LayerMaskPredictor(nn.Module):
 
             elif self.loss_func == "regr":
                 # pdb.set_trace()
-                lmp_input = lmp_input.masked_fill_(lmp_input_mask[:, :, None], 0)
+                # lmp_input = lmp_input.masked_fill_(lmp_input_mask[:, :, None], 0)
                 # lmp_input = lmp_input.masked_fill_(~lmp_input_mask[:, :, None], 1)
                 layermask = self.proj1(torch.mean(lmp_input,1))
                 layermask = torch.sigmoid(layermask)
@@ -432,7 +432,7 @@ class LayerMaskPredictor(nn.Module):
 
             if self.loss_func == 'binary_cls':
                 
-                lmp_input = lmp_input.masked_fill_(lmp_input_mask[:, :, None], 0)
+                # lmp_input = lmp_input.masked_fill_(lmp_input_mask[:, :, None], 0)
                 layermask = self.proj1(torch.mean(lmp_input,1))
                 layermask = torch.sigmoid(layermask)
 
@@ -440,7 +440,7 @@ class LayerMaskPredictor(nn.Module):
                     loss = self.bce_loss(layermask, aggregate_stats)
                     loss = loss.mean(dim=1).mean()
                     return loss, None
-                #pdb.set_trace()
+
                 ret = torch.zeros(layermask.shape[0], self.num_layers * 2, device=torch.device("cuda"))
                 max_val, _ = layermask.max(dim=1)
                 # filter configs within range (max-potential_threshold, max)
@@ -448,16 +448,16 @@ class LayerMaskPredictor(nn.Module):
                 filtered[filtered == 0] = float("inf")
                 _, ci = torch.min(filtered, dim=1)
                 ci_val = layermask[range(bs), ci]
-                ci[ci_val < self.allon_threshold] = self.ci_allon
+                # ci[ci_val < self.allon_threshold] = self.ci_allon
                 print("{:.2f} {:.2f} {:.2f} {:.2f}".format(ci_val.mean().item(), ci_val.max().item(), ci_val.min().item(), max_val.mean().item() - 2*self.potential_threshold))
-                # ci[ci_val < max_val.mean().item() - 2*self.potential_threshold] = self.ci_allon
+                ci[ci_val < max_val.mean().item() - 2*self.potential_threshold] = self.ci_allon
                 ret = self.all_configs[ci]
 
                 return None, ret
 
             elif self.loss_func == "regr":
 
-                lmp_input = lmp_input.masked_fill_(lmp_input_mask[:, :, None], 0)
+                # lmp_input = lmp_input.masked_fill_(lmp_input_mask[:, :, None], 0)
                 # lmp_input = lmp_input.masked_fill_(~lmp_input_mask[:, :, None], 1)
                 layermask = self.proj1(torch.mean(lmp_input,1))
                 layermask = torch.sigmoid(layermask)
@@ -475,9 +475,9 @@ class LayerMaskPredictor(nn.Module):
                 ci_val = layermask[range(bs), ci]
 
                 print("{:.2f} {:.2f} {:.2f} {:.2f}".format(ci_val.mean().item(), ci_val.max().item(), ci_val.min().item(), max_val.mean().item() - 2*self.potential_threshold))
-                ci[ci_val < self.allon_threshold] = self.ci_allon
+                # ci[ci_val < self.allon_threshold] = self.ci_allon
 
-                # ci[ci_val < max_val.mean().item() - 2*self.potential_threshold] = self.ci_allon
+                ci[ci_val < max_val.mean().item() - 2*self.potential_threshold] = self.ci_allon
                 ret = self.all_configs[ci]
 
                 return None, ret
@@ -497,7 +497,8 @@ class LayerMaskPredictor(nn.Module):
                 _, ci = torch.min(filtered, dim=1)
                 ci_val = layermask[range(bs), ci]
                 print("{:.2f} {:.2f} {:.2f} {:.2f}".format(ci_val.mean().item(), ci_val.max().item(), ci_val.min().item(), max_val.mean().item() - 2*self.potential_threshold))
-                ci[ci_val < self.allon_threshold] = self.ci_allon
+                # ci[ci_val < self.allon_threshold] = self.ci_allon
+                ci[ci_val < max_val.mean().item() - 2*self.potential_threshold] = self.ci_allon
                 ret = self.all_configs[ci]
 
                 return None, ret
@@ -802,6 +803,7 @@ class NewTransformer(nn.Module):
         state = decoded['state']
         if cache is not None:
             state = state[:, -self.span:]
+
         return {
             'cache': decoded.get('cache'),
             'logits': embedding(state, transpose=True).transpose(2, 1),  # transpose to B x C x ...

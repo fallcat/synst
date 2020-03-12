@@ -50,7 +50,7 @@ def main(argv=None):
     if args.action_type == "iterative_train" and args.action_config.debug:
         dataloader = get_dataloader(
             args.config.data, args.seed_fn, pin_memory,
-            args.num_devices, shuffle=False
+            args.num_devices, shuffle=True
         )
     else:
         dataloader = get_dataloader(
@@ -61,7 +61,8 @@ def main(argv=None):
 
     args.config.model.action_type = args.action_type
     args.config.model.loss_func = args.config.data.loss_func
-    #args.action_config.disable_cache = True
+    # args.action_config.disable_cache = True
+    args.action_config.batch_size = args.config.data.batch_size
     print("loss func %s" % args.config.model.loss_func)
     model = args.model(args.config.model, dataloader.dataset)
     action = args.action(args.action_config, model, dataloader, args.device)
