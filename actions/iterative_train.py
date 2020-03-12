@@ -452,7 +452,7 @@ class IterativeTrainer(object):
             all_on_masks = sum([(m.sum(dim=1) == num_layer).sum() for m in test_batch_masks])
             print("all-on ratio: {}".format(all_on_masks.item() / (s_bsize * len(test_batch_masks)))) # what percent of the test set selecting all-on config
             # TODO: add stats on average num layers chosen when choosing non-all-on config
-            #pdb.set_trace()
+            pdb.set_trace()
             filter_allon = [m.sum(dim=1) != num_layer for m in test_batch_masks]
             non_allon_configs = [m*lm for m, lm in zip(filter_allon, test_batch_masks)]
             non_allon_configs = sum([m.sum(dim=1) for m in non_allon_configs])
@@ -595,7 +595,7 @@ class IterativeTrainer(object):
 
                 percent_ges.update(percent_g)
                 test_bleus.update(test_gen_bleu)
-                average_num_layers.update(total_selected_layers)
+                average_num_layers.update(total_selected_layers / float(total_masks))
                 experiment.log_metric('percent_ge', percent_ges.last_value)
                 experiment.log_metric('test_bleu', test_bleus.last_value)
                 experiment.log_metric('num_layer', average_num_layers.last_value)
@@ -607,7 +607,7 @@ class IterativeTrainer(object):
                             'train_loss': train_losses.last_value,
                             'val_loss': val_losses.last_value,
                             'test_bleu': test_gen_bleu,
-                            'num_layer': total_selected_layers,
+                            'num_layer': total_selected_layers / float(total_masks),
                             'percent_ge': percent_g,
                             'all_on_ratio': all_on_masks.item() / float(total_masks),
                             'non_all_on_num_layer': non_allon_config_layers.item() / (total_masks - all_on_masks.item()), 
@@ -615,7 +615,7 @@ class IterativeTrainer(object):
                             "non_all_on_examples_allon_bleu": non_allon_allon_bleu,
                             "layer_selection_ratio": np.around(ratio.cpu().numpy(), 2).tolist()
                         }
-                    f.write(json.dumps(obj, indent=4))
+                    f.write(json.dumps(obj))
 
             self.enable_train_LMP(model)
 
