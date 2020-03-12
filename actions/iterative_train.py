@@ -160,7 +160,7 @@ class IterativeTrainer(object):
         self.lmp_optimizer = optim.Adam(self.modules['model'].layer_mask_predictor.parameters(), lr=self.config.base_lr, betas=(0.9, 0.98), eps=1e-9)
         self.lmp_lr_scheduler = LambdaLR(self.lmp_optimizer, LinearLRSchedule(
                                 self.config.base_lr,
-                                1e-4,
+                                1e-5,
                                 self.config.max_train_lmp_epochs * 1999 / config.batch_size))
 
 
@@ -492,8 +492,8 @@ class IterativeTrainer(object):
         model.eval() # dropout to 0 and no_grad
         num_layer = 2 * len(model.encoders)
         test_dataloader = self.test_dataloader
-        test_batches = [a for ai, a in enumerate(iter(test_dataloader)) if ai < 2]
-        # test_batches = [a for ai, a in enumerate(iter(test_dataloader))]
+        #test_batches = [a for ai, a in enumerate(iter(test_dataloader)) if ai < 2]
+        test_batches = [a for ai, a in enumerate(iter(test_dataloader))]
         model.set_LMP_type('noskip')
         noskip_translator = model.translator(self.config).to(torch.device("cuda"))
         test_gold, test_allon_gen, _ = self.get_translated(noskip_translator, test_batches)
@@ -579,7 +579,7 @@ class IterativeTrainer(object):
                 filter_allon = [m.sum(dim=1) != num_layer for m in test_masks] #filter_allon[0].float()[:, None] * test_batch_masks[0]
                 non_allon_configs = [m.float()[:, None]*lm for m, lm in zip(filter_allon, test_masks)]
                 non_allon_config_layers = sum([m.sum() for m in non_allon_configs])
-                print("average #layer non-all-on config example {}".format(non_allon_config_layers / (total_masks - all_on_masks.item())))
+                print("average #layer non-all-on config example {}".format(non_allon_config_layers / (total_masks - all_on_masks.item() + 1e-10)))
                 #TODO: add total average #layer
                 total_selected_layers = sum([m.sum().item() for m in test_masks])
                 print("average #layer all {}".format(total_selected_layers / float(total_masks)))
@@ -610,7 +610,7 @@ class IterativeTrainer(object):
                             'num_layer': total_selected_layers / float(total_masks),
                             'percent_ge': percent_g,
                             'all_on_ratio': all_on_masks.item() / float(total_masks),
-                            'non_all_on_num_layer': non_allon_config_layers.item() / (total_masks - all_on_masks.item()), 
+                            'non_all_on_num_layer': non_allon_config_layers.item() / (total_masks - all_on_masks.item() + 1e-10), 
                             'non_all_on_examples_lmp_bleu': non_allon_gen_bleu,
                             "non_all_on_examples_allon_bleu": non_allon_allon_bleu,
                             "layer_selection_ratio": np.around(ratio.cpu().numpy(), 2).tolist()
