@@ -44,11 +44,9 @@ class TransformerSublayer(nn.Module):
     def forward(self, inputs, gating_weight, *sublayer_args, **sublayer_kwargs): # pylint:disable=arguments-differ
         ''' The forward pass of the sublayer '''
         out_dropout = self.dropout(self.sublayer(*sublayer_args, **sublayer_kwargs))
-        ret = self.norm(inputs + gating_weight.view(-1, 1, 1) * out_dropout)
         ret = self.norm(inputs + gating_weight[:, None, None] * out_dropout)
         skip = inputs * (1-gating_weight)[:, None, None]
         ret = gating_weight[:, None, None] * ret + skip
-        # ret = self.norm(inputs + out_dropout)
         return ret
 
 class TransformerFFN(nn.Module):
@@ -289,6 +287,7 @@ class LayerMaskPredictor(nn.Module):
                        shuffle_configs,
                        num_configs,
                        loss_func,
+                       lmp_eval_mode,
                        dropout_p=0.1):
         super(LayerMaskPredictor, self).__init__()
         self.num_layers = num_layers
@@ -334,7 +333,7 @@ class LayerMaskPredictor(nn.Module):
         self.config_end = -1
         self.allon_threshold = allon_threshold
         self.potential_threshold = potential_threshold
-        print("all-on threshold %f" % self.allon_threshold)
+        print("potential threshold %f" % self.potential_threshold)
 
         if lmp_type not in ["random"]:
             if not noisy:
@@ -363,7 +362,7 @@ class LayerMaskPredictor(nn.Module):
 
         if self.lmp_type == "iterative_training_debug_oracle":
             self.loss_func = loss_func
-        self.eval = False
+        self.eval = lmp_eval_mode
         
     def reset_parameters(self):
         ''' Reset parameters using xavier initialiation '''
@@ -393,8 +392,7 @@ class LayerMaskPredictor(nn.Module):
         # use lmp
         if not self.eval:
             if self.loss_func == 'binary_cls':
-
-                # lmp_input = lmp_input.masked_fill_(lmp_input_mask[:, :, None], 0)
+                lmp_input = lmp_input.masked_fill_(lmp_input_mask[:, :, None], 0)
                 layermask = self.proj1(torch.mean(lmp_input,1))
                 layermask = torch.sigmoid(layermask)
                 loss = self.bce_loss(layermask, aggregate_stats)
@@ -403,9 +401,7 @@ class LayerMaskPredictor(nn.Module):
                 return loss, None
 
             elif self.loss_func == "regr":
-                # pdb.set_trace()
-                # lmp_input = lmp_input.masked_fill_(lmp_input_mask[:, :, None], 0)
-                # lmp_input = lmp_input.masked_fill_(~lmp_input_mask[:, :, None], 1)
+                lmp_input = lmp_input.masked_fill_(lmp_input_mask[:, :, None], 0)
                 layermask = self.proj1(torch.mean(lmp_input,1))
                 layermask = torch.sigmoid(layermask)
                 loss = ((layermask - aggregate_stats)**2).mean(dim=1).mean()
@@ -427,12 +423,13 @@ class LayerMaskPredictor(nn.Module):
         # testing
         else:
             bs, L, emb = lmp_input.shape
+            print('using layermask predictor')
 
             # assert aggregate_stats is None
 
             if self.loss_func == 'binary_cls':
                 
-                # lmp_input = lmp_input.masked_fill_(lmp_input_mask[:, :, None], 0)
+                lmp_input = lmp_input.masked_fill_(lmp_input_mask[:, :, None], 0)
                 layermask = self.proj1(torch.mean(lmp_input,1))
                 layermask = torch.sigmoid(layermask)
 
@@ -457,8 +454,7 @@ class LayerMaskPredictor(nn.Module):
 
             elif self.loss_func == "regr":
 
-                # lmp_input = lmp_input.masked_fill_(lmp_input_mask[:, :, None], 0)
-                # lmp_input = lmp_input.masked_fill_(~lmp_input_mask[:, :, None], 1)
+#                lmp_input = lmp_input.masked_fill_(lmp_input_mask[:, :, None], 0)
                 layermask = self.proj1(torch.mean(lmp_input,1))
                 layermask = torch.sigmoid(layermask)
 
@@ -571,7 +567,8 @@ class NewTransformer(nn.Module):
                                                        config.potential_threshold,
                                                        config.shuffle_lmp_configs,
                                                        config.num_configs,
-                                                       config.loss_func)
+                                                       config.loss_func,
+                                                       config.lmp_eval_mode)
 
 
     @classmethod
@@ -748,19 +745,10 @@ class NewTransformer(nn.Module):
         if raw_layermask is None:
             layer_mask, lmp_raw_layermask = self.layer_mask_predictor(encoded['state'], encoded['mask'])
             raw_layermask = lmp_raw_layermask
-            #pdb.set_trace()
         else:
             layer_mask = None
-
         for i, encoder in enumerate(self.encoders):
-            if self.layermask_type != "random":
-                # if 0 in raw_layermask[:, i]:
-                #     print("skip layer %i" % i )
-                #     continue
-                encoded = encoder(encoded, i, word_embedding, gating_weight=raw_layermask[:, i])
-            else:
-                if raw_layermask[0][i]:
-                    encoded = encoder(encoded, i, word_embedding, gating_weight=1)
+            encoded = encoder(encoded, i, word_embedding, gating_weight=raw_layermask[:, i])
                 
         return encoded, layer_mask, raw_layermask
 
@@ -790,15 +778,8 @@ class NewTransformer(nn.Module):
             pdb.set_trace()
 
         for i, decoder in enumerate(decoders):
-            if self.layermask_type != "random":
-                # if 0 in raw_layermask[:, len(decoders) + i]:
-                #     print("skip layer %i" % (len(decoders) + i) )
-                #     continue
-                decoded = decoder(decoded, encoded, i, word_embedding, gating_weight=raw_layermask[:, len(decoders) + i])
-            else:
-                if raw_layermask[0][len(decoders)+i]:
-                    decoded = decoder(decoded, encoded, i, word_embedding, gating_weight=1)
-
+            decoded = decoder(decoded, encoded, i, word_embedding, gating_weight=raw_layermask[:, len(decoders) + i])
+           
         # compute projection to the vocabulary
         state = decoded['state']
         if cache is not None:

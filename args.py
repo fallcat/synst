@@ -556,6 +556,13 @@ def add_new_transformer_args(parser):
         help="number of configs to optimize"
     )
 
+    group.add_argument(
+        "--lmp-eval-mode",
+        default=False,
+        action="store_true",
+        help="whether to shuffle the configs, used for optimizing the selected config range"
+    )
+
     return group
 
 
