@@ -13,7 +13,7 @@ import torch
 from data import DATASETS
 from models import MODELS
 from actions import Trainer, Evaluator, Translator, Pass, Prober, ProbeTrainer, ProbeEvaluator, ProbeNewTranslator, \
-    ProbeOffDiagonal, IterativeTrainer
+    ProbeOffDiagonal, IterativeTrainer, OracleTranslator
 from utils import get_version_string, get_random_seed_fn
 
 
@@ -1702,6 +1702,15 @@ def parse_args(argv=None):
         action=Translator,
         action_type='translate',
         action_config=groups['translate'],
+        shuffle=False
+    )
+
+    oracle_translate_parser = subparsers.add_parser('oracle_translate', help='Translate from a model')
+    groups['oracle_translate'] = add_translate_args(oracle_translate_parser)
+    translate_parser.set_defaults(
+        action=OracleTranslator,
+        action_type='oracle_translate',
+        action_config=groups['oracle_translate'],
         shuffle=False
     )
 

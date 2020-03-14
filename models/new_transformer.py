@@ -748,7 +748,11 @@ class NewTransformer(nn.Module):
         else:
             layer_mask = None
         for i, encoder in enumerate(self.encoders):
-            encoded = encoder(encoded, i, word_embedding, gating_weight=raw_layermask[:, i])
+            if len(raw_layermask.shape) == 1:
+                if raw_layermask[i]:
+                    encoded = encoder(encoded, i, word_embedding, gating_weight=raw_layermask[:, i])
+            else:
+                encoded = encoder(encoded, i, word_embedding, gating_weight=raw_layermask[:, i])
                 
         return encoded, layer_mask, raw_layermask
 
@@ -778,7 +782,12 @@ class NewTransformer(nn.Module):
             pdb.set_trace()
 
         for i, decoder in enumerate(decoders):
-            decoded = decoder(decoded, encoded, i, word_embedding, gating_weight=raw_layermask[:, len(decoders) + i])
+            if len(raw_layermask.shape) == 1:
+                if raw_layermask[i]:
+                    decoded = decoder(decoded, encoded, i, word_embedding,
+                                      gating_weight=raw_layermask[len(decoders) + i])
+            else:
+                decoded = decoder(decoded, encoded, i, word_embedding, gating_weight=raw_layermask[:, len(decoders) + i])
            
         # compute projection to the vocabulary
         state = decoded['state']
