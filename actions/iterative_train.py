@@ -345,14 +345,21 @@ class IterativeTrainer(object):
                         f.write(json.dumps(obj))
 
                     if self.is_best_checkpoint(val_losses):
-                        fname = os.path.join(self.config.checkpoint_directory, 'translated.txt')
+                        fname = os.path.join(self.config.checkpoint_directory, 'translated_lmp.txt')
                         with open(fname, 'w') as f:
                             for l in test_gen:
                                 f.write(l + '\n')
 
+                        fname = os.path.join(self.config.checkpoint_directory, 'translated_allon.txt')
+                        with open(fname, 'w') as f:
+                            for l in test_allon_gen:
+                                f.write(l + '\n')
+
                         fname = os.path.join(self.config.checkpoint_directory, 'test_masks.pkl')
                         with open(fname, 'wb') as f:
-                            pickle.dump({'test_masks': test_masks}, f)
+                            pickle.dump({'test_masks': test_masks, 
+                                         'test_lmp_bleu_by_sent': test_gen_bleu_by_sent, 
+                                         'test_allon_bleu_by_sent': test_allon_bleu_by_sent}, f)
 
                 self.enable_train_LMP(model)
 
