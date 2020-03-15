@@ -239,7 +239,6 @@ class IterativeTrainer(object):
         if self.test_dataloader is not None:
             noskip_translator = model.translator(self.config).to(torch.device("cuda"))
             test_batches = [b for b in iter(self.test_dataloader)]
-            # test_batches = [b for i, b in enumerate(test_batches) if i < 2]
             test_gold, test_allon_gen, _ = self.get_translated(noskip_translator, test_batches)
             test_allon_bleu, test_allon_bleu_by_sent = self.get_bleu_res(test_allon_gen, test_gold)
         
@@ -348,7 +347,8 @@ class IterativeTrainer(object):
                     if self.is_best_checkpoint(val_losses):
                         fname = os.path.join(self.config.checkpoint_directory, 'translated.txt')
                         with open(fname, 'w') as f:
-                            f.writelines(test_gen)
+                            for l in test_gen:
+                                f.write(l + '\n')
 
                         fname = os.path.join(self.config.checkpoint_directory, 'test_masks.pkl')
                         with open(fname, 'wb') as f:
