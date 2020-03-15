@@ -519,7 +519,7 @@ def add_new_transformer_args(parser):
     group.add_argument(
         '--layermask-type',
         type=str,
-        choices=['noskip', 'gating', 'iterative_training','iterative_training_debug_oracle'],
+        choices=['noskip', 'itertrain', 'random'],
         default='noskip'
     )
     group.add_argument(
@@ -927,14 +927,7 @@ def add_iterative_train_args(parser):
         help='How many tokens beyond the length basis to allow decoding to continue.'
     )
 
-    # original train args
-    group.add_argument(
-        '-A',
-        '--accumulate-steps',
-        type=int,
-        default=1,
-        help='How many batches of data to accumulate gradients over'
-    )
+    # part of original train args, with changed default values
     group.add_argument(
         '--gold-p',
         type=float,
@@ -944,21 +937,8 @@ def add_iterative_train_args(parser):
     group.add_argument(
         '--dropout-p',
         type=float,
-        default=0.1,
+        default=0.0,
         help='The dropout percentage during training'
-    )
-    group.add_argument(
-        '--early-stopping',
-        type=_integer_geq(),
-        default=0,
-        help='If > 0, stop training after this many checkpoints of increasing nll on the validation'
-        ' set. This also implies storing of the best_checkpoint.'
-    )
-    group.add_argument(
-        '--label-smoothing',
-        type=float,
-        default=0.1,
-        help='The amount of label smoothing'
     )
     group.add_argument(
         '-c',
@@ -968,45 +948,12 @@ def add_iterative_train_args(parser):
         help='Where to store model checkpoints'
     )
     group.add_argument(
-        '--checkpoint-interval',
-        type=int,
-        default=10*60,
-        help='Generate a checkpoint every `n` seconds'
-    )
-    group.add_argument(
-        '--max-checkpoints',
-        type=int,
-        default=5,
-        help='The maximum number of checkpoints to keep'
-    )
-    group.add_argument(
-        '-e',
-        '--max-epochs',
-        type=int,
-        default=0,
-        help='Maximum number of epochs for training the model'
-    )
-    group.add_argument(
-        '--max-steps',
-        type=int,
-        default=100000,
-        help='Maximum number of steps for training the model'
-    )
-    group.add_argument(
         '-l',
         '--learning-rate',
         dest='base_lr',
         type=float,
         default=None,
         help='The initial learning rate of the optimizer. Defaults to embedding_size ** -0.5'
-    )
-    group.add_argument(
-        '-L',
-        '--learning-rate-decay',
-        dest='lr_decay',
-        type=float,
-        default=.999995,
-        help='The learning rate decay of the optimizer'
     )
     group.add_argument(
         '--final-learning-rate',
@@ -1038,94 +985,37 @@ def add_iterative_train_args(parser):
         help='add optimizer'
     )
     group.add_argument(
-        '--freeze-layermask',
-        default=False,
-        action='store_true',
-        help="whether to freeze the layermask predictor, this is set to True after training entire model to converge"
-    )
-    group.add_argument(
-        '--linear-tradeoff',
-        default=False,
-        action='store_true',
-        help="use linear scheduled tradeoffs"
-    )
-
-    group.add_argument(
-        '--sample-interval',
+        '--max-checkpoints',
         type=int,
-        default=4000,
-        help='Number of warmup steps for the Transformer learning rate'
-    )
-    
-    group.add_argument(
-        '--sample-times',
-        type=int,
-        default=500,
-        help="number of times to sample layermasks for iterative training"
+        default=5,
+        help='The maximum number of checkpoints to keep'
     )
 
-    group.add_argument(
-        '--max-lmp-train-steps',
-        type=int,
-        default=500,
-        help="number of times to train the LMP"
-    )
-
-    group.add_argument(
-        '--sample-size',
-        type=int,
-        default=250,
-        help="number of examples sampled from valid set"
-    )
-
-    group.add_argument(
-        '--sample-batch-size',
-        type=int,
-        default=50,
-        help="number of examples sampled from valid set"
-    )
-
-    group.add_argument(
-        '--step-start-iter-train',
-        type=int,
-        default=20,
-        help="step after which to start training"
-    )
-    group.add_argument(
-        '--debug',
-        default=False,
-        action='store_true',
-        help="debug oracle"
-    )
-
-    group.add_argument(
-        '--iter-train-lmp-val-n-batches',
-        type=int,
-        default=2,
-        help="training lmp with _n_ valid batches "
-    )
-
-    group.add_argument(
-        '--iter-train-n-configs', 
-        type=int,
-        default=100,
-        help="train how many configs once"
-    )
-
-    group.add_argument(
-        '--optimize-the-same', 
-        default=False,
-        action='store_true',
-        help="whether to optimize the same set of configs every validation batch"
-    )
-
+    # new iter-train args
     group.add_argument(
         '--max-train-lmp-epochs',
         type=int,
         default=500,
         help='Maximum number of epochs for training the layermask predictor'
     )
-
+    group.add_argument(
+        '--early-stopping',
+        type=int,
+        default=50,
+        help='stops LMP training when current validation loss is larger than previous _N_ valid losses'
+    )
+    group.add_argument(
+        '--eval-every',
+        type=int,
+        default=20,
+        help='run on validation set during LMP training for every _N_ steps'
+    )
+    group.add_argument(
+        '--test',
+        default=False,
+        action='store_true',
+        help="whether to also translate test dataset and evaluate after training LMP"
+    )
     return group
 
 def add_probe_train_args(parser):

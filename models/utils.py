@@ -10,7 +10,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import ticker
 from collections import OrderedDict
-
+import pdb
 import torch
 from torch import nn
 from torch.nn import functional as F
@@ -305,7 +305,7 @@ class Translator(object):
             )
 
             # change to store distribution
-            encoded, _, lmp_raw_layermask = self.encoder(batch['inputs'], raw_layermask=raw_layermask)
+            encoded, lmp_raw_layermask = self.encoder(batch['inputs'], raw_layermask=raw_layermask)
 
             if raw_layermask is None:
                 raw_layermask = lmp_raw_layermask
