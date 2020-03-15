@@ -277,39 +277,57 @@ class TransformerDecoderLayer(nn.Module):
 
 class LayerMaskPredictor(nn.Module):
     def __init__(self, embedding_size, 
-                       hidden_size, 
                        num_layers, 
-                       action_type, 
                        lmp_type, 
-                       noisy,
-                       allon_threshold,
                        potential_threshold,
                        shuffle_configs,
                        num_configs,
                        loss_func,
-                       lmp_eval_mode,
-                       dropout_p=0.1):
+                       lmp_eval_mode):
         super(LayerMaskPredictor, self).__init__()
+
         self.num_layers = num_layers
 
-        #### for debugging oracle
+        self.init_configs(num_layers, num_configs=num_configs, shuffle_configs=shuffle_configs)
+        self.potential_threshold = potential_threshold
+        self.lmp_type = lmp_type # choose from ['random', 'noskip', 'itertrain']
+        self.loss_func = loss_func
+        self.eval = lmp_eval_mode
+
+        if lmp_type is not "random":
+            self.proj1 = nn.Linear(embedding_size, self.all_configs.shape[0]-1)
+            if self.loss_func == 'binary_cls':
+                self.bce_loss = BCELoss(reduction='none')
+            self.reset_parameters()
+        else:
+            self.sample_distribution = torch.ones(2 * num_layers, device=torch.device("cuda")) * 0.5 # init 0.5
+
+        # print configs for LMP
+        print("lmp type : %s" % self.lmp_type)
+        print("potential threshold : %f " % self.potential_threshold)
+        print("loss func: %s" % self.loss_func)
+        print("eval mode : %s" % self.eval)
+        print("num of configs: %i" % self.all_configs.shape[0])
+        print("shuffle configs: %s" % shuffle_configs)
+        print("all-on index: %i" % self.ci_allon)
+        
+    def init_configs(self, num_layers, num_configs=-1, shuffle_configs=False):
+
         num_layer = 2 * num_layers
         all_combs = sum([list(combinations(range(num_layer), k)) for k in range(1, num_layer+1)], [])
         all_combs = [x for x in all_combs if any(y >= num_layer//2 for y in x)]
-        print("shuffle configs", shuffle_configs)
+
         if shuffle_configs:
             random.Random(42).shuffle(all_combs)
 
-        all_combs = all_combs[:num_configs]
-        if num_configs != 4032:
-            print("append all-on config")
+        if num_configs != -1:
+            all_combs = all_combs[:num_configs]
             all_combs.append(tuple(i for i in range(num_layer)))
 
         self.all_configs = torch.zeros(len(all_combs), num_layer, device=torch.device("cuda"))
         for ci, c in enumerate(all_combs):
             for cii in c:
                 self.all_configs[ci, cii] += 1
-
 
         """
         To be deleted later, adding this because oracle result has label shift
@@ -318,65 +336,20 @@ class LayerMaskPredictor(nn.Module):
         2. decoder layer shift backward by 1
         """
         self.all_configs[:, 0] = 1
-        self.all_configs[:, self.num_layers:] = self.all_configs[:, self.num_layers-1:-1]
+        self.all_configs[:, num_layers:] = self.all_configs[:, num_layers-1:-1]
         """
         To be deleted
         """
 
-
         self.ci_allon = all_combs.index(tuple(i for i in range(num_layer)))
         self.all_configs_sum_layer = self.all_configs.sum(dim=1) # len(all_combs) x 1
-        print("all-on config ci: %i" % self.ci_allon)
-
-        # config range: while training with samples, only optimize certain range; during test time, need to know which range is optimized
-        self.config_start = 0
-        self.config_end = -1
-        self.allon_threshold = allon_threshold
-        self.potential_threshold = potential_threshold
-        print("potential threshold %f" % self.potential_threshold)
-
-        if lmp_type not in ["random"]:
-            if not noisy:
-                if lmp_type == "iterative_training":
-                    self.proj1 = nn.Linear(embedding_size, 2 * num_layers)
-                elif lmp_type == "iterative_training_debug_oracle":
-                    self.proj1 = nn.Linear(embedding_size, len(all_combs)-1)
-                else:
-                    self.proj1 = nn.Linear(embedding_size, hidden_size)
-                    self.proj2 = nn.Linear(hidden_size, 2 * num_layers)
-            else:
-                self.proj1 = nn.Linear(embedding_size, 2 * num_layers)
-                self.proj_noise = nn.Linear(embedding_size, 2 * num_layers)
-
-            self.dropout = nn.Dropout(dropout_p, inplace=True)
-
-            self.action_type = action_type
-            self.lmp_type = lmp_type
-            self.noisy=noisy
-
-            self.bce_loss = BCELoss(reduction='none')
-
-            self.reset_parameters()
-        else:
-            self.sample_distribution = torch.ones(2 * num_layers, device=torch.device("cuda")) * 0.5 # init 0.5
-
-        if self.lmp_type == "iterative_training_debug_oracle":
-            self.loss_func = loss_func
-        self.eval = lmp_eval_mode
         
+         
     def reset_parameters(self):
         ''' Reset parameters using xavier initialiation '''
         gain = nn.init.calculate_gain('linear')
-
         nn.init.xavier_uniform_(self.proj1.weight, gain)
         nn.init.constant_(self.proj1.bias, 0.)
-        if not self.noisy:
-            if "iterative_training" not in self.lmp_type:
-                nn.init.xavier_uniform_(self.proj2.weight, gain)
-                nn.init.constant_(self.proj2.bias, 0.)
-        else:
-            nn.init.xavier_uniform_(self.proj_noise.weight, gain)
-            nn.init.constant_(self.proj_noise.bias, 0.)
 
     def forward(self, lmp_input, lmp_input_mask, aggregate_stats=None):
         '''
@@ -385,136 +358,46 @@ class LayerMaskPredictor(nn.Module):
             return: sampled layermask, raw-layermask-distribution
         '''
         
-        # not skipping
+        # special case: not skipping
         if self.lmp_type == "noskip":
-            return None, torch.ones(lmp_input.size(0), self.num_layers * 2, device=torch.device("cuda"))
+            return torch.ones(lmp_input.size(0), self.num_layers * 2, device=torch.device("cuda"))
 
-        # use lmp
+        lmp_input = lmp_input.masked_fill_(lmp_input_mask[:, :, None], 0)
+        layermask = self.proj1(torch.mean(lmp_input,1))
+        layermask = torch.sigmoid(layermask)
+
         if not self.eval:
             if self.loss_func == 'binary_cls':
-                lmp_input = lmp_input.masked_fill_(lmp_input_mask[:, :, None], 0)
-                layermask = self.proj1(torch.mean(lmp_input,1))
-                layermask = torch.sigmoid(layermask)
                 loss = self.bce_loss(layermask, aggregate_stats)
                 loss = loss.mean(dim=1).mean()
-
-                return loss, None
+                return loss
 
             elif self.loss_func == "regr":
-                lmp_input = lmp_input.masked_fill_(lmp_input_mask[:, :, None], 0)
-                layermask = self.proj1(torch.mean(lmp_input,1))
-                layermask = torch.sigmoid(layermask)
                 loss = ((layermask - aggregate_stats)**2).mean(dim=1).mean()
-                return loss, None
+                return loss
 
             elif self.loss_func == "scaled_regr":
-                lmp_input = lmp_input.masked_fill_(lmp_input_mask[:, :, None], 0)
-                layermask = self.proj1(torch.mean(lmp_input,1))
-                layermask = torch.sigmoid(layermask)
                 loss = ((layermask - aggregate_stats)**2).mean(dim=1).mean()
-                return loss, None
+                return loss
 
             elif self.loss_func == "rank":
-                pass
+                raise NotImplementedError
 
             else:
-                pass
-
-        # testing
+                raise NotImplementedError
         else:
-            bs, L, emb = lmp_input.shape
-            print('using layermask predictor')
+            bs, _, _ = lmp_input.shape
+            ret = torch.zeros(layermask.shape[0], self.num_layers * 2, device=torch.device("cuda"))
+            max_val, _ = layermask.max(dim=1)
+            filtered = (layermask + self.potential_threshold >= max_val[:, None]).float() * self.all_configs_sum_layer[:-1] # all_configs_sum_layer last entry is all-on
+            filtered[filtered == 0] = float("inf")
+            _, ci = torch.min(filtered, dim=1)
+            ci_val = layermask[range(bs), ci]
+            # print("{:.2f} {:.2f} {:.2f} {:.2f}".format(ci_val.mean().item(), ci_val.max().item(), ci_val.min().item(), max_val.mean().item() - 2*self.potential_threshold))
+            ci[ci_val < max_val.mean().item() - 2*self.potential_threshold] = self.ci_allon
+            ret = self.all_configs[ci]
 
-            # assert aggregate_stats is None
-
-            if self.loss_func == 'binary_cls':
-                
-                lmp_input = lmp_input.masked_fill_(lmp_input_mask[:, :, None], 0)
-                layermask = self.proj1(torch.mean(lmp_input,1))
-                layermask = torch.sigmoid(layermask)
-
-                if aggregate_stats is not None:
-                    loss = self.bce_loss(layermask, aggregate_stats)
-                    loss = loss.mean(dim=1).mean()
-                    return loss, None
-
-                ret = torch.zeros(layermask.shape[0], self.num_layers * 2, device=torch.device("cuda"))
-                max_val, _ = layermask.max(dim=1)
-                # filter configs within range (max-potential_threshold, max)
-                filtered = (layermask + self.potential_threshold >= max_val[:, None]).float() * self.all_configs_sum_layer[:-1]
-                filtered[filtered == 0] = float("inf")
-                _, ci = torch.min(filtered, dim=1)
-                ci_val = layermask[range(bs), ci]
-                # ci[ci_val < self.allon_threshold] = self.ci_allon
-                print("{:.2f} {:.2f} {:.2f} {:.2f}".format(ci_val.mean().item(), ci_val.max().item(), ci_val.min().item(), max_val.mean().item() - 2*self.potential_threshold))
-                ci[ci_val < max_val.mean().item() - 2*self.potential_threshold] = self.ci_allon
-                ret = self.all_configs[ci]
-
-                return None, ret
-
-            elif self.loss_func == "regr":
-
-#                lmp_input = lmp_input.masked_fill_(lmp_input_mask[:, :, None], 0)
-                layermask = self.proj1(torch.mean(lmp_input,1))
-                layermask = torch.sigmoid(layermask)
-
-                if aggregate_stats is not None:
-                    loss = ((layermask - aggregate_stats)**2).mean(dim=1).mean()
-                    return loss, None
-
-                ret = torch.zeros(layermask.shape[0], self.num_layers * 2, device=torch.device("cuda"))
-                max_val, _ = layermask.max(dim=1)
-                # filter configs within range (max-potential_threshold, max)
-                filtered = (layermask + self.potential_threshold >= max_val[:, None]).float() * self.all_configs_sum_layer[:-1]
-                filtered[filtered == 0] = float("inf")
-                _, ci = torch.min(filtered, dim=1)
-                ci_val = layermask[range(bs), ci]
-
-                print("{:.2f} {:.2f} {:.2f} {:.2f}".format(ci_val.mean().item(), ci_val.max().item(), ci_val.min().item(), max_val.mean().item() - 2*self.potential_threshold))
-                # ci[ci_val < self.allon_threshold] = self.ci_allon
-
-                ci[ci_val < max_val.mean().item() - 2*self.potential_threshold] = self.ci_allon
-                ret = self.all_configs[ci]
-
-                return None, ret
-
-            elif self.loss_func == "scaled_regr":
-                lmp_input = lmp_input.masked_fill_(lmp_input_mask[:, :, None], 0)
-                layermask = self.proj1(torch.mean(lmp_input,1))
-                layermask = torch.sigmoid(layermask)
-                if aggregate_stats is not None:
-                    loss = ((layermask - aggregate_stats)**2).mean(dim=1).mean()
-                    return loss, None
-                ret = torch.zeros(layermask.shape[0], self.num_layers * 2, device=torch.device("cuda"))
-                max_val, _ = layermask.max(dim=1)
-                # filter configs within range (max-potential_threshold, max)
-                filtered = (layermask + self.potential_threshold >= max_val[:, None]).float() * self.all_configs_sum_layer[:-1]
-                filtered[filtered == 0] = float("inf")
-                _, ci = torch.min(filtered, dim=1)
-                ci_val = layermask[range(bs), ci]
-                print("{:.2f} {:.2f} {:.2f} {:.2f}".format(ci_val.mean().item(), ci_val.max().item(), ci_val.min().item(), max_val.mean().item() - 2*self.potential_threshold))
-                # ci[ci_val < self.allon_threshold] = self.ci_allon
-                ci[ci_val < max_val.mean().item() - 2*self.potential_threshold] = self.ci_allon
-                ret = self.all_configs[ci]
-
-                return None, ret
-
-            elif self.loss_func == "rank":
-                pass
-
-            else:
-                pass
-
-
-    def random_layermask_sampling(self):
-
-        # sample from distribution
-        all_sample = Bernoulli(torch.ones(config.num_layers * 2) * self.sample_distribution).sample()
-        # must have a decoder
-        if not any(all_sample[self.num_layers:self.num_layers*2]):
-            all_sample[np.random.randint(self.num_layers, self.num_layers*2)] = 1
-
-        return all_sample
+            return ret
 
 
 class NewTransformer(nn.Module):
@@ -547,23 +430,10 @@ class NewTransformer(nn.Module):
             reduction='none'
         )
 
-
-        self.layermask_type = config.layermask_type
-        self.gating_tradeoff = config.gating_tradeoff
-        self.diversity_tradeoff = config.diversity_tradeoff
-
-        self.random_layermask_p = 0.5
-
-        self.layermask = None
-
         # layermask predictor
         self.layer_mask_predictor = LayerMaskPredictor(config.embedding_size, 
-                                                       config.hidden_dim, 
                                                        config.num_layers, 
-                                                       config.action_type, 
                                                        config.layermask_type,
-                                                       config.layermask_noisy,
-                                                       config.allon_threshold,
                                                        config.potential_threshold,
                                                        config.shuffle_lmp_configs,
                                                        config.num_configs,
@@ -710,9 +580,7 @@ class NewTransformer(nn.Module):
             step_progress = curr_step / max-step
         """
 
-        encoded, _, raw_layermask = self.encode(batch['inputs'])
-        self.layermask = raw_layermask
-
+        encoded, raw_layermask = self.encode(batch['inputs'])
         decoded = self.decode(
             encoded,
             right_shift(right_shift(batch['targets']), shift=self.span - 1, fill=self.sos_idx),
@@ -740,17 +608,13 @@ class NewTransformer(nn.Module):
             'mask': inputs.eq(self.padding_idx)
         }
 
-        print(self.layermask_type)
-
         if raw_layermask is None:
-            layer_mask, lmp_raw_layermask = self.layer_mask_predictor(encoded['state'], encoded['mask'])
-            raw_layermask = lmp_raw_layermask
-        else:
-            layer_mask = None
+            raw_layermask = self.layer_mask_predictor(encoded['state'], encoded['mask'])
+
         for i, encoder in enumerate(self.encoders):
             encoded = encoder(encoded, i, word_embedding, gating_weight=raw_layermask[:, i])
                 
-        return encoded, layer_mask, raw_layermask
+        return encoded, raw_layermask
 
     def decode(self, encoded, targets, decoders=None, 
                                        embedding=None, 
@@ -774,8 +638,10 @@ class NewTransformer(nn.Module):
             'input_lens': input_lens
         }
 
-        if len(raw_layermask) != encoded['state'].shape[0]:
+        if len(raw_layermask) != encoded['state'].shape[0]: # for debugging beam_search
             pdb.set_trace()
+
+        assert raw_layermask is not None
 
         for i, decoder in enumerate(decoders):
             decoded = decoder(decoded, encoded, i, word_embedding, gating_weight=raw_layermask[:, len(decoders) + i])
@@ -796,13 +662,9 @@ class NewTransformer(nn.Module):
 
 
     def set_LMP_type(self, lmp_type):
-        if lmp_type not in ["random", "noskip", 'iterative_training', 'iterative_training_debug_oracle']:
-            print("cannot set to this type after initiliazation!")
-            exit(-1)
-        self.layer_mask_predictor.lmp_type = lmp_type
-        self.layermask_type = lmp_type
+        # used by action:itertrain
+        if lmp_type not in ["random", "noskip", "itertrain"]:
+            raise ValueError
 
-    def set_LMP_config_range(self, start, end):
-        
-        self.layer_mask_predictor.config_start = start
-        self.layer_mask_predictor.config_end = end
+        self.layer_mask_predictor.lmp_type = lmp_type
+

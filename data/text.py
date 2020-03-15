@@ -106,10 +106,11 @@ class TextDataset(Dataset):
 
         with open(itertrain_data, 'rb') as f:
             data = pickle.load(f)
-        
+        print("iter train data file : %s" % itertrain_data)
         data['y2'] /= data['y2'].max(dim=1)[0][:, None]
         y1, y2 = [], []
         valid_data_range = len(data['example_ids']) if not itertrain_val else 199
+        print("itertrain_val %s valid_data_range %i" % (itertrain_val, valid_data_range))
         for i in range(valid_data_range):
             ei = data['example_ids'].index(i) if not itertrain_val else data['example_ids'].index(i+1800)
             if 'valid.iter.all' in itertrain_data:
