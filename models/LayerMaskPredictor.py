@@ -100,7 +100,6 @@ class LayerMaskPredictor(nn.Module):
             dec_sample = np.random.randint(6, 12, size=batch_size)
             sample = Bernoulli(self.sample_distribution.expand(batch_size, self.num_layers * 2)).sample()
             sample[np.arange(batch_size), dec_sample] = 1
-            print(sample)
             return sample
 
         lmp_input = lmp_input.masked_fill_(lmp_input_mask[:, :, None], 0)
