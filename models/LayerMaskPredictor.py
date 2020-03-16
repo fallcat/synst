@@ -96,10 +96,10 @@ class LayerMaskPredictor(nn.Module):
             return torch.ones(lmp_input.size(0), self.num_layers * 2, device=torch.device("cuda"))
 
         if self.lmp_type == "random":
-            dec_sample = np.random.randint(6, 12)
-            sample = Bernoulli(self.sample_distribution.expand(lmp_input.size(0), self.num_layers * 2)).sample()
-            if sample[dec_sample] != 1:
-                sample[dec_sample] = 1
+            batch_size = lmp_input.size(0)
+            dec_sample = np.random.randint(6, 12, size=batch_size)
+            sample = Bernoulli(self.sample_distribution.expand(batch_size, self.num_layers * 2)).sample()
+            sample[np.arange(batch_size), dec_sample] = 1
             return sample
 
         lmp_input = lmp_input.masked_fill_(lmp_input_mask[:, :, None], 0)
