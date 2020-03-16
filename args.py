@@ -563,6 +563,13 @@ def add_new_transformer_args(parser):
         help="whether to shuffle the configs, used for optimizing the selected config range"
     )
 
+    group.add_argument(
+        "--lmp-transformer",
+        default=False,
+        action="store_true",
+        help="if True, in LMP, embedding first passes through a trainable transformer encoder"
+    )
+
     return group
 
 
@@ -1016,6 +1023,13 @@ def add_iterative_train_args(parser):
         action='store_true',
         help="whether to also translate test dataset and get stats"
     )
+    group.add_argument(
+        '--pass-enc0',
+        default=False,
+        action='store_true',
+        help="whether to the embedding output of encoder 0"
+    )
+
     return group
 
 def add_probe_train_args(parser):
