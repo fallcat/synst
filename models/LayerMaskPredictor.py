@@ -5,6 +5,7 @@ import torch.nn.functional as F
 from itertools import combinations
 from torch.nn import BCELoss
 from torch import nn
+from torch.distributions import Bernoulli
 
 class LayerMaskPredictor(nn.Module):
     def __init__(self, embedding_size, 
@@ -31,7 +32,7 @@ class LayerMaskPredictor(nn.Module):
                 self.bce_loss = BCELoss(reduction='none')
             self.reset_parameters()
         else:
-            self.sample_distribution = torch.ones(2 * num_layers, device=torch.device("cuda")) * 0.5 # init 0.5
+            self.sample_distribution = torch.ones((1, 2 * num_layers), device=torch.device("cuda")) * 0.5 # init 0.5
 
         # print configs for LMP
         print("lmp type : %s" % self.lmp_type)
@@ -92,6 +93,13 @@ class LayerMaskPredictor(nn.Module):
         # special case: not skipping
         if self.lmp_type == "noskip":
             return torch.ones(lmp_input.size(0), self.num_layers * 2, device=torch.device("cuda"))
+
+        if self.lmp_type == "random":
+            dec_sample = np.random.randint(6, 12)
+            sample = Bernoulli(self.sample_distribution.expand(lmp_input.size(0), self.num_layers * 2)).sample()
+            if sample[dec_sample] != 1:
+                sample[dec_sample] = 1
+            return sample
 
         lmp_input = lmp_input.masked_fill_(lmp_input_mask[:, :, None], 0)
         layermask = self.proj1(torch.mean(lmp_input,1))
