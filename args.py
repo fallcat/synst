@@ -1014,7 +1014,7 @@ def add_iterative_train_args(parser):
         '--test',
         default=False,
         action='store_true',
-        help="whether to also translate test dataset and evaluate after training LMP"
+        help="whether to also translate test dataset and get stats"
     )
     return group
 
