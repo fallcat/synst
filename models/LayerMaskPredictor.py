@@ -7,6 +7,7 @@ from torch.nn import BCELoss
 from torch import nn
 from torch.distributions import Bernoulli
 
+
 class LayerMaskPredictor(nn.Module):
     def __init__(self, embedding_size, 
                        num_layers, 
@@ -26,6 +27,7 @@ class LayerMaskPredictor(nn.Module):
         self.loss_func = loss_func
         self.eval = lmp_eval_mode
 
+        print("lmp_type", lmp_type)
         if lmp_type is not "random":
             self.proj1 = nn.Linear(embedding_size, self.all_configs.shape[0]-1)
             if self.loss_func == 'binary_cls':
