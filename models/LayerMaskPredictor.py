@@ -102,9 +102,11 @@ class LayerMaskPredictor(nn.Module):
             print("sample before", sample)
             violate_indices = torch.sum(sample[:, self.num_layers: self.num_layers * 2], dim=1) == 0
             print("violate indices", violate_indices)
-            dec_sample = np.random.randint(self.num_layers, self.num_layers * 2, size=violate_indices.size(0))
-            sample[violate_indices, dec_sample] = 1
-            print("sample after", sample)
+            dec_sample_size = violate_indices.sum()
+            if dec_sample_size > 0:
+                dec_sample = np.random.randint(self.num_layers, self.num_layers * 2, size=dec_sample_size)
+                sample[violate_indices, dec_sample] = 1
+                print("sample after", sample)
             return sample
 
         lmp_input = lmp_input.masked_fill_(lmp_input_mask[:, :, None], 0)
