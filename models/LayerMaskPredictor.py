@@ -97,9 +97,14 @@ class LayerMaskPredictor(nn.Module):
 
         if self.lmp_type == "random":
             batch_size = lmp_input.size(0)
-            dec_sample = np.random.randint(6, 12, size=batch_size)
+
             sample = Bernoulli(self.sample_distribution.expand(batch_size, self.num_layers * 2)).sample()
-            sample[np.arange(batch_size), dec_sample] = 1
+            print("sample before", sample)
+            violate_indices = torch.sum(sample[:, self.num_layers: self.num_layers * 2], dim=1) == 0
+            print("violate indices", violate_indices)
+            dec_sample = np.random.randint(self.num_layers, self.num_layers * 2, size=violate_indices.size(0))
+            sample[violate_indices, dec_sample] = 1
+            print("sample after", sample)
             return sample
 
         lmp_input = lmp_input.masked_fill_(lmp_input_mask[:, :, None], 0)
