@@ -28,12 +28,15 @@ class LayerMaskPredictor(nn.Module):
         self.eval = lmp_eval_mode
 
         print("lmp_type", lmp_type)
+        print(lmp_type != "random")
         if lmp_type is not "random":
+            print("1")
             self.proj1 = nn.Linear(embedding_size, self.all_configs.shape[0]-1)
             if self.loss_func == 'binary_cls':
                 self.bce_loss = BCELoss(reduction='none')
             self.reset_parameters()
         else:
+            print("2")
             self.sample_distribution = torch.ones((1, 2 * num_layers), device=torch.device("cuda")) * 0.5 # init 0.5
 
         # print configs for LMP
