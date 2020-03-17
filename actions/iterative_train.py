@@ -142,7 +142,7 @@ class IterativeTrainer(object):
         self.lmp_optimizer = optim.Adam(self.modules['model'].layer_mask_predictor.parameters(), lr=self.config.base_lr, betas=(0.9, 0.98), eps=1e-9)
         self.lmp_lr_scheduler = LambdaLR(self.lmp_optimizer, LinearLRSchedule(
                                 self.config.base_lr,
-                                1e-6,
+                                1e-5,
                                 self.config.max_train_lmp_epochs * 1999 / config.batch_size))
 
 
@@ -234,7 +234,18 @@ class IterativeTrainer(object):
         print("average #layer non-all-on config example {}".format(non_allon_config_layers / (total_masks - all_on_masks.item() + 1e-10)))
         print("average #layer all {}".format(total_selected_layers / float(total_masks)))
         print("non-allon config: bleu using layers selected by LMP {}".format(non_allon_gen_bleu))
-        print("non-allon config: bleu using layers selected by LMP {}".format(non_allon_allon_bleu))
+        print("non-allon config: bleu using all layers {}".format(non_allon_allon_bleu))
+
+        print('{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t'.format(
+                np.round(test_gen_bleu, 2),
+                np.round((total_selected_layers / float(total_masks)), 2),
+                np.round(percent_g, 2),
+                np.round((all_on_masks.item() / float(total_masks)), 2),
+                np.round((non_allon_config_layers.item() / (total_masks - all_on_masks.item() + 1e-10)), 2),
+                np.round(non_allon_gen_bleu, 2),
+                np.round(non_allon_allon_bleu, 2),
+                [np.round(x, 2) for x in np.around(ratio.cpu().numpy(), 2).tolist()]
+            ))
 
         fname = os.path.join(self.config.checkpoint_directory, 'translated_lmp.txt')
         with open(fname, 'w') as f:
@@ -331,7 +342,7 @@ class IterativeTrainer(object):
                             end_flag = True
                             break
 
-                        if self.is_best_checkpoint(val_losses) and epoch_i > epoch + 20:
+                        if self.is_best_checkpoint(val_losses) and epoch_i > epoch + 4:
                             self.checkpoint(epoch, experiment.curr_step, True)
 
             if end_flag:
