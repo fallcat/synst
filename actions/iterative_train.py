@@ -142,7 +142,7 @@ class IterativeTrainer(object):
         self.lmp_optimizer = optim.Adam(self.modules['model'].layer_mask_predictor.parameters(), lr=self.config.base_lr, betas=(0.9, 0.98), eps=1e-9)
         self.lmp_lr_scheduler = LambdaLR(self.lmp_optimizer, LinearLRSchedule(
                                 self.config.base_lr,
-                                1e-5,
+                                1e-6,
                                 self.config.max_train_lmp_epochs * 1999 / config.batch_size))
 
 
@@ -331,7 +331,7 @@ class IterativeTrainer(object):
                             end_flag = True
                             break
 
-                        if self.is_best_checkpoint(val_losses) and epoch_i > epoch + 4:
+                        if self.is_best_checkpoint(val_losses) and epoch_i > epoch + 20:
                             self.checkpoint(epoch, experiment.curr_step, True)
 
             if end_flag:

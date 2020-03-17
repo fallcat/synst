@@ -6,7 +6,6 @@ import torch.nn.functional as F
 from itertools import combinations
 from torch.nn import BCELoss
 from torch import nn
-import pdb
 
 class LayerMaskPredictor(nn.Module):
     def __init__(self, embedding_size, 
@@ -117,7 +116,7 @@ class LayerMaskPredictor(nn.Module):
             return torch.ones(lmp_input.size(0), self.num_layers * 2, device=torch.device("cuda"))
 
         lmp_input = lmp_input.masked_fill_(lmp_input_mask[:, :, None], 0)
-        layermask = self.proj1(torch.mean(lmp_input,1))
+        layermask = self.proj1(torch.sum(lmp_input,1))
         layermask = torch.sigmoid(layermask)
 
         if not self.eval:
