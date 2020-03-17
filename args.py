@@ -562,6 +562,12 @@ def add_new_transformer_args(parser):
         action="store_true",
         help="whether to shuffle the configs, used for optimizing the selected config range"
     )
+    group.add_argument(
+        "--lmp-config-file",
+        type=str,
+        default=None,
+        help='where to load lmp configs file'
+    )
 
     return group
 

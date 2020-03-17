@@ -315,8 +315,8 @@ class NewTransformer(nn.Module):
                                                        config.shuffle_lmp_configs,
                                                        config.num_configs,
                                                        config.loss_func,
-                                                       config.lmp_eval_mode)
-
+                                                       config.lmp_eval_mode,
+                                                       config.lmp_config_file)
 
     @classmethod
     def create_encoders(cls, config):
