@@ -1233,6 +1233,12 @@ def add_translate_args(parser):
         help='Default output filename is translated_{step}.txt'
     )
     group.add_argument(
+        '--fix-combination',
+        type=str,
+        default=None,
+        help='Fixed combination to use in translate'
+    )
+    group.add_argument(
         '--order-output',
         default=False,
         action='store_true',
