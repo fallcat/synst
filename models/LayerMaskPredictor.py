@@ -6,6 +6,7 @@ import torch.nn.functional as F
 from itertools import combinations
 from torch.nn import BCELoss
 from torch import nn
+import pdb
 
 class LayerMaskPredictor(nn.Module):
     def __init__(self, embedding_size, 
@@ -95,7 +96,7 @@ class LayerMaskPredictor(nn.Module):
             """
             To be deleted
             """
-            self.ci_allon = len(configs)
+            self.ci_allon = len(configs) - 1
             self.all_configs_sum_layer = self.all_configs.sum(dim=1) # len(all_combs) x 1
 
     def reset_parameters(self):
