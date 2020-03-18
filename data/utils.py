@@ -129,6 +129,6 @@ def get_dataloader(config, worker_init_fn=None, pin_memory=True, num_devices=1, 
         collate_fn=partial(dataset.collate, sort=True),
         #num_workers=num_devices,
         num_workers=0,
-	pin_memory=pin_memory,
+	    pin_memory=pin_memory,
         worker_init_fn=worker_init_fn
     )

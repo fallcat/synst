@@ -96,6 +96,10 @@ class OracleTranslator(object):
             for combination in all_combinations[k]:
                 if self.config.fix_combination is not None and torch.sum(combination[:len_fcl] == fix_combination_tensor) != len_fcl:
                     continue
+                filename = f'{self.config.output_filename}_{combination_str}.txt' if self.config.output_filename is not None else f'oracle_{combination_str}.txt'
+                filepath = os.path.join(self.config.output_directory, filename)
+                if os.path.exists(filepath) and len(open(filepath).readlines()) == 1999:
+                    continue
                 combination_str = ''.join([str(int(c.item())) for c in combination])
                 print("Generation combination", combination_str)
 
@@ -128,8 +132,8 @@ class OracleTranslator(object):
 
                             ordered_outputs.append((example_id, f'{decoded}', bleu))
 
-                    filename = f'{self.config.output_filename}_{combination_str}.txt' if self.config.output_filename is not None else f'oracle_{combination_str}.txt'
-                    with open(os.path.join(self.config.output_directory, filename), 'w') as output_file:
+
+                    with open(filepath, 'w') as output_file:
                         for _, outputs, bleu in sorted(ordered_outputs,
                                                  key=lambda x: x[0]):  # pylint:disable=consider-using-enumerate
                             output_file.write(outputs + "\t" + str(bleu) + "\n")
