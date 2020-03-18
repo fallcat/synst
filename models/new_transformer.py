@@ -44,11 +44,14 @@ class TransformerSublayer(nn.Module):
 
     def forward(self, inputs, gating_weight, *sublayer_args, **sublayer_kwargs): # pylint:disable=arguments-differ
         ''' The forward pass of the sublayer '''
-        out_dropout = self.dropout(self.sublayer(*sublayer_args, **sublayer_kwargs))
-        ret = self.norm(inputs + gating_weight[:, None, None] * out_dropout)
-        skip = inputs * (1-gating_weight)[:, None, None]
-        ret = gating_weight[:, None, None] * ret + skip
-        return ret
+        if gating_weight.size() == 1:
+            return self.norm(inputs + self.dropout(self.sublayer(*sublayer_args, **sublayer_kwargs)))
+        else:
+            out_dropout = self.dropout(self.sublayer(*sublayer_args, **sublayer_kwargs))
+            ret = self.norm(inputs + gating_weight[:, None, None] * out_dropout)
+            skip = inputs * (1-gating_weight)[:, None, None]
+            ret = gating_weight[:, None, None] * ret + skip
+            return ret
 
 class TransformerFFN(nn.Module):
     ''' Implements the Transformer feed-forward network '''
@@ -491,7 +494,7 @@ class NewTransformer(nn.Module):
         for i, encoder in enumerate(self.encoders):
             if len(raw_layermask.shape) == 1:
                 if raw_layermask[i]:
-                    encoded = encoder(encoded, i, word_embedding, gating_weight=raw_layermask[:, i])
+                    encoded = encoder(encoded, i, word_embedding, gating_weight=raw_layermask[i])
             else:
                 encoded = encoder(encoded, i, word_embedding, gating_weight=raw_layermask[:, i])
                 
