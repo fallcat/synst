@@ -10,7 +10,7 @@ import struct
 import numpy as np
 
 # SAVE PATH
-SAVE_PATH = "/mnt/nfs/work1/miyyer/simengsun/data/small_enro/"
+SAVE_PATH = "/mnt/nfs/work1/miyyer/wyou/data/small_enro/"
 
 np.random.seed(42)
 
