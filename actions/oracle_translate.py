@@ -91,6 +91,8 @@ class OracleTranslator(object):
             fix_combination_tensor = torch.tensor([float(x) for x in self.config.fix_combination])
             len_fcl = fix_combination_tensor.size(0)
 
+        count = 0
+
         # num bpe tokens
         for k in range(total_num_layer, 0, -1):
             for combination in all_combinations[k]:
@@ -98,6 +100,9 @@ class OracleTranslator(object):
                     continue
                 combination_str = ''.join([str(int(c.item())) for c in combination])
                 print("Generation combination", combination_str)
+                count += 1
+                if count == 1:
+                    continue
 
                 batches = tqdm(
                     self.dataloader,
