@@ -41,6 +41,7 @@ for filename in os.listdir(experiment_folder):
         with open(os.path.join(experiment_folder, filename), 'rt') as input_file:
             with open(os.path.join(experiment_folder, "train4000_" + filename), 'wt') as output_file:
                 text = str(input_file.read())
+                text = text.replace('--job-name=', '--job-name=4k')
                 text = text.replace('2080ti-short', '1080ti-long')
                 text = text.replace("DATA_PATH=/mnt/nfs/work1/miyyer/simengsun/data/small_enro", "DATA_PATH=/mnt/nfs/work1/miyyer/wyou/data/small_enro")
                 text = text.replace("--split valid", "--split train4000")
