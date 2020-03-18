@@ -525,7 +525,7 @@ class NewTransformer(nn.Module):
         if len(raw_layermask) != encoded['state'].shape[0]: # for debugging beam_search
             pdb.set_trace()
 
-        assert raw_layermask is not None
+        # assert raw_layermask is not None
 
         for i, decoder in enumerate(decoders):
             if len(raw_layermask.shape) == 1:
