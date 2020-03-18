@@ -94,7 +94,7 @@ class OracleTranslator(object):
         # num bpe tokens
         for k in range(total_num_layer, 0, -1):
             for combination in all_combinations[k]:
-                # pdb.set_trace()
+                pdb.set_trace()
                 if self.config.fix_combination is not None and torch.sum(combination[:len_fcl] == fix_combination_tensor) != len_fcl:
                     continue
                 combination_str = ''.join([str(int(c.item())) for c in combination])
