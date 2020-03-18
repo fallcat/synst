@@ -68,7 +68,8 @@ if __name__ == "__main__":
 
 	if sys.argv[1] == "binarize":
 		vocab = load_vocab()
-		binarize("train", vocab)
-		binarize("test", vocab)
-		binarize("valid", vocab)
+		binarize("train2000", vocab)
+		binarize("train4000", vocab)
+		# binarize("test", vocab)
+		# binarize("valid", vocab)
 
