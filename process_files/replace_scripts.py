@@ -44,4 +44,5 @@ for filename in os.listdir(experiment_folder):
                 text = text.replace('2080-short', '1080-long')
                 text = text.replace("DATA_PATH=/mnt/nfs/work1/miyyer/simengsun/data/small_enro", "DATA_PATH=/mnt/nfs/work1/miyyer/wyou/data/small_enro")
                 text = text.replace("--split valid", "--split train2000")
+                text = text.replace("--fix-combination 0000", "--fix-combination 0000 --output-filename train2000_oracle")
                 output_file.write(text)
