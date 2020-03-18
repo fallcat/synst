@@ -529,7 +529,7 @@ class NewTransformer(nn.Module):
         #     pdb.set_trace()
 
         # assert raw_layermask is not None
-        pdb.set_trace()
+        # pdb.set_trace()
 
         for i, decoder in enumerate(decoders):
             if len(raw_layermask.shape) == 1:
