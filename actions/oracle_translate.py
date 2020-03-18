@@ -88,13 +88,13 @@ class OracleTranslator(object):
         all_combinations = self.instantiate_combination(total_num_layer) # {k: [[0,1,0,0...], [1,0,0,0...]]}
 
         if self.config.fix_combination is not None:
-            fix_combination_list = [int(x) for x in self.config.fix_combination]
-            len_fcl = len(fix_combination_list)
+            fix_combination_tensor = torch.tensor([int(x) for x in self.config.fix_combination]).cuda()
+            len_fcl = fix_combination_list.size(0)
 
         # num bpe tokens
         for k in range(total_num_layer, 0, -1):
             for combination in all_combinations[k]:
-                if self.config.fix_combination is not None and combination[:len_fcl] != fix_combination_list:
+                if self.config.fix_combination is not None and torch.sum(combination[:len_fcl] == fix_combination_tensor) == len_fcl:
                     continue
                 combination_str = ''.join([str(int(c.item())) for c in combination])
                 print("Generation combination", combination_str)
