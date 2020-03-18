@@ -223,7 +223,7 @@ class BeamSearchDecoder(object):
                 updated_cache = []
 
                 # expand raw_layermask
-                assert len(raw_layermask) == len(beam_count)
+                # assert len(raw_layermask) == len(beam_count)
                 if sum(beam_count) != raw_layermask.shape[0]:
                     new_raw_layermask = []
                     for eg, rtimes in zip(raw_layermask, beam_count):
