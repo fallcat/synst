@@ -47,6 +47,7 @@ class TransformerSublayer(nn.Module):
         if gating_weight == 1:
             return self.norm(inputs + self.dropout(self.sublayer(*sublayer_args, **sublayer_kwargs)))
         else:
+            pdb.set_trace()
             out_dropout = self.dropout(self.sublayer(*sublayer_args, **sublayer_kwargs))
             ret = self.norm(inputs + gating_weight[:, None, None] * out_dropout)
             skip = inputs * (1-gating_weight)[:, None, None]

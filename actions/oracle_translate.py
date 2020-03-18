@@ -106,7 +106,7 @@ class OracleTranslator(object):
                     desc=get_description(),
                     file=sys.stdout  # needed to make tqdm_wrap_stdout work
                 )
-                pdb.set_trace()
+                # pdb.set_trace()
 
                 with tqdm_wrap_stdout():
                     ordered_outputs = []
