@@ -39,10 +39,10 @@ experiment_folder = "rl-scripts/small_enro_rl04/"
 for filename in os.listdir(experiment_folder):
     if filename.startswith("oracle_translate"):
         with open(os.path.join(experiment_folder, filename), 'rt') as input_file:
-            with open(os.path.join(experiment_folder, "train2000_" + filename), 'wt') as output_file:
+            with open(os.path.join(experiment_folder, "train4000_" + filename), 'wt') as output_file:
                 text = str(input_file.read())
                 text = text.replace('2080ti-short', '1080ti-long')
                 text = text.replace("DATA_PATH=/mnt/nfs/work1/miyyer/simengsun/data/small_enro", "DATA_PATH=/mnt/nfs/work1/miyyer/wyou/data/small_enro")
-                text = text.replace("--split valid", "--split train2000")
+                text = text.replace("--split valid", "--split train4000")
                 text = text.replace("--fix-combination", "--output-filename train2000_oracle --fix-combination")
                 output_file.write(text)
