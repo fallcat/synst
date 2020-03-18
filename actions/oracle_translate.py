@@ -132,7 +132,6 @@ class OracleTranslator(object):
                     with open(os.path.join(self.config.output_directory, filename), 'w') as output_file:
                         for _, outputs, bleu in sorted(ordered_outputs,
                                                  key=lambda x: x[0]):  # pylint:disable=consider-using-enumerate
-                            pdb.set_trace()
                             output_file.write(outputs + "\t" + str(bleu) + "\n")
 
     def __call__(self, epoch, experiment, verbose=0):
