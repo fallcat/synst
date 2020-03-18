@@ -89,7 +89,7 @@ class OracleTranslator(object):
 
         if self.config.fix_combination is not None:
             fix_combination_tensor = torch.tensor([int(x) for x in self.config.fix_combination]).cuda()
-            len_fcl = fix_combination_list.size(0)
+            len_fcl = fix_combination_tensor.size(0)
 
         # num bpe tokens
         for k in range(total_num_layer, 0, -1):
