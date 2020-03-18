@@ -88,7 +88,7 @@ class OracleTranslator(object):
         all_combinations = self.instantiate_combination(total_num_layer) # {k: [[0,1,0,0...], [1,0,0,0...]]}
 
         if self.config.fix_combination is not None:
-            fix_combination_tensor = torch.tensor([int(x) for x in self.config.fix_combination])
+            fix_combination_tensor = torch.tensor([float(x) for x in self.config.fix_combination])
             len_fcl = fix_combination_tensor.size(0)
 
         # num bpe tokens
