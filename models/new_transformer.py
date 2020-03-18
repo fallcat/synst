@@ -533,7 +533,7 @@ class NewTransformer(nn.Module):
 
         for i, decoder in enumerate(decoders):
             if len(raw_layermask.shape) == 1:
-                if raw_layermask[i]:
+                if raw_layermask[len(decoders) + i]:
                     decoded = decoder(decoded, encoded, i, word_embedding,
                                       gating_weight=raw_layermask[len(decoders) + i])
             else:
