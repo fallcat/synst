@@ -66,7 +66,9 @@ class AnnotatedTextDataset(TextDataset):
         'dev': 'valid.tok',
         'test': 'test.tok',
         'valid-train': 'valid-train.tok',
-        'valid-val': 'valid-val.tok'
+        'valid-val': 'valid-val.tok',
+        'train2000': 'train2000.tok',
+        'train4000': 'train4000.tok'
     }
 
     IGNORE_REGEX_LIST = []
