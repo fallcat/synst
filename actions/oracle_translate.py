@@ -126,14 +126,14 @@ class OracleTranslator(object):
                                 self.dataset.decode(batch['targets'][i].numpy().tolist(), trim=not verbose))
                             bleu = sacrebleu.corpus_bleu([decoded], [[target_text]], tokenize="none").score
 
-                            ordered_outputs.append((example_id, f'{decoded}\n', bleu))
+                            ordered_outputs.append((example_id, f'{decoded}', bleu))
 
                     filename = f'{self.config.output_filename}_{combination_str}.txt' or f'oracle_{combination_str}.txt'
                     with open(os.path.join(self.config.output_directory, filename), 'w') as output_file:
                         for _, outputs, bleu in sorted(ordered_outputs,
                                                  key=lambda x: x[0]):  # pylint:disable=consider-using-enumerate
                             pdb.set_trace()
-                            output_file.write(outputs + "\t" + str(bleu))
+                            output_file.write(outputs + "\t" + str(bleu) + "\n")
 
     def __call__(self, epoch, experiment, verbose=0):
         ''' Generate from the model '''
