@@ -91,8 +91,6 @@ class OracleTranslator(object):
             fix_combination_tensor = torch.tensor([float(x) for x in self.config.fix_combination])
             len_fcl = fix_combination_tensor.size(0)
 
-        count = 0
-
         # num bpe tokens
         for k in range(total_num_layer, 0, -1):
             for combination in all_combinations[k]:
@@ -100,9 +98,6 @@ class OracleTranslator(object):
                     continue
                 combination_str = ''.join([str(int(c.item())) for c in combination])
                 print("Generation combination", combination_str)
-                count += 1
-                if count == 1:
-                    continue
 
                 batches = tqdm(
                     self.dataloader,
@@ -133,7 +128,7 @@ class OracleTranslator(object):
 
                             ordered_outputs.append((example_id, f'{decoded}', bleu))
 
-                    filename = f'{self.config.output_filename}_{combination_str}.txt' or f'oracle_{combination_str}.txt'
+                    filename = f'{self.config.output_filename}_{combination_str}.txt' if self.config.output_filename is not None else f'oracle_{combination_str}.txt'
                     with open(os.path.join(self.config.output_directory, filename), 'w') as output_file:
                         for _, outputs, bleu in sorted(ordered_outputs,
                                                  key=lambda x: x[0]):  # pylint:disable=consider-using-enumerate
