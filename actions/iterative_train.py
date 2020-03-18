@@ -202,61 +202,69 @@ class IterativeTrainer(object):
         test_allon_bleu, test_allon_bleu_by_sent = self.get_bleu_res(test_allon_gen, test_gold)
 
         model.set_LMP_type('itertrain')
-        sample_translator = model.translator(self.config).to(torch.device("cuda"))
-        test_gen_gold, test_gen, test_masks = self.get_translated(sample_translator, test_batches)
-        test_gen_bleu, test_gen_bleu_by_sent = self.get_bleu_res(test_gen, test_gold)
-        
-        percent_g = sum([int(a >= b) for a, b in zip(test_gen_bleu_by_sent, test_allon_bleu_by_sent)]) / len(test_allon_gen)
-        combined_test_gen = [test_gen[i] if test_gen_bleu_by_sent[i] > test_allon_bleu_by_sent[i] else test_allon_gen[i] for i in range(len(test_gen))]
-        combined_test_bleu = sacrebleu.corpus_bleu(combined_test_gen, [test_gold], tokenize='none').score
-        ratio = sum([a.sum(dim=0) for a in test_masks])/(len(test_masks) * test_masks[0].shape[0])
-        all_on_masks = sum([(m.sum(dim=1) == num_layer).sum() for m in test_masks])
-        total_masks = sum([m.shape[0] for m in test_masks])
-        
-        filter_allon = [m.sum(dim=1) != num_layer for m in test_masks] 
-        non_allon_configs = [m.float()[:, None]*lm for m, lm in zip(filter_allon, test_masks)]
-        non_allon_config_layers = sum([m.sum() for m in non_allon_configs])
-        
-        filter_allon = torch.cat(filter_allon)
-        non_allon_gen = [test_gen[i] for i in range(len(test_gen)) if filter_allon[i]]
-        non_allon_allon = [test_allon_gen[i] for i in range(len(test_allon_gen)) if filter_allon[i]]
-        non_allon_gold = [test_gold[i] for i in range(len(test_gold)) if filter_allon[i] ]
-        non_allon_gen_bleu = sacrebleu.corpus_bleu(non_allon_gen, [non_allon_gold], tokenize='none').score
-        non_allon_allon_bleu = sacrebleu.corpus_bleu(non_allon_allon, [non_allon_gold], tokenize='none').score
+        test_bleu_list = []
+        thresh_range = [0, 0.0001, 0.0003, 0.0005, 0.001, 0.0015, 0.002, 0.0025, 0.003, 0.0035, 0.004]
+        test_bleu_list = []
+        for t in thresh_range:
+            model.layer_mask_predictor.potential_threshold = t
+            sample_translator = model.translator(self.config).to(torch.device("cuda"))
+            test_gen_gold, test_gen, test_masks = self.get_translated(sample_translator, test_batches)
+            test_gen_bleu, test_gen_bleu_by_sent = self.get_bleu_res(test_gen, test_gold)
+            test_bleu_list.append(test_gen_bleu)
+            percent_g = sum([int(a >= b) for a, b in zip(test_gen_bleu_by_sent, test_allon_bleu_by_sent)]) / len(test_allon_gen)
+            combined_test_gen = [test_gen[i] if test_gen_bleu_by_sent[i] > test_allon_bleu_by_sent[i] else test_allon_gen[i] for i in range(len(test_gen))]
+            combined_test_bleu = sacrebleu.corpus_bleu(combined_test_gen, [test_gold], tokenize='none').score
+            ratio = sum([a.sum(dim=0) for a in test_masks])/(len(test_masks) * test_masks[0].shape[0])
+            all_on_masks = sum([(m.sum(dim=1) == num_layer).sum() for m in test_masks])
+            total_masks = sum([m.shape[0] for m in test_masks])
+            
+            filter_allon = [m.sum(dim=1) != num_layer for m in test_masks] 
+            non_allon_configs = [m.float()[:, None]*lm for m, lm in zip(filter_allon, test_masks)]
+            non_allon_config_layers = sum([m.sum() for m in non_allon_configs])
+            
+            filter_allon = torch.cat(filter_allon)
+            non_allon_gen = [test_gen[i] for i in range(len(test_gen)) if filter_allon[i]]
+            non_allon_allon = [test_allon_gen[i] for i in range(len(test_allon_gen)) if filter_allon[i]]
+            non_allon_gold = [test_gold[i] for i in range(len(test_gold)) if filter_allon[i] ]
+            non_allon_gen_bleu = sacrebleu.corpus_bleu(non_allon_gen, [non_allon_gold], tokenize='none').score
+            non_allon_allon_bleu = sacrebleu.corpus_bleu(non_allon_allon, [non_allon_gold], tokenize='none').score
 
-        total_selected_layers = sum([m.sum().item() for m in test_masks])
-        
-        print("test corpus bleu: {:.2f}".format(test_gen_bleu))
-        print("percent >= : {}".format(percent_g))
-        print("combined test corpus bleu: {:.2f}".format(combined_test_bleu))
-        print("layer selection ratio: {}".format(np.around(ratio.cpu().numpy(), 2).tolist()))
-        print("all-on ratio: {}".format(all_on_masks.item() / float(total_masks))) # what percent of the test set selecting all-on config
-        print("average #layer non-all-on config example {}".format(non_allon_config_layers / (total_masks - all_on_masks.item() + 1e-10)))
-        print("average #layer all {}".format(total_selected_layers / float(total_masks)))
-        print("non-allon config: bleu using layers selected by LMP {}".format(non_allon_gen_bleu))
-        print("non-allon config: bleu using all layers {}".format(non_allon_allon_bleu))
+            total_selected_layers = sum([m.sum().item() for m in test_masks])
+            
+            print("threshold: {}".format(model.layer_mask_predictor.potential_threshold))
+            # print("test corpus bleu: {:.2f}".format(test_gen_bleu))
+            # print("percent >= : {}".format(percent_g))
+            # print("combined test corpus bleu: {:.2f}".format(combined_test_bleu))
+            # print("layer selection ratio: {}".format(np.around(ratio.cpu().numpy(), 2).tolist()))
+            # print("all-on ratio: {}".format(all_on_masks.item() / float(total_masks))) # what percent of the test set selecting all-on config
+            # print("average #layer non-all-on config example {}".format(non_allon_config_layers / (total_masks - all_on_masks.item() + 1e-10)))
+            # print("average #layer all {}".format(total_selected_layers / float(total_masks)))
+            # print("non-allon config: bleu using layers selected by LMP {}".format(non_allon_gen_bleu))
+            # print("non-allon config: bleu using all layers {}".format(non_allon_allon_bleu))
 
-        print('{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t'.format(
-                np.round(test_gen_bleu, 2),
-                np.round((total_selected_layers / float(total_masks)), 2),
-                np.round(percent_g, 2),
-                np.round((all_on_masks.item() / float(total_masks)), 2),
-                np.round((non_allon_config_layers.item() / (total_masks - all_on_masks.item() + 1e-10)), 2),
-                np.round(non_allon_gen_bleu, 2),
-                np.round(non_allon_allon_bleu, 2),
-                [np.round(x, 2) for x in np.around(ratio.cpu().numpy(), 2).tolist()]
-            ))
+            print('{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t'.format(
+                    np.round(test_gen_bleu, 2),
+                    np.round((total_selected_layers / float(total_masks)), 2),
+                    np.round(percent_g, 2),
+                    np.round((all_on_masks.item() / float(total_masks)), 2),
+                    np.round((non_allon_config_layers.item() / (total_masks - all_on_masks.item() + 1e-10)), 2),
+                    np.round(non_allon_gen_bleu, 2),
+                    np.round(non_allon_allon_bleu, 2),
+                    [np.round(x, 2) for x in np.around(ratio.cpu().numpy(), 2).tolist()]
+                ))
 
-        fname = os.path.join(self.config.checkpoint_directory, 'translated_lmp.txt')
-        with open(fname, 'w') as f:
-            for l in test_gen:
-                f.write(l + '\n')
+            fname = os.path.join(self.config.checkpoint_directory, 'translated_lmp_{}.txt'.format(t))
+            with open(fname, 'w') as f:
+                for l in test_gen:
+                    f.write(l + '\n')
 
-        fname = os.path.join(self.config.checkpoint_directory, 'test_masks.pkl')
-        with open(fname, 'wb') as f:
-            pickle.dump({'test_masks': test_masks, 
-                         'test_lmp_bleu_by_sent': test_gen_bleu_by_sent, 
-                         'test_allon_bleu_by_sent': test_allon_bleu_by_sent}, f)
+            fname = os.path.join(self.config.checkpoint_directory, 'test_masks_{}.pkl'.format(t))
+            with open(fname, 'wb') as f:
+                pickle.dump({'test_masks': test_masks, 
+                             'test_lmp_bleu_by_sent': test_gen_bleu_by_sent, 
+                             'test_allon_bleu_by_sent': test_allon_bleu_by_sent}, f)
+
+        print([np.round(x, 2) for x in test_bleu_list])
 
     def get_bleu_res(self, decoded, gold, tokenize='none'):
 

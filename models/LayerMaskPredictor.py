@@ -146,8 +146,10 @@ class LayerMaskPredictor(nn.Module):
             filtered[filtered == 0] = float("inf")
             _, ci = torch.min(filtered, dim=1)
             ci_val = layermask[range(bs), ci]
-            # print("{:.2f} {:.2f} {:.2f} {:.2f}".format(ci_val.mean().item(), ci_val.max().item(), ci_val.min().item(), max_val.mean().item() - 2*self.potential_threshold))
             ci[ci_val < max_val.mean().item() - 2*self.potential_threshold] = self.ci_allon
             ret = self.all_configs[ci]
+
+            # ci = [random.randint(0,self.ci_allon) for i in range(bs)]
+            # ret = self.all_configs[ci]
 
             return ret
