@@ -112,7 +112,7 @@ class LayerMaskPredictor(nn.Module):
                     sample[violate_indices, dec_sample] = 1
                 return sample
             else:
-                return torch.cat(random.sample(self.sample_distribution, batch_size), dim=0)
+                return torch.stack(random.choice(self.sample_distribution, batch_size))
 
         lmp_input = lmp_input.masked_fill_(lmp_input_mask[:, :, None], 0)
         layermask = self.proj1(torch.mean(lmp_input,1))
