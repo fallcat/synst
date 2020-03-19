@@ -33,7 +33,7 @@ class Translator(object):
         }
 
         if self.config.fix_combination is not None:
-            self.config.fix_combination = [int(x) for x in self.config.fix_combination]
+            self.config.fix_combination = torch.tensor([int(x) for x in self.config.fix_combination])
 
     @property
     def dataset(self):
