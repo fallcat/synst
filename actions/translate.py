@@ -17,6 +17,7 @@ from tqdm import tqdm
 
 from utils import profile
 from utils import tqdm_wrap_stdout
+import pdb
 
 
 class Translator(object):
@@ -136,6 +137,7 @@ class Translator(object):
 
                 self.translate_all(output_file, epoch, experiment, verbose)
                 layermask_path = os.path.join(self.config.output_directory, 'layermasks.txt')
+                pdb.set_trace()
                 with open(layermask_path, 'w') as f:
                     for lm in self.translator.layermasks:
                         f.write('\t'.join([str(a.item()) for a in lm]) + '\n')
