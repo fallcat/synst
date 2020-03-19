@@ -318,7 +318,8 @@ class NewTransformer(nn.Module):
                                                        config.shuffle_lmp_configs,
                                                        config.num_configs,
                                                        config.loss_func,
-                                                       config.lmp_eval_mode)
+                                                       config.lmp_eval_mode,
+                                                       config.layermask_file)
 
 
     @classmethod
@@ -491,7 +492,7 @@ class NewTransformer(nn.Module):
         if raw_layermask is None:
             raw_layermask = self.layer_mask_predictor(encoded['state'], encoded['mask'])
 
-        # pdb.set_trace()
+        pdb.set_trace()
 
         for i, encoder in enumerate(self.encoders):
             if len(raw_layermask.shape) == 1:

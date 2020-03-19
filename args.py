@@ -562,6 +562,12 @@ def add_new_transformer_args(parser):
         action="store_true",
         help="whether to shuffle the configs, used for optimizing the selected config range"
     )
+    group.add_argument(
+        '--layermask-file',
+        type=str,
+        default=None,
+        help="The file to store layermasks to use. If not none and layermask-type is random, then use the layermasks from file"
+    )
 
     return group
 

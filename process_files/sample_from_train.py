@@ -2,10 +2,10 @@ import random
 
 # total = 612422
 # sample_size = 4000
-# sampled = random.sample(range(total), sample_size)
+#
 # sampled2 = random.sample(sampled, 2000)
 #
-# print(sampled)
+# print(sampled)sampled = random.sample(range(total), sample_size)
 # print(len(sampled))
 #
 # with open("sampled_train_idx4000.txt", "wt") as output_file:

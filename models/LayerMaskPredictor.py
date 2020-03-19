@@ -16,7 +16,8 @@ class LayerMaskPredictor(nn.Module):
                        shuffle_configs,
                        num_configs,
                        loss_func,
-                       lmp_eval_mode):
+                       lmp_eval_mode,
+                       layermask_file):
         super(LayerMaskPredictor, self).__init__()
 
         self.num_layers = num_layers
@@ -26,6 +27,7 @@ class LayerMaskPredictor(nn.Module):
         self.lmp_type = lmp_type # choose from ['random', 'noskip', 'itertrain']
         self.loss_func = loss_func
         self.eval = lmp_eval_mode
+        self.layermask_file = layermask_file
 
         if lmp_type != "random":
             self.proj1 = nn.Linear(embedding_size, self.all_configs.shape[0]-1)
@@ -33,7 +35,11 @@ class LayerMaskPredictor(nn.Module):
                 self.bce_loss = BCELoss(reduction='none')
             self.reset_parameters()
         else:
-            self.sample_distribution = torch.ones((1, 2 * num_layers), device=torch.device("cuda")) * 0.5 # init 0.5
+            if layermask_file is None:
+                self.sample_distribution = torch.ones((1, 2 * num_layers), device=torch.device("cuda")) * 0.5 # init 0.5
+            else:
+                with open(layermask_file) as layermask_file:
+                    self.sample_distribution = [torch.tensor(line.split(), device=torch.device("cuda")) for line in layermask_file.readlines()]
 
         # print configs for LMP
         print("lmp type : %s" % self.lmp_type)
@@ -96,15 +102,18 @@ class LayerMaskPredictor(nn.Module):
             return torch.ones(lmp_input.size(0), self.num_layers * 2, device=torch.device("cuda"))
 
         if self.lmp_type == "random":
-            batch_size = lmp_input.size(0)
+            if self.layermask_file is None:
+                batch_size = lmp_input.size(0)
 
-            sample = Bernoulli(self.sample_distribution.expand(batch_size, self.num_layers * 2)).sample()
-            violate_indices = torch.sum(sample[:, self.num_layers: self.num_layers * 2], dim=1) == 0
-            dec_sample_size = violate_indices.sum()
-            if dec_sample_size > 0:
-                dec_sample = np.random.randint(self.num_layers, self.num_layers * 2, size=dec_sample_size)
-                sample[violate_indices, dec_sample] = 1
-            return sample
+                sample = Bernoulli(self.sample_distribution.expand(batch_size, self.num_layers * 2)).sample()
+                violate_indices = torch.sum(sample[:, self.num_layers: self.num_layers * 2], dim=1) == 0
+                dec_sample_size = violate_indices.sum()
+                if dec_sample_size > 0:
+                    dec_sample = np.random.randint(self.num_layers, self.num_layers * 2, size=dec_sample_size)
+                    sample[violate_indices, dec_sample] = 1
+                return sample
+            else:
+                return random.choice(self.sample_distribution)
 
         lmp_input = lmp_input.masked_fill_(lmp_input_mask[:, :, None], 0)
         layermask = self.proj1(torch.mean(lmp_input,1))
