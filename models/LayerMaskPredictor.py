@@ -1,6 +1,7 @@
 import torch
 import random
 import numpy as np
+import pdb
 import torch.nn.functional as F
 from itertools import combinations
 from torch.nn import BCELoss
@@ -112,6 +113,7 @@ class LayerMaskPredictor(nn.Module):
                     sample[violate_indices, dec_sample] = 1
                 return sample
             else:
+                pdb.set_trace()
                 return torch.stack(random.choice(self.sample_distribution, batch_size))
 
         lmp_input = lmp_input.masked_fill_(lmp_input_mask[:, :, None], 0)
