@@ -39,7 +39,7 @@ class LayerMaskPredictor(nn.Module):
                 self.sample_distribution = torch.ones((1, 2 * num_layers), device=torch.device("cuda")) * 0.5 # init 0.5
             else:
                 with open(layermask_file) as layermask_file:
-                    self.sample_distribution = [torch.tensor([int(x) for x in line.split()], device=torch.device("cuda")) for line in layermask_file.readlines()]
+                    self.sample_distribution = [torch.tensor([int(x) for x in list(line)], device=torch.device("cuda")) for line in layermask_file.readlines()]
 
         # print configs for LMP
         print("lmp type : %s" % self.lmp_type)
@@ -102,9 +102,8 @@ class LayerMaskPredictor(nn.Module):
             return torch.ones(lmp_input.size(0), self.num_layers * 2, device=torch.device("cuda"))
 
         if self.lmp_type == "random":
+            batch_size = lmp_input.size(0)
             if self.layermask_file is None:
-                batch_size = lmp_input.size(0)
-
                 sample = Bernoulli(self.sample_distribution.expand(batch_size, self.num_layers * 2)).sample()
                 violate_indices = torch.sum(sample[:, self.num_layers: self.num_layers * 2], dim=1) == 0
                 dec_sample_size = violate_indices.sum()
@@ -113,7 +112,7 @@ class LayerMaskPredictor(nn.Module):
                     sample[violate_indices, dec_sample] = 1
                 return sample
             else:
-                return random.choice(self.sample_distribution)
+                return torch.cat(random.sample(self.sample_distribution, batch_size), dim=0)
 
         lmp_input = lmp_input.masked_fill_(lmp_input_mask[:, :, None], 0)
         layermask = self.proj1(torch.mean(lmp_input,1))
