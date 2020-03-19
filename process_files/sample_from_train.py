@@ -18,12 +18,12 @@ import random
 #         output_file.write(str(n) + '\n')
 
 # ------------------------------------------------------------
-idx_filename = "/mnt/nfs/work1/miyyer/wyou/synst/process_files/sampled_train_idx2000.txt"
+idx_filename = "/mnt/nfs/work1/miyyer/wyou/synst/process_files/sampled_train_idx4000.txt"
 with open(idx_filename, "rt") as idx_file:
     with open('/mnt/nfs/work1/miyyer/wyou/data/small_enro/train.tok.bpe.32000.ro', 'rt') as ro_file:
         with open('/mnt/nfs/work1/miyyer/wyou/data/small_enro/train.tok.bpe.32000.en', 'rt') as en_file:
-            with open('/mnt/nfs/work1/miyyer/wyou/data/small_enro/train2000.tok.bpe.32000.ro', 'wt') as output_ro_file:
-                with open('/mnt/nfs/work1/miyyer/wyou/data/small_enro/train2000.tok.bpe.32000.en', 'wt') as output_en_file:
+            with open('/mnt/nfs/work1/miyyer/wyou/data/small_enro/train4000.tok.bpe.32000.ro', 'wt') as output_ro_file:
+                with open('/mnt/nfs/work1/miyyer/wyou/data/small_enro/train4000.tok.bpe.32000.en', 'wt') as output_en_file:
                     ro_lines = list(ro_file.readlines())
                     en_lines = list(en_file.readlines())
                     for idx in idx_file.readlines():
