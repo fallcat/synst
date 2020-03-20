@@ -40,7 +40,7 @@ class LayerMaskPredictor(nn.Module):
                 self.sample_distribution = torch.ones((1, 2 * num_layers), device=torch.device("cuda")) * 0.5 # init 0.5
             else:
                 with open(layermask_file) as layermask_file:
-                    self.sample_distribution = [torch.tensor([int(x) for x in list(line.strip())], device=torch.device("cuda")) for line in layermask_file.readlines()]
+                    self.sample_distribution = torch.stack([torch.tensor([int(x) for x in list(line.strip())], device=torch.device("cuda")) for line in layermask_file.readlines()])
 
         # print configs for LMP
         print("lmp type : %s" % self.lmp_type)
@@ -114,7 +114,8 @@ class LayerMaskPredictor(nn.Module):
                 return sample
             else:
                 pdb.set_trace()
-                return torch.stack(np.random.choice(self.sample_distribution, batch_size))
+                indices = torch.multinomial(torch.ones(self.sample_distribution.size(0)), batch_size, replacement=True)
+                return self.sample_distribution[indices]
 
         lmp_input = lmp_input.masked_fill_(lmp_input_mask[:, :, None], 0)
         layermask = self.proj1(torch.mean(lmp_input,1))
