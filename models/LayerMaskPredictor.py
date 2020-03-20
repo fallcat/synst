@@ -113,7 +113,7 @@ class LayerMaskPredictor(nn.Module):
                     sample[violate_indices, dec_sample] = 1
                 return sample
             else:
-                pdb.set_trace()
+                # pdb.set_trace()
                 indices = torch.multinomial(torch.ones(self.sample_distribution.size(0)), batch_size, replacement=True)
                 return self.sample_distribution[indices]
 
