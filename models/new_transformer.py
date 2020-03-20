@@ -44,11 +44,14 @@ class TransformerSublayer(nn.Module):
 
     def forward(self, inputs, gating_weight, *sublayer_args, **sublayer_kwargs): # pylint:disable=arguments-differ
         ''' The forward pass of the sublayer '''
-        out_dropout = self.dropout(self.sublayer(*sublayer_args, **sublayer_kwargs))
-        ret = self.norm(inputs + gating_weight[:, None, None] * out_dropout)
-        skip = inputs * (1-gating_weight)[:, None, None]
-        ret = gating_weight[:, None, None] * ret + skip
-        return ret
+        if gating_weight.size(0) == 1:
+            return self.norm(inputs + self.dropout(self.sublayer(*sublayer_args, **sublayer_kwargs)))
+        else:
+            out_dropout = self.dropout(self.sublayer(*sublayer_args, **sublayer_kwargs))
+            ret = self.norm(inputs + gating_weight[:, None, None] * out_dropout)
+            skip = inputs * (1-gating_weight)[:, None, None]
+            ret = gating_weight[:, None, None] * ret + skip
+            return ret
 
 class TransformerFFN(nn.Module):
     ''' Implements the Transformer feed-forward network '''
@@ -316,6 +319,7 @@ class NewTransformer(nn.Module):
                                                        config.num_configs,
                                                        config.loss_func,
                                                        config.lmp_eval_mode,
+                                                       config.layermask_file,
                                                        config.lmp_config_file)
 
     @classmethod
@@ -488,8 +492,14 @@ class NewTransformer(nn.Module):
         if raw_layermask is None:
             raw_layermask = self.layer_mask_predictor(encoded['state'], encoded['mask'])
 
+        # pdb.set_trace()
+
         for i, encoder in enumerate(self.encoders):
-            encoded = encoder(encoded, i, word_embedding, gating_weight=raw_layermask[:, i])
+            if len(raw_layermask.shape) == 1:
+                if raw_layermask[i]:
+                    encoded = encoder(encoded, i, word_embedding, gating_weight=raw_layermask[i])
+            else:
+                encoded = encoder(encoded, i, word_embedding, gating_weight=raw_layermask[:, i])
                 
         return encoded, raw_layermask
 
@@ -515,13 +525,19 @@ class NewTransformer(nn.Module):
             'input_lens': input_lens
         }
 
-        if len(raw_layermask) != encoded['state'].shape[0]: # for debugging beam_search
-            pdb.set_trace()
+        # if len(raw_layermask) != encoded['state'].shape[0]: # for debugging beam_search
+        #     pdb.set_trace()
 
-        assert raw_layermask is not None
+        # assert raw_layermask is not None
+        # pdb.set_trace()
 
         for i, decoder in enumerate(decoders):
-            decoded = decoder(decoded, encoded, i, word_embedding, gating_weight=raw_layermask[:, len(decoders) + i])
+            if len(raw_layermask.shape) == 1:
+                if raw_layermask[len(decoders) + i]:
+                    decoded = decoder(decoded, encoded, i, word_embedding,
+                                      gating_weight=raw_layermask[len(decoders) + i])
+            else:
+                decoded = decoder(decoded, encoded, i, word_embedding, gating_weight=raw_layermask[:, len(decoders) + i])
            
         # compute projection to the vocabulary
         state = decoded['state']

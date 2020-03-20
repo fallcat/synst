@@ -17,6 +17,7 @@ from tqdm import tqdm
 
 from utils import profile
 from utils import tqdm_wrap_stdout
+import pdb
 
 
 class Translator(object):
@@ -31,6 +32,9 @@ class Translator(object):
         self.modules = {
             'model': model
         }
+
+        if self.config.fix_combination is not None:
+            self.config.fix_combination = torch.tensor([int(x) for x in self.config.fix_combination])
 
     @property
     def dataset(self):
@@ -74,7 +78,7 @@ class Translator(object):
             for batch in batches:
                 # run the data through the model
                 batches.set_description_str(get_description())
-                sequences, _ = self.translator.translate(batch)
+                sequences, _ = self.translator.translate(batch, self.config.fix_combination)
 
                 if self.config.timed:
                     continue

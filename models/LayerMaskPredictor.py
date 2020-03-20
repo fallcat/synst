@@ -2,10 +2,13 @@ import torch
 import random
 import pickle
 import numpy as np
+import pdb
 import torch.nn.functional as F
 from itertools import combinations
 from torch.nn import BCELoss
 from torch import nn
+from torch.distributions import Bernoulli
+
 
 class LayerMaskPredictor(nn.Module):
     def __init__(self, embedding_size, 
@@ -16,6 +19,7 @@ class LayerMaskPredictor(nn.Module):
                        num_configs,
                        loss_func,
                        lmp_eval_mode,
+                       layermask_file,
                        config_file):
         super(LayerMaskPredictor, self).__init__()
 
@@ -26,14 +30,19 @@ class LayerMaskPredictor(nn.Module):
         self.lmp_type = lmp_type # choose from ['random', 'noskip', 'itertrain']
         self.loss_func = loss_func
         self.eval = lmp_eval_mode
+        self.layermask_file = layermask_file
 
-        if lmp_type is not "random":
+        if lmp_type != "random":
             self.proj1 = nn.Linear(embedding_size, self.all_configs.shape[0]-1)
             if self.loss_func == 'binary_cls':
                 self.bce_loss = BCELoss(reduction='none')
             self.reset_parameters()
         else:
-            self.sample_distribution = torch.ones(2 * num_layers, device=torch.device("cuda")) * 0.5 # init 0.5
+            if layermask_file is None:
+                self.sample_distribution = torch.ones((1, 2 * num_layers), device=torch.device("cuda")) * 0.5 # init 0.5
+            else:
+                with open(layermask_file) as layermask_file:
+                    self.sample_distribution = torch.stack([torch.tensor([float(x) for x in list(line.strip())], device=torch.device("cuda")) for line in layermask_file.readlines()])
 
         # print configs for LMP
         print("lmp type : %s" % self.lmp_type)
@@ -114,6 +123,21 @@ class LayerMaskPredictor(nn.Module):
         # special case: not skipping
         if self.lmp_type == "noskip":
             return torch.ones(lmp_input.size(0), self.num_layers * 2, device=torch.device("cuda"))
+
+        if self.lmp_type == "random":
+            batch_size = lmp_input.size(0)
+            if self.layermask_file is None:
+                sample = Bernoulli(self.sample_distribution.expand(batch_size, self.num_layers * 2)).sample()
+                violate_indices = torch.sum(sample[:, self.num_layers: self.num_layers * 2], dim=1) == 0
+                dec_sample_size = violate_indices.sum()
+                if dec_sample_size > 0:
+                    dec_sample = np.random.randint(self.num_layers, self.num_layers * 2, size=dec_sample_size)
+                    sample[violate_indices, dec_sample] = 1
+                return sample
+            else:
+                # pdb.set_trace()
+                indices = torch.multinomial(torch.ones(self.sample_distribution.size(0)), batch_size, replacement=True)
+                return self.sample_distribution[indices]
 
         lmp_input = lmp_input.masked_fill_(lmp_input_mask[:, :, None], 0)
         layermask = self.proj1(torch.sum(lmp_input,1))

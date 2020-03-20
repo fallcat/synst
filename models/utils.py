@@ -309,8 +309,9 @@ class Translator(object):
 
             if raw_layermask is None:
                 raw_layermask = lmp_raw_layermask
-
-            self.layermasks.append(raw_layermask[0])
+                self.layermasks.append(raw_layermask[0])
+            else:
+                self.layermasks.append(raw_layermask)
             # decode using top-k decoder layer
             beams = decoder.initialize_search(
                 [[self.sos_idx] * self.span for _ in range(len(batch['inputs']))],

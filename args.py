@@ -13,7 +13,7 @@ import torch
 from data import DATASETS
 from models import MODELS
 from actions import Trainer, Evaluator, Translator, Pass, Prober, ProbeTrainer, ProbeEvaluator, ProbeNewTranslator, \
-    ProbeOffDiagonal, IterativeTrainer
+    ProbeOffDiagonal, IterativeTrainer, OracleTranslator
 from utils import get_version_string, get_random_seed_fn
 
 
@@ -563,18 +563,19 @@ def add_new_transformer_args(parser):
         help="whether to shuffle the configs, used for optimizing the selected config range"
     )
     group.add_argument(
+        '--layermask-file',
+        type=str,
+        default=None,
+        help="The file to store layermasks to use during train. If not none and layermask-type is random, then use the layermasks from file"
+    )
+    
+    group.add_argument(
         "--lmp-config-file",
         type=str,
         default=None,
         help='where to load lmp configs file'
     )
-
-    group.add_argument(
-        "--lmp-transformer",
-        default=False,
-        action="store_true",
-        help="if True, in LMP, embedding first passes through a trainable transformer encoder"
-    )
+    
 
     return group
 
@@ -726,7 +727,7 @@ def add_data_args(parser):
         '--split',
         type=str,
         default='train',
-        choices=['train', 'valid', 'test', 'dev','valid-train', 'valid-val'],
+        choices=['train', 'valid', 'test', 'dev','valid-train', 'valid-val', 'train2000', 'train4000'],
         help='Location for the preprocessed data'
     )
     group.add_argument(
@@ -1253,6 +1254,12 @@ def add_translate_args(parser):
         help='Default output filename is translated_{step}.txt'
     )
     group.add_argument(
+        '--fix-combination',
+        type=str,
+        default=None,
+        help='Fixed combination to use in translate'
+    )
+    group.add_argument(
         '--order-output',
         default=False,
         action='store_true',
@@ -1615,6 +1622,15 @@ def parse_args(argv=None):
         shuffle=False
     )
 
+    oracle_translate_parser = subparsers.add_parser('oracle_translate', help='Translate from a model')
+    groups['oracle_translate'] = add_translate_args(oracle_translate_parser)
+    oracle_translate_parser.set_defaults(
+        action=OracleTranslator,
+        action_type='oracle_translate',
+        action_config=groups['oracle_translate'],
+        shuffle=False
+    )
+
     probe_new_translate_parser = subparsers.add_parser('probe_new_translate', help='Probe New Translate from a model')
     groups['probe_new_translate'] = add_translate_args(probe_new_translate_parser)
     probe_new_translate_parser.set_defaults(
@@ -1750,7 +1766,7 @@ Commit your changes first, then try again.''')
     if args.action_type == 'evaluate':
         args.action_config.average_checkpoints = args.average_checkpoints
 
-    if (args.action_type == 'translate' or args.action_type == 'probe_new_translate') and args.num_devices > 1:
+    if (args.action_type == 'translate' or args.action_type == 'probe_new_translate') or args.action_type == 'oracle_translate' and args.num_devices > 1:
         # Caching is currently not thread-safe
         args.action_config.disable_cache = True
 

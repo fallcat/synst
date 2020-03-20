@@ -223,17 +223,19 @@ class BeamSearchDecoder(object):
                 updated_cache = []
 
                 # expand raw_layermask
-                assert len(raw_layermask) == len(beam_count)
-                if sum(beam_count) != raw_layermask.shape[0]:
-                    new_raw_layermask = []
-                    for eg, rtimes in zip(raw_layermask, beam_count):
-                        if rtimes == 0:
-                            continue
-                        new_raw_layermask.append(eg.repeat(rtimes, 1))
-                        #pdb.set_trace()
-                    new_raw_layermask = torch.cat(new_raw_layermask)
-                else:
-                    new_raw_layermask = raw_layermask
+                # assert len(raw_layermask) == len(beam_count)
+                # if sum(beam_count) != raw_layermask.shape[0]:
+                #     new_raw_layermask = []
+                #     for eg, rtimes in zip(raw_layermask, beam_count):
+                #         if rtimes == 0:
+                #             continue
+                #         new_raw_layermask.append(eg.repeat(rtimes, 1))
+                #         #pdb.set_trace()
+                #     new_raw_layermask = torch.cat(new_raw_layermask)
+                # else:
+                #     new_raw_layermask = raw_layermask
+
+                new_raw_layermask = raw_layermask
 
                 chunks = [(encoded_batch, batch, new_raw_layermask)]
                 while chunks:

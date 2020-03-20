@@ -4,6 +4,7 @@ Initialize the actions module
 from actions.train import Trainer
 from actions.evaluate import Evaluator
 from actions.translate import Translator
+from actions.oracle_translate import OracleTranslator
 from actions.probe import Prober
 from actions.probe_train import ProbeTrainer
 from actions.probe_evaluate import ProbeEvaluator
