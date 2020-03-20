@@ -18,7 +18,7 @@ from torch.distributions import Bernoulli
 import torch.nn.functional as F
 from itertools import combinations
 from torch.nn import BCELoss
-from models.LayerMaskPredictor import LayerMaskPredictor
+from models.layer_mask_predictor import LayerMaskPredictor
 
 
 class TransformerSublayer(nn.Module):
