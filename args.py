@@ -566,8 +566,16 @@ def add_new_transformer_args(parser):
         '--layermask-file',
         type=str,
         default=None,
-        help="The file to store layermasks to use. If not none and layermask-type is random, then use the layermasks from file"
+        help="The file to store layermasks to use during train. If not none and layermask-type is random, then use the layermasks from file"
     )
+    
+    group.add_argument(
+        "--lmp-config-file",
+        type=str,
+        default=None,
+        help='where to load lmp configs file'
+    )
+    
 
     return group
 
@@ -1020,8 +1028,15 @@ def add_iterative_train_args(parser):
         '--test',
         default=False,
         action='store_true',
-        help="whether to also translate test dataset and evaluate after training LMP"
+        help="whether to also translate test dataset and get stats"
     )
+    group.add_argument(
+        '--pass-enc0',
+        default=False,
+        action='store_true',
+        help="whether to the embedding output of encoder 0"
+    )
+
     return group
 
 def add_probe_train_args(parser):

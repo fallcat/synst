@@ -319,8 +319,8 @@ class NewTransformer(nn.Module):
                                                        config.num_configs,
                                                        config.loss_func,
                                                        config.lmp_eval_mode,
-                                                       config.layermask_file)
-
+                                                       config.layermask_file,
+                                                       config.lmp_config_file)
 
     @classmethod
     def create_encoders(cls, config):

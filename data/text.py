@@ -107,7 +107,7 @@ class TextDataset(Dataset):
         with open(itertrain_data, 'rb') as f:
             data = pickle.load(f)
         print("iter train data file : %s" % itertrain_data)
-        data['y2'] /= data['y2'].max(dim=1)[0][:, None]
+        #data['y2'] /= (data['y2'].max(dim=1)[0][:, None] + 1e-9)
         y1, y2 = [], []
         valid_data_range = len(data['example_ids']) if not itertrain_val else 199
         print("itertrain_val %s valid_data_range %i" % (itertrain_val, valid_data_range))
