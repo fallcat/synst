@@ -114,7 +114,7 @@ class LayerMaskPredictor(nn.Module):
                 return sample
             else:
                 pdb.set_trace()
-                return torch.stack(random.choice(self.sample_distribution, batch_size))
+                return torch.stack(np.random.choice(self.sample_distribution, batch_size))
 
         lmp_input = lmp_input.masked_fill_(lmp_input_mask[:, :, None], 0)
         layermask = self.proj1(torch.mean(lmp_input,1))
