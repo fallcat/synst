@@ -143,8 +143,7 @@ class IterativeTrainer(object):
         self.lmp_lr_scheduler = LambdaLR(self.lmp_optimizer, LinearLRSchedule(
                                 self.config.base_lr,
                                 1e-5,
-                                self.config.max_train_lmp_epochs * 1999 / config.batch_size))
-
+                                self.config.max_train_lmp_epochs * 1800 / config.batch_size))
 
     @property
     def dataset(self):
@@ -332,7 +331,6 @@ class IterativeTrainer(object):
             end_flag = False
             for bi, batch in enumerate(iter(self.dataloader)):
                 experiment.set_step(experiment.curr_step + 1)
-
                 train_loss = self.get_loss(model, batch)
                 self.optimize(train_loss)
                 train_losses.update(train_loss.item())
@@ -344,7 +342,7 @@ class IterativeTrainer(object):
                         val_losses.update(val_loss)
                         experiment.log_metric('val_loss', val_losses.last_value)
 
-                        print("step: %i epoch : %i batch : %i val loss: %f" % (experiment.curr_step, epoch_i, bi, val_loss))
+                        print("step: %i epoch : %i batch : %i train loss: %f val loss: %f" % (experiment.curr_step, epoch_i, bi, train_loss.item(), val_loss))
                         if self.end_itertrain(val_losses.values, self.config.early_stopping) and epoch_i > epoch + 1:
                             self.checkpoint(epoch, experiment.curr_step, False)
                             end_flag = True

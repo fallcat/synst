@@ -525,8 +525,8 @@ class NewTransformer(nn.Module):
             'input_lens': input_lens
         }
 
-        # if len(raw_layermask) != encoded['state'].shape[0]: # for debugging beam_search
-        #     pdb.set_trace()
+        if len(raw_layermask) != encoded['state'].shape[0]: # for debugging beam_search
+            pdb.set_trace()
 
         # assert raw_layermask is not None
         # pdb.set_trace()

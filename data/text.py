@@ -31,7 +31,7 @@ class TextDataset(Dataset):
         self.reserved_range = len(self.id2token)
 
         if config.itertrain_data != 'none':
-            self.itertrain_data = self.load_itertrain(config.itertrain_data, config.loss_func, itertrain_val=config.itertrain_val,)
+            self.itertrain_data = self.load_itertrain(config.itertrain_data, config.loss_func, itertrain_val=config.itertrain_val)
         else:
             self.itertrain_data = None
 
@@ -107,22 +107,18 @@ class TextDataset(Dataset):
         with open(itertrain_data, 'rb') as f:
             data = pickle.load(f)
         print("iter train data file : %s" % itertrain_data)
-        #data['y2'] /= (data['y2'].max(dim=1)[0][:, None] + 1e-9)
         y1, y2 = [], []
         valid_data_range = len(data['example_ids']) if not itertrain_val else 199
         print("itertrain_val %s valid_data_range %i" % (itertrain_val, valid_data_range))
-        for i in range(valid_data_range):
-            ei = data['example_ids'].index(i) if not itertrain_val else data['example_ids'].index(i+1800)
-            if 'valid.iter.all' in itertrain_data:
-                y1.append(data['y1'][ei, :-1])
-                y2.append(data['y2'][ei, :-1])
-            else:
-                y1.append(data['y1'][ei])
-                y2.append(data['y2'][ei])
 
         itertrain_data = {}
-        itertrain_data['y1'] = torch.stack(y1).float()
-        itertrain_data['y2'] = torch.stack(y2)
+        # if not val-val dataloader (itertrain_val)
+        # no need to filter data, else, only the last 199 is used as lmp-training val set
+        y1_data = data['y1'][:len(data['example_ids']), :] if not itertrain_val else data['y1'][1800:, :]
+        y2_data = data['y2'][:len(data['example_ids']), :] if not itertrain_val else data['y2'][1800:, :]
+
+        itertrain_data['y1'] = torch.tensor(y1_data).float()
+        itertrain_data['y2'] = torch.tensor(y2_data).float()
 
         return itertrain_data
 
