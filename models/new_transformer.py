@@ -44,7 +44,6 @@ class TransformerSublayer(nn.Module):
 
     def forward(self, inputs, gating_weight, *sublayer_args, **sublayer_kwargs): # pylint:disable=arguments-differ
         ''' The forward pass of the sublayer '''
-        pdb.set_trace()
         if len(gating_weight.size()) == 0:
             return self.norm(inputs + self.dropout(self.sublayer(*sublayer_args, **sublayer_kwargs)))
         else:
