@@ -45,14 +45,15 @@ class TransformerSublayer(nn.Module):
     def forward(self, inputs, gating_weight, *sublayer_args, **sublayer_kwargs): # pylint:disable=arguments-differ
         ''' The forward pass of the sublayer '''
         pdb.set_trace()
-        if gating_weight.size(0) == 1:
-            return self.norm(inputs + self.dropout(self.sublayer(*sublayer_args, **sublayer_kwargs)))
-        else:
+        if gating_weight.size() is not None:
             out_dropout = self.dropout(self.sublayer(*sublayer_args, **sublayer_kwargs))
             ret = self.norm(inputs + gating_weight[:, None, None] * out_dropout)
-            skip = inputs * (1-gating_weight)[:, None, None]
+            skip = inputs * (1 - gating_weight)[:, None, None]
             ret = gating_weight[:, None, None] * ret + skip
             return ret
+        else:
+            return self.norm(inputs + self.dropout(self.sublayer(*sublayer_args, **sublayer_kwargs)))
+
 
 class TransformerFFN(nn.Module):
     ''' Implements the Transformer feed-forward network '''
