@@ -77,7 +77,7 @@ class LayerMaskPredictor(nn.Module):
             with open(config_file, 'rb') as f:
                 configs = pickle.load(f)['configs']
 
-            self.all_configs = torch.tensor(configs, device=torch.device("cuda"))
+            self.all_configs = torch.tensor(configs, device=torch.device("cuda")).float()
             self.ci_allon = self.all_configs.shape[0] - 1
             self.all_configs_sum_layer = self.all_configs.sum(dim=1) # len(all_combs) x 1
 
