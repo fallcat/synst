@@ -71,40 +71,14 @@ class LayerMaskPredictor(nn.Module):
             for ci, c in enumerate(all_combs):
                 for cii in c:
                     self.all_configs[ci, cii] += 1
-
-            """
-            To be deleted later, adding this because oracle result has label shift
-            e.g. [0., 0., 1., 1., 1., 1., 1., 1., 0., 0., 1., 1.] change to [1., 0., 1., 1., 1., 1., 1., 1., 1., 0., 0., 1.]
-            1. first layer always 1
-            2. decoder layer shift backward by 1
-            """
-            self.all_configs[:, 0] = 1
-            self.all_configs[:, num_layers:] = self.all_configs[:, num_layers-1:-1]
-            """
-            To be deleted
-            """
-
             self.ci_allon = all_combs.index(tuple(i for i in range(num_layer)))
             self.all_configs_sum_layer = self.all_configs.sum(dim=1) # len(all_combs) x 1
         else:
             with open(config_file, 'rb') as f:
                 configs = pickle.load(f)['configs']
 
-            configs[tuple([1 for i in range(12)])] = len(configs)
-            configs = sorted(configs.items(), key=lambda a: a[1])
-            self.all_configs = torch.tensor([c[0] for c in configs], device=torch.device("cuda"))
-            """
-            To be deleted later, adding this because oracle result has label shift
-            e.g. [0., 0., 1., 1., 1., 1., 1., 1., 0., 0., 1., 1.] change to [1., 0., 1., 1., 1., 1., 1., 1., 1., 0., 0., 1.]
-            1. first layer always 1
-            2. decoder layer shift backward by 1
-            """
-            self.all_configs[:, 0] = 1
-            self.all_configs[:, num_layers:] = self.all_configs[:, num_layers-1:-1]
-            """
-            To be deleted
-            """
-            self.ci_allon = len(configs) - 1
+            self.all_configs = torch.tensor(configs, device=torch.device("cuda"))
+            self.ci_allon = self.all_configs.shape[0] - 1
             self.all_configs_sum_layer = self.all_configs.sum(dim=1) # len(all_combs) x 1
 
     def reset_parameters(self):
@@ -135,7 +109,6 @@ class LayerMaskPredictor(nn.Module):
                     sample[violate_indices, dec_sample] = 1
                 return sample
             else:
-                # pdb.set_trace()
                 indices = torch.multinomial(torch.ones(self.sample_distribution.size(0)), batch_size, replacement=True)
                 return self.sample_distribution[indices]
 
@@ -164,7 +137,6 @@ class LayerMaskPredictor(nn.Module):
                 raise NotImplementedError
         else:
             bs, _, _ = lmp_input.shape
-            ret = torch.zeros(layermask.shape[0], self.num_layers * 2, device=torch.device("cuda"))
             max_val, _ = layermask.max(dim=1)
             filtered = (layermask + self.potential_threshold >= max_val[:, None]).float() * self.all_configs_sum_layer[:-1] # all_configs_sum_layer last entry is all-on
             filtered[filtered == 0] = float("inf")
