@@ -3,6 +3,7 @@ import pdb
 
 template_path = "rl-scripts/small_enro_rl04/oracle_translate0000.sh"
 experiment_folder = "rl-scripts/small_enro_rl04/"
+experiment_folder2 = "rl-scripts/small_enro_rl05/"
 #
 # with open("not_found_ids2.txt", "rt") as file:
 #     ids = [int(i.strip()) for i in file.readlines()]
@@ -39,11 +40,9 @@ experiment_folder = "rl-scripts/small_enro_rl04/"
 for filename in os.listdir(experiment_folder):
     if filename.startswith("oracle_translate"):
         with open(os.path.join(experiment_folder, filename), 'rt') as input_file:
-            with open(os.path.join(experiment_folder, "train4000_" + filename), 'wt') as output_file:
+            with open(os.path.join(experiment_folder2, filename), 'wt') as output_file:
                 text = str(input_file.read())
-                text = text.replace('--job-name=', '--job-name=4k')
+                text = text.replace('--job-name=', '--job-name=05v')
+                text = text.replace('small_enro_rl04', 'small_enro_rl05')
                 text = text.replace('2080ti-short', '1080ti-long')
-                text = text.replace("DATA_PATH=/mnt/nfs/work1/miyyer/simengsun/data/small_enro", "DATA_PATH=/mnt/nfs/work1/miyyer/wyou/data/small_enro")
-                text = text.replace("--split valid", "--split train4000")
-                text = text.replace("--fix-combination", "--output-filename train4000_oracle --fix-combination")
                 output_file.write(text)
