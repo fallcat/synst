@@ -43,6 +43,7 @@ class LayerMaskPredictor(nn.Module):
             else:
                 with open(layermask_file) as layermask_file:
                     self.sample_distribution = torch.stack([torch.tensor([float(x) for x in list(line.strip())], device=torch.device("cuda")) for line in layermask_file.readlines()])
+                    print("Using layermasks from file, layermasks using: ", self.sample_distribution)
 
         # print configs for LMP
         print("lmp type : %s" % self.lmp_type)
