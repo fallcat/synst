@@ -348,7 +348,7 @@ class IterativeTrainer(object):
                             end_flag = True
                             break
 
-                        if self.is_best_checkpoint(val_losses) and epoch_i > epoch + 100:
+                        if self.is_best_checkpoint(val_losses) and epoch_i > epoch + 15:
                             self.checkpoint(epoch, experiment.curr_step, True)
 
             if end_flag:
