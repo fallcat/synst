@@ -46,4 +46,5 @@ for filename in os.listdir(experiment_folder):
                 # text = text.replace('small_enro_rl04', 'small_enro_rl05')
                 text = text.replace('2080ti-short', '1080ti-long')
                 text = text.replace('--split valid', '--split test')
+                text = text.replace('--fix-combination', '--output-filename test_oracle --fix-combination')
                 output_file.write(text)

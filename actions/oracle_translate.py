@@ -101,7 +101,7 @@ class OracleTranslator(object):
                 filepath = os.path.join(self.config.output_directory, filename)
                 if os.path.exists(filepath) and len(open(filepath).readlines()) == 1999:
                     continue
-                print("Generation combination", combination_str)
+                # print("Generation combination", combination_str)
 
                 batches = tqdm(
                     self.dataloader,
