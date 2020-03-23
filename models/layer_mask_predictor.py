@@ -99,7 +99,7 @@ class LayerMaskPredictor(nn.Module):
         
         # special case: not skipping
         if self.lmp_type == "noskip":
-            return torch.ones(lmp_input.size(0), self.num_layers * 2, device=torch.device("cuda"))
+            return torch.ones(self.num_layers * 2, device=torch.device("cuda"))
 
         if self.lmp_type == "random":
             batch_size = lmp_input.size(0)
