@@ -575,7 +575,13 @@ def add_new_transformer_args(parser):
         default=None,
         help='where to load lmp configs file'
     )
-    
+
+    group.add_argument(
+        '--random-config',
+        default=False,
+        action="store_true",
+        help="whether to choose a random config during inference (for obtaining random-inference baseline)"
+    )    
 
     return group
 

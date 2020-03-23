@@ -320,7 +320,8 @@ class NewTransformer(nn.Module):
                                                        config.loss_func,
                                                        config.lmp_eval_mode,
                                                        config.layermask_file,
-                                                       config.lmp_config_file)
+                                                       config.lmp_config_file,
+                                                       config.random_config)
 
     @classmethod
     def create_encoders(cls, config):

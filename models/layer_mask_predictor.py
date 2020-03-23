@@ -20,7 +20,8 @@ class LayerMaskPredictor(nn.Module):
                        loss_func,
                        lmp_eval_mode,
                        layermask_file,
-                       config_file):
+                       config_file,
+                       random_config):
         super(LayerMaskPredictor, self).__init__()
 
         self.num_layers = num_layers
@@ -31,6 +32,7 @@ class LayerMaskPredictor(nn.Module):
         self.loss_func = loss_func
         self.eval = lmp_eval_mode
         self.layermask_file = layermask_file
+        self.random_inference = random_config
 
         if lmp_type != "random":
             self.proj1 = nn.Linear(embedding_size, self.all_configs.shape[0]-1)
@@ -52,6 +54,7 @@ class LayerMaskPredictor(nn.Module):
         print("num of configs: %i" % self.all_configs.shape[0])
         print("shuffle configs: %s" % shuffle_configs)
         print("all-on index: %i" % self.ci_allon)
+        print("random inference: %s" % self.random_inference)
         
     def init_configs(self, config_file, num_layers, num_configs=-1, shuffle_configs=False):
 
@@ -77,7 +80,7 @@ class LayerMaskPredictor(nn.Module):
             with open(config_file, 'rb') as f:
                 configs = pickle.load(f)['configs']
 
-            self.all_configs = torch.tensor(configs, device=torch.device("cuda")).float()
+            self.all_configs = torch.tensor(configs, device=torch.device("cuda"))
             self.ci_allon = self.all_configs.shape[0] - 1
             self.all_configs_sum_layer = self.all_configs.sum(dim=1) # len(all_combs) x 1
 
@@ -136,16 +139,19 @@ class LayerMaskPredictor(nn.Module):
             else:
                 raise NotImplementedError
         else:
-            bs, _, _ = lmp_input.shape
-            max_val, _ = layermask.max(dim=1)
-            filtered = (layermask + self.potential_threshold >= max_val[:, None]).float() * self.all_configs_sum_layer[:-1] # all_configs_sum_layer last entry is all-on
-            filtered[filtered == 0] = float("inf")
-            _, ci = torch.min(filtered, dim=1)
-            ci_val = layermask[range(bs), ci]
-            ci[ci_val < max_val.mean().item() - 2*self.potential_threshold] = self.ci_allon
-            ret = self.all_configs[ci]
 
-            # ci = [random.randint(0,self.ci_allon) for i in range(bs)]
-            # ret = self.all_configs[ci]
+            if not self.random_inference:
+                bs, _, _ = lmp_input.shape
+                max_val, _ = layermask.max(dim=1)
+                filtered = (layermask + self.potential_threshold >= max_val[:, None]).float() * self.all_configs_sum_layer[:-1] # all_configs_sum_layer last entry is all-on
+                filtered[filtered == 0] = float("inf")
+                _, ci = torch.min(filtered, dim=1)
+                ci_val = layermask[range(bs), ci]
+                ci[ci_val < max_val.mean().item() - 2*self.potential_threshold] = self.ci_allon
+                ret = self.all_configs[ci]
+
+            else:
+                ci = [random.randint(0,self.ci_allon) for i in range(bs)]
+                ret = self.all_configs[ci]
 
             return ret
