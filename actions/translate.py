@@ -136,9 +136,5 @@ class Translator(object):
                     print(f'Outputting to {output_path}')
 
                 self.translate_all(output_file, epoch, experiment, verbose)
-                layermask_path = os.path.join(self.config.output_directory, 'layermasks.txt')
-                with open(layermask_path, 'w') as f:
-                    for lm in self.translator.layermasks:
-                        f.write('\t'.join([str(a.item()) for a in lm]) + '\n')
 
 
