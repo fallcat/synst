@@ -162,7 +162,6 @@ class ProbeOffDiagonal(object):
                         # print("distance >= threshold", (distance >= self.config.off_diagonal_distance_threshold).shape)
                         # print(distance >= self.config.off_diagonal_distance_threshold, torch.sum(distance >= self.config.off_diagonal_distance_threshold))
                         # print("max_weights[distance >= threshold]", max_weights[distance >= self.config.off_diagonal_distance_threshold].shape, max_weights[distance >= 1])
-                        pdb.set_trace()
 
                         max_prob = torch.max(max_weights[distance >= self.config.off_diagonal_distance_threshold])
                         argmax_offset = torch.max(distance)
