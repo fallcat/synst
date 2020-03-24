@@ -221,9 +221,8 @@ class BeamSearchDecoder(object):
 
                 logits = []
                 updated_cache = []
-
                 # expand raw_layermask
-                if len(raw_layermask.size()) == 0:
+                if len(raw_layermask.size()) == 1:
                     new_raw_layermask = raw_layermask
                 else:
                     assert len(raw_layermask) == len(beam_count)
