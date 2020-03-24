@@ -140,8 +140,8 @@ class LayerMaskPredictor(nn.Module):
                 raise NotImplementedError
         else:
 
+            bs, _, _ = lmp_input.shape
             if not self.random_inference:
-                bs, _, _ = lmp_input.shape
                 max_val, _ = layermask.max(dim=1)
                 filtered = (layermask + self.potential_threshold >= max_val[:, None]).float() * self.all_configs_sum_layer[:-1] # all_configs_sum_layer last entry is all-on
                 filtered[filtered == 0] = float("inf")
