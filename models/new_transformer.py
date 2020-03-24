@@ -328,6 +328,8 @@ class NewTransformer(nn.Module):
         ''' Create the transformer encoders '''
         kwargs = {'dropout_p': config.dropout_p}
 
+        if config.num_enc_layers is None:
+            config.num_enc_layers = config.num_layers
         if config.ffn_layer == -1:
             ffn_layer = [1] * config.num_enc_layers
         assert len(ffn_layer) == config.num_enc_layers
@@ -372,6 +374,8 @@ class NewTransformer(nn.Module):
         ''' Create the transformer decoders '''
         kwargs = {'dropout_p': config.dropout_p, 'span': config.span}
 
+        if config.num_dec_layers is None:
+            config.num_dec_layers = config.num_layers
         if config.ffn_layer == -1:
             ffn_layer = [1] * config.num_dec_layers
         assert len(ffn_layer) == config.num_dec_layers
@@ -476,7 +480,7 @@ class NewTransformer(nn.Module):
         nll = self.cross_entropy(logits, targets).sum(dims[:-1])
         smoothed_nll = self.label_smoothing(logits, targets).sum(dims)
 
-        sum_layermask = raw_layermask # [bs, ]
+        sum_layermask = raw_layermask.sum(dim=1) # [bs, ]
 
         loss = smoothed_nll
 
@@ -526,8 +530,8 @@ class NewTransformer(nn.Module):
             'input_lens': input_lens
         }
 
-        #if len(raw_layermask) != encoded['state'].shape[0]: # for debugging beam_search
-        #    pdb.set_trace()
+        # if len(raw_layermask) != encoded['state'].shape[0]: # for debugging beam_search
+        #     pdb.set_trace()
 
         # assert raw_layermask is not None
         # pdb.set_trace()
