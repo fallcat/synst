@@ -488,12 +488,17 @@ def add_new_transformer_args(parser):
         default=-1
     )
 
-    #group.add_argument(
-     #   '--layer-mask',
-      #  default=False,
-       # action='store_true',
-       # help="Use layer mask"
-    #)
+    group.add_argument(
+        '--num-enc-layers',
+        type=int,
+        help="number of encoder layers"
+    )
+
+    group.add_argument(
+        '--num-dec-layers',
+        type=int,
+        help="number of decoder layers"
+    )
 
     group.add_argument(
         '--gating-tradeoff',
@@ -575,7 +580,13 @@ def add_new_transformer_args(parser):
         default=None,
         help='where to load lmp configs file'
     )
-    
+
+    group.add_argument(
+        '--random-config',
+        default=False,
+        action="store_true",
+        help="whether to choose a random config during inference (for obtaining random-inference baseline)"
+    )    
 
     return group
 

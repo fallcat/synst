@@ -320,22 +320,25 @@ class NewTransformer(nn.Module):
                                                        config.loss_func,
                                                        config.lmp_eval_mode,
                                                        config.layermask_file,
-                                                       config.lmp_config_file)
+                                                       config.lmp_config_file,
+                                                       config.random_config)
 
     @classmethod
     def create_encoders(cls, config):
         ''' Create the transformer encoders '''
         kwargs = {'dropout_p': config.dropout_p}
 
+        if config.num_enc_layers is None:
+            config.num_enc_layers = config.num_layers
         if config.ffn_layer == -1:
-            config.ffn_layer = [1] * config.num_layers
-        assert len(config.ffn_layer) == config.num_layers
+            ffn_layer = [1] * config.num_enc_layers
+        assert len(ffn_layer) == config.num_enc_layers
 
         attn_config = {'attn_type': config.attn_type,
                        'attn_position': config.attn_position,
                        'attn_param': config.attn_param,
                        'attn_displacement': config.attn_displacement,
-                       'num_layers': config.num_layers,
+                       'num_layers': config.num_enc_layers,
                        'num_heads': config.num_heads,
                        'attn_concat': config.attn_concat,
                        'which_attn': 'encoder',
@@ -347,12 +350,12 @@ class NewTransformer(nn.Module):
                        'attn_indexing': config.enc_attn_indexing,
                        'no_attn': config.enc_no_attn,
                        'indexing_type': config.indexing_type,
-                       'ffn_layer': config.ffn_layer}
+                       'ffn_layer': ffn_layer}
         args = [attn_config, config.num_heads, config.embedding_size, config.hidden_dim]
 
         encoders = nn.ModuleList([
             TransformerEncoderLayer(*args, layer_i, **kwargs)
-            for layer_i in range(config.num_layers)
+            for layer_i in range(config.num_enc_layers)
         ])
 
         if config.tie_ffn_weights:
@@ -371,15 +374,17 @@ class NewTransformer(nn.Module):
         ''' Create the transformer decoders '''
         kwargs = {'dropout_p': config.dropout_p, 'span': config.span}
 
+        if config.num_dec_layers is None:
+            config.num_dec_layers = config.num_layers
         if config.ffn_layer == -1:
-            config.ffn_layer = [1] * config.num_layers
-        assert len(config.ffn_layer) == config.num_layers
+            ffn_layer = [1] * config.num_dec_layers
+        assert len(ffn_layer) == config.num_dec_layers
 
         dec_attn_config = {'attn_type': config.dec_attn_type,
                            'attn_position': config.dec_attn_position,
                            'attn_param': config.dec_attn_param,
                            'attn_displacement': config.dec_attn_displacement,
-                           'num_layers': config.num_layers,
+                           'num_layers': config.num_dec_layers,
                            'num_heads': config.num_heads,
                            'attn_concat': config.dec_attn_concat,
                            'which_attn': 'decoder',
@@ -391,12 +396,12 @@ class NewTransformer(nn.Module):
                            'attn_indexing': config.dec_attn_indexing,
                            'no_attn': config.dec_no_attn,
                            'indexing_type': config.indexing_type,
-                           'ffn_layer': config.ffn_layer}
+                           'ffn_layer': ffn_layer}
         enc_dec_attn_config = {'attn_type': config.enc_dec_attn_type,
                                'attn_position': config.enc_dec_attn_position,
                                'attn_param': config.enc_dec_attn_param,
                                'attn_displacement': config.enc_dec_attn_displacement,
-                               'num_layers': config.num_layers,
+                               'num_layers': config.num_dec_layers,
                                'num_heads': config.num_heads,
                                'word_count_ratio': self.dataset.word_count_ratio,
                                'attn_concat': config.enc_dec_attn_concat,
@@ -404,18 +409,18 @@ class NewTransformer(nn.Module):
                                'attn_weights': config.enc_dec_attn_weights,
                                'attn_score': config.enc_dec_attn_score,
                                'attn_bins': config.enc_dec_attn_bins,
-                               'enc_dec_attn_layer': config.enc_dec_attn_layer,
+                               'enc_dec_attn_layer': 1,
                                'enc_dec_attn_num_heads': config.enc_dec_attn_num_heads,
                                'attn_threshold': config.enc_dec_attn_threshold,
                                'attn_window': config.enc_dec_attn_window,
                                'attn_indexing': config.enc_dec_attn_indexing,
                                'indexing_type': config.indexing_type,
-                               'ffn_layer': config.ffn_layer
+                               'ffn_layer': ffn_layer
                                }
         args = [dec_attn_config, enc_dec_attn_config, config.num_heads, config.embedding_size, config.hidden_dim]
         decoders = nn.ModuleList([
             TransformerDecoderLayer(*args, layer_i, **kwargs)
-            for layer_i in range(config.num_layers)
+            for layer_i in range(config.num_dec_layers)
         ])
 
         if config.tie_ffn_weights:
