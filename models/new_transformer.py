@@ -42,9 +42,9 @@ class TransformerSublayer(nn.Module):
         ''' Reset parameters using xavier initialiation '''
         self.norm.reset_parameters()
 
-    def forward(self, inputs, gating_weight, *sublayer_args, **sublayer_kwargs): # pylint:disable=arguments-differ
+    def forward(self, inputs, gating_weight, ensemble, *sublayer_args, **sublayer_kwargs): # pylint:disable=arguments-differ
         ''' The forward pass of the sublayer '''
-        if len(gating_weight.size()) == 0:
+        if not ensemble and len(gating_weight.size()) == 0:
             return self.norm(inputs + self.dropout(self.sublayer(*sublayer_args, **sublayer_kwargs)))
         else:
             out_dropout = self.dropout(self.sublayer(*sublayer_args, **sublayer_kwargs))
@@ -104,7 +104,7 @@ class TransformerEncoderLayer(nn.Module):
         self.ffn.reset_parameters()
         self.self_attention.reset_parameters()
 
-    def forward(self, inputs, layer_i, word_embedding, gating_weight=1):  # pylint:disable=arguments-differ
+    def forward(self, inputs, layer_i, word_embedding, gating_weight=1, ensemble=False):  # pylint:disable=arguments-differ
         ''' The forward pass '''
         mask = inputs['mask']
         state = inputs['state']
@@ -113,14 +113,14 @@ class TransformerEncoderLayer(nn.Module):
 
         if not self.no_attn:
             state = self.self_attention(
-                state, gating_weight, # residual
+                state, gating_weight, ensemble, # residual
                 state, state, state, mask,  # passed to multiheaded attention
                 layer_i=layer_i, word_embedding=word_embedding
             )
 
         if hasattr(self, 'ffn'):
             state = self.ffn(
-                state, gating_weight,  # residual
+                state, gating_weight, ensemble, # residual
                 state, # passed to feed-forward network  
             )
 
@@ -180,7 +180,7 @@ class TransformerDecoderLayer(nn.Module):
         if hasattr(self, 'source_attention'):
             self.source_attention.reset_parameters()
 
-    def forward(self, inputs, sources, layer_i, word_embedding, gating_weight=1): # pylint:disable=arguments-differ
+    def forward(self, inputs, sources, layer_i, word_embedding, gating_weight=1, ensemble=False): # pylint:disable=arguments-differ
         ''' The forward pass '''
         mask = inputs['mask']
         state = inputs['state']
@@ -207,7 +207,7 @@ class TransformerDecoderLayer(nn.Module):
             # print("decoder self attention")
 
             state = self.self_attention(
-                residual, gating_weight, # residual
+                residual, gating_weight, ensemble, # residual
                 state, state, state, **kwargs # passed to multiheaded attention
             )
         else:
@@ -229,13 +229,13 @@ class TransformerDecoderLayer(nn.Module):
         if hasattr(self, 'source_attention'):
             # print("in source, state", state.shape)
             state = self.source_attention(
-                state, gating_weight, # residual
+                state, gating_weight, ensemble, # residual
                 source, source, state, **kwargs # passed to multiheaded attention
             )
 
         if hasattr(self, 'ffn'):
             state = self.ffn(
-                state, gating_weight, # residual
+                state, gating_weight, ensemble, # residual
                 state, # passed to feed-forward network
             )
 
@@ -490,10 +490,7 @@ class NewTransformer(nn.Module):
     def encode(self, inputs, raw_layermask=None):
         ''' Encode the inputs '''
         word_embedding = self.embed(inputs, self.embedding)
-        if self.layermask_type == "ensemble":
-            batch_size = word_embedding.shape[0]
-            word_embedding = word_embedding.unsqueeze(1).expand(batch_size,
-                                                                len(self.layer_mask_predictor.get_layermasks()))
+        pdb.set_trace()
 
         encoded = {
             'state': word_embedding,
@@ -503,11 +500,20 @@ class NewTransformer(nn.Module):
         if raw_layermask is None:
             raw_layermask = self.layer_mask_predictor(encoded['state'], encoded['mask'])
 
+        if self.layermask_type == "ensemble":
+            batch_size = word_embedding.shape[0]
+            raw_layermask_shape = raw_layermask.shape
+            encoded['state'] = encoded['state'].unsqueeze(1).expand(batch_size, raw_layermask_shape)
+            ensemble_layermask = raw_layermask.unsqueeze(0).expand(batch_size, raw_layermask_shape[0],
+                                                                   raw_layermask_shape[1]).view(-1,
+                                                                                                raw_layermask_shape[1])
+
         # pdb.set_trace()
 
         for i, encoder in enumerate(self.encoders):
             if self.layermask_type == "ensemble":
-                encoded = encoder(encoded, i, word_embedding, gating_weight=raw_layermask)
+                encoded = encoder(encoded, i, word_embedding,
+                                  gating_weight=ensemble_layermask[:, i])
             elif len(raw_layermask.shape) == 1:
                 if raw_layermask[i]:
                     encoded = encoder(encoded, i, word_embedding, gating_weight=raw_layermask[i])
@@ -538,6 +544,14 @@ class NewTransformer(nn.Module):
             'input_lens': input_lens
         }
 
+        if self.layermask_type == "ensemble":
+            batch_size = word_embedding.shape[0]
+            raw_layermask_shape = raw_layermask.shape
+            decoded['state'] = decoded['state'].unsqueeze(1).expand(batch_size, raw_layermask_shape)
+            ensemble_layermask = raw_layermask.unsqueeze(0).expand(batch_size, raw_layermask_shape[0],
+                                                                   raw_layermask_shape[1]).view(-1,
+                                                                                                raw_layermask_shape[1])
+
         # if len(raw_layermask) != encoded['state'].shape[0]: # for debugging beam_search
         #     pdb.set_trace()
 
@@ -545,7 +559,9 @@ class NewTransformer(nn.Module):
         # pdb.set_trace()
 
         for i, decoder in enumerate(decoders):
-            if len(raw_layermask.shape) == 1:
+            if self.layermask_type == "ensemble":
+                decoded = decoder(decoded, encoded, i, word_embedding, gating_weight=ensemble_layermask[:, len(decoders) + i])
+            elif len(raw_layermask.shape) == 1:
                 if raw_layermask[len(decoders) + i]:
                     decoded = decoder(decoded, encoded, i, word_embedding,
                                       gating_weight=raw_layermask[len(decoders) + i])
