@@ -301,7 +301,8 @@ class Translator(object):
                 self.decoder,
                 self.eos_idx,
                 self.config,
-                self.span
+                self.span,
+                self.modules['model'].layermask_type == "ensemble"
             )
 
             # change to store distribution

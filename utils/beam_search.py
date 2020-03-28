@@ -49,12 +49,13 @@ class Beam(object):
 
 class BeamSearchDecoder(object):
     ''' Class that encapsulates decoding using beam search '''
-    def __init__(self, model, eos_idx, config, span=1):
+    def __init__(self, model, eos_idx, config, span=1, ensemble=False):
         ''' Initialize the beam search decoder '''
         self.span = span
         self.model = model
         self.config = config
         self.eos_idx = eos_idx
+        self.ensemble = ensemble
 
     @property
     def beam_width(self):
@@ -222,7 +223,9 @@ class BeamSearchDecoder(object):
                 logits = []
                 updated_cache = []
                 # expand raw_layermask
-                if len(raw_layermask.size()) == 1:
+                if self.ensemble:
+                    new_raw_layermask = raw_layermask
+                elif len(raw_layermask.size()) == 1:
                     new_raw_layermask = raw_layermask
                 else:
                     assert len(raw_layermask) == len(beam_count)
@@ -262,7 +265,7 @@ class BeamSearchDecoder(object):
                             chunks.extend(zip(
                                 utils.split_or_chunk(encoded_batch, 2),
                                 utils.split_or_chunk(batch, 2),
-                                utils.split_or_chunk(r_layermask, 2)
+                                r_layermask if self.ensemble else utils.split_or_chunk(r_layermask, 2)
                             ))
 
                             # Additionally clear the cache in case the issue is related to allocator

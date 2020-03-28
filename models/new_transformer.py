@@ -506,7 +506,9 @@ class NewTransformer(nn.Module):
         # pdb.set_trace()
 
         for i, encoder in enumerate(self.encoders):
-            if len(raw_layermask.shape) == 1:
+            if self.layermask_type == "ensemble":
+                encoded = encoder(encoded, i, word_embedding, gating_weight=raw_layermask)
+            elif len(raw_layermask.shape) == 1:
                 if raw_layermask[i]:
                     encoded = encoder(encoded, i, word_embedding, gating_weight=raw_layermask[i])
             else:

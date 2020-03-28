@@ -136,7 +136,7 @@ class LayerMaskPredictor(nn.Module):
                 return self.layermasks[indices]
 
         if self.lmp_type == "ensemble":
-            return self.layermasks.unsqueeze(0).expand(batch_size, -1)
+            return self.layermasks  # .unsqueeze(0).expand(batch_size, -1)
 
         lmp_input = lmp_input.masked_fill_(lmp_input_mask[:, :, None], 0)
         layermask = self.proj1(torch.sum(lmp_input,1))
