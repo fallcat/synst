@@ -88,7 +88,7 @@ class BeamSearchDecoder(object):
 
                 batch_idx = len(batch)
                 cache.append(hypothesis.cache)
-                encoded_batch.append(encoded[i])
+                encoded_batch.append(encoded[i*len(beams):(i+1)*len(beams)])
                 hypothesis_map[hypothesis] = batch_idx
                 batch.append(hypothesis.sequence)
                 cnt += 1
