@@ -277,7 +277,7 @@ class BeamSearchDecoder(object):
                 pdb.set_trace()
                 log_prob = torch.cat(logits).log_softmax(1)
                 if self.ensemble:
-                    log_prob = log_prob.view(int(log_prob.shape[0] / raw_layermask.shape[0]), raw_layermask.shape[0], -1).mean(dim=1)
+                    log_prob = log_prob.view(int(log_prob.shape[0] / raw_layermask.shape[0]), raw_layermask.shape[0], log_prob.shape[1], log_prob.shape[2]).mean(dim=1)
 
                 self.update_beams(log_prob, beam_map, updated_cache)
 
