@@ -322,6 +322,7 @@ class NewTransformer(nn.Module):
                                                        config.layermask_file,
                                                        config.lmp_config_file,
                                                        config.random_config)
+        self.layermask_type = config.layermask_type
 
     @classmethod
     def create_encoders(cls, config):
@@ -489,6 +490,11 @@ class NewTransformer(nn.Module):
     def encode(self, inputs, raw_layermask=None):
         ''' Encode the inputs '''
         word_embedding = self.embed(inputs, self.embedding)
+        if self.layermask_type == "ensemble":
+            batch_size = word_embedding.shape[0]
+            word_embedding = word_embedding.unsqueeze(1).expand(batch_size,
+                                                                len(self.layer_mask_predictor.get_layermasks()))
+
         encoded = {
             'state': word_embedding,
             'mask': inputs.eq(self.padding_idx)

@@ -524,7 +524,7 @@ def add_new_transformer_args(parser):
     group.add_argument(
         '--layermask-type',
         type=str,
-        choices=['noskip', 'itertrain', 'random'],
+        choices=['noskip', 'itertrain', 'random', 'ensemble'],
         default='noskip'
     )
     group.add_argument(
