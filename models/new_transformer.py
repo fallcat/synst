@@ -502,8 +502,11 @@ class NewTransformer(nn.Module):
 
         if self.layermask_type == "ensemble":
             batch_size = word_embedding.shape[0]
+            length = encoded['state'].shape[1]
+            emb_dim = encoded['state'].shape[2]
             raw_layermask_shape = raw_layermask.shape
-            encoded['state'] = encoded['state'].unsqueeze(1).expand(batch_size, raw_layermask_shape)
+            encoded['state'] = encoded['state'].unsqueeze(1).expand(batch_size, raw_layermask_shape[0], length, emb_dim).view(-1, length, emb_dim)
+            encoded['mask'] = encoded['mask'].unsqueeze(1).expand(batch_size, raw_layermask_shape[0], length).view(-1, length)
             ensemble_layermask = raw_layermask.unsqueeze(0).expand(batch_size, raw_layermask_shape[0],
                                                                    raw_layermask_shape[1]).view(-1,
                                                                                                 raw_layermask_shape[1])
@@ -546,8 +549,13 @@ class NewTransformer(nn.Module):
 
         if self.layermask_type == "ensemble":
             batch_size = word_embedding.shape[0]
+            length = decoded['state'].shape[1]
+            emb_dim = decoded['state'].shape[2]
             raw_layermask_shape = raw_layermask.shape
-            decoded['state'] = decoded['state'].unsqueeze(1).expand(batch_size, raw_layermask_shape)
+            decoded['state'] = decoded['state'].unsqueeze(1).expand(batch_size, raw_layermask_shape[0], length,
+                                                                    emb_dim).view(-1, length, emb_dim)
+            decoded['mask'] = decoded['mask'].unsqueeze(1).expand(batch_size, raw_layermask_shape[0], length).view(-1,
+                                                                                                                   length)
             ensemble_layermask = raw_layermask.unsqueeze(0).expand(batch_size, raw_layermask_shape[0],
                                                                    raw_layermask_shape[1]).view(-1,
                                                                                                 raw_layermask_shape[1])
