@@ -278,7 +278,7 @@ class BeamSearchDecoder(object):
                 if self.ensemble:
                     print("log_prob.shape", log_prob.shape)
                     pdb.set_trace()
-                    log_prob = log_prob.view(log_prob.shape[0] / raw_layermask.shape[0], raw_layermask.shape[0], -1).mean(dim=1)
+                    log_prob = log_prob.view(int(log_prob.shape[0] / raw_layermask.shape[0]), raw_layermask.shape[0], -1).mean(dim=1)
 
                 self.update_beams(log_prob, beam_map, updated_cache)
 
