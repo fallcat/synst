@@ -88,9 +88,7 @@ class BeamSearchDecoder(object):
 
                 batch_idx = len(batch)
                 cache.append(hypothesis.cache)
-                pdb.set_trace()
-                encoded_batch.append({'state': encoded['state'][i*len(beams):(i+1)*len(beams)],
-                                      'mask': encoded['mask'][i*len(beams):(i+1)*len(beams)]})
+                encoded_batch.append(encoded[i])
                 hypothesis_map[hypothesis] = batch_idx
                 batch.append(hypothesis.sequence)
                 cnt += 1
@@ -172,6 +170,7 @@ class BeamSearchDecoder(object):
         # numpy searchsorted is a faster version of python's bisect.bisect[_left|_right]
         # that returns insertion points for multiple values
         new_hypotheses = []
+        pdb.set_trace()
         for new_hypothesis_idx in hypotheses_indices:
             base_hypothesis_idx = new_hypothesis_idx // self.beam_width
             base_hypothesis = beam.hypotheses[base_hypothesis_idx]
@@ -204,6 +203,7 @@ class BeamSearchDecoder(object):
 
     def update_beams(self, log_prob, beam_map, cache=None):
         ''' Update the beam batch '''
+        pdb.set_trace()
         scores, indices = torch.topk(log_prob, self.beam_width, 1)
         for beam, hypothesis_map in beam_map.items():
             if beam.all_done(self.eos_idx):
@@ -237,7 +237,6 @@ class BeamSearchDecoder(object):
                             if rtimes == 0:
                                 continue
                             new_raw_layermask.append(eg.repeat(rtimes, 1))
-                            #pdb.set_trace()
                         new_raw_layermask = torch.cat(new_raw_layermask)
                     else:
                         new_raw_layermask = raw_layermask
@@ -278,8 +277,6 @@ class BeamSearchDecoder(object):
 
                 log_prob = torch.cat(logits).log_softmax(1)
                 if self.ensemble:
-                    print("log_prob.shape", log_prob.shape)
-                    pdb.set_trace()
                     log_prob = log_prob.view(int(log_prob.shape[0] / raw_layermask.shape[0]), raw_layermask.shape[0], -1).mean(dim=1)
 
                 self.update_beams(log_prob, beam_map, updated_cache)
