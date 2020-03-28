@@ -490,7 +490,7 @@ class NewTransformer(nn.Module):
     def encode(self, inputs, raw_layermask=None):
         ''' Encode the inputs '''
         word_embedding = self.embed(inputs, self.embedding)
-        pdb.set_trace()
+        # pdb.set_trace()
 
         encoded = {
             'state': word_embedding,

@@ -170,7 +170,7 @@ class BeamSearchDecoder(object):
         # numpy searchsorted is a faster version of python's bisect.bisect[_left|_right]
         # that returns insertion points for multiple values
         new_hypotheses = []
-        pdb.set_trace()
+        # pdb.set_trace()
         for new_hypothesis_idx in hypotheses_indices:
             base_hypothesis_idx = new_hypothesis_idx // self.beam_width
             base_hypothesis = beam.hypotheses[base_hypothesis_idx]
@@ -203,7 +203,7 @@ class BeamSearchDecoder(object):
 
     def update_beams(self, log_prob, beam_map, cache=None):
         ''' Update the beam batch '''
-        pdb.set_trace()
+        # pdb.set_trace()
         scores, indices = torch.topk(log_prob, self.beam_width, 1)
         for beam, hypothesis_map in beam_map.items():
             if beam.all_done(self.eos_idx):
@@ -274,7 +274,7 @@ class BeamSearchDecoder(object):
                             torch.cuda.empty_cache()
                         else:
                             raise rte
-                pdb.set_trace()
+                # pdb.set_trace()
                 log_prob = torch.cat(logits).log_softmax(1)
                 if self.ensemble:
                     log_prob = log_prob.view(int(log_prob.shape[0] / raw_layermask.shape[0]), raw_layermask.shape[0], log_prob.shape[1], log_prob.shape[2]).mean(dim=1)
