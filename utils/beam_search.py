@@ -88,6 +88,7 @@ class BeamSearchDecoder(object):
 
                 batch_idx = len(batch)
                 cache.append(hypothesis.cache)
+                pdb.set_trace()
                 encoded_batch.append(encoded[i*len(beams):(i+1)*len(beams)])
                 hypothesis_map[hypothesis] = batch_idx
                 batch.append(hypothesis.sequence)
