@@ -247,6 +247,7 @@ class BeamSearchDecoder(object):
                         encoded_batch, batch, r_layermask = chunks.pop()
                         
                         result = self.model(encoded_batch, batch, cache=cache, raw_layermask=r_layermask)
+                        pdb.set_trace()
 
                         new_cache = result.get('cache')
                         if new_cache:
