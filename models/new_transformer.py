@@ -209,7 +209,7 @@ class TransformerDecoderLayer(nn.Module):
             # print("decoder self attention")
 
             state = self.self_attention(
-                residual, gating_weight, ensemble, # residual
+                residual, gating_weight, self.ensemble, # residual
                 state, state, state, **kwargs # passed to multiheaded attention
             )
         else:
@@ -231,13 +231,13 @@ class TransformerDecoderLayer(nn.Module):
         if hasattr(self, 'source_attention'):
             # print("in source, state", state.shape)
             state = self.source_attention(
-                state, gating_weight, ensemble, # residual
+                state, gating_weight, self.ensemble, # residual
                 source, source, state, **kwargs # passed to multiheaded attention
             )
 
         if hasattr(self, 'ffn'):
             state = self.ffn(
-                state, gating_weight, ensemble, # residual
+                state, gating_weight, self.ensemble, # residual
                 state, # passed to feed-forward network
             )
 
