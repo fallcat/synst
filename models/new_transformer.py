@@ -428,7 +428,7 @@ class NewTransformer(nn.Module):
         args = [dec_attn_config, enc_dec_attn_config, config.num_heads, config.embedding_size, config.hidden_dim]
         decoders = nn.ModuleList([
             TransformerDecoderLayer(*args, layer_i,
-                                    self.layer_mask_predictor.get_layermasks().shape[0] if config.layermask_type == "ensemble" else None,
+                                    self.layermask_predictor.get_layermasks().shape[0] if config.layermask_type == "ensemble" else None,
                                     **kwargs)
             for layer_i in range(config.num_dec_layers)
         ])
