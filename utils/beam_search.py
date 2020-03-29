@@ -269,6 +269,7 @@ class BeamSearchDecoder(object):
                                 utils.split_or_chunk(batch, 2),
                                 r_layermask if self.ensemble else utils.split_or_chunk(r_layermask, 2)
                             ))
+                            pdb.set_trace()
 
                             # Additionally clear the cache in case the issue is related to allocator
                             # fragmentation.
