@@ -267,7 +267,7 @@ class BeamSearchDecoder(object):
                             chunks.extend(zip(
                                 utils.split_or_chunk(encoded_batch, 2),
                                 utils.split_or_chunk(batch, 2),
-                                r_layermask if self.ensemble else utils.split_or_chunk(r_layermask, 2)
+                                [r_layermask] * 2 if self.ensemble else utils.split_or_chunk(r_layermask, 2)
                             ))
                             pdb.set_trace()
 
