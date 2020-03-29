@@ -225,6 +225,8 @@ class BeamSearchDecoder(object):
             encoded = utils.split_or_chunk(encoded, len(beams))
             while not self.all_done(beams):
                 encoded_batch, batch, beam_map, cache, beam_count = self.collate(encoded, beams)
+                print("cache after collate", cache)
+                pdb.set_trace()
 
                 logits = []
                 updated_cache = []
@@ -249,9 +251,11 @@ class BeamSearchDecoder(object):
                 while chunks:
                     try:
                         encoded_batch, batch, r_layermask = chunks.pop()
+
+                        pdb.set_trace()
                         
                         result = self.model(encoded_batch, batch, cache=cache, raw_layermask=r_layermask)
-                        pdb.set_trace()
+
 
                         new_cache = result.get('cache')
                         if new_cache:
