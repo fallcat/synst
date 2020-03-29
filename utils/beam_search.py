@@ -10,7 +10,9 @@ class BeamHypothesis(object):
     def __init__(self, sequence, score, cache=None):
         self.score = score
         self.sequence = sequence
+        print("cache")
         self.cache = cache or {}
+        print("self.cache", self.cache)
 
     def __len__(self):
         ''' The length of the hypothesis is the length of the sequence '''
@@ -88,6 +90,8 @@ class BeamSearchDecoder(object):
 
                 batch_idx = len(batch)
                 cache.append(hypothesis.cache)
+                print("hypothesis.cache", hypothesis.cache)
+                print("cache", cache)
                 encoded_batch.append(encoded[i])
                 hypothesis_map[hypothesis] = batch_idx
                 batch.append(hypothesis.sequence)
