@@ -129,7 +129,7 @@ class TransformerEncoderLayer(nn.Module):
 
 class TransformerDecoderLayer(nn.Module):
     ''' Implements a single decoder layer in a transformer decoder stack '''
-    def __init__(self, dec_attn_config, enc_dec_attn_config, num_heads, dim, hidden_dim, layer_i, causal=True, span=1,
+    def __init__(self, dec_attn_config, enc_dec_attn_config, num_heads, dim, hidden_dim, layer_i, layermasks_len, causal=True, span=1,
                  dropout_p=0.1):
         ''' Initialize the transformer layer '''
         super(TransformerDecoderLayer, self).__init__()
@@ -140,6 +140,7 @@ class TransformerDecoderLayer(nn.Module):
 
         self.enc_dec_attn_config = enc_dec_attn_config
         self.no_attn = dec_attn_config['no_attn']
+        self.layermasks_len = layermasks_len
 
 
         if dec_attn_config['ffn_layer'][layer_i]:
@@ -241,6 +242,10 @@ class TransformerDecoderLayer(nn.Module):
 
         if self.causal and cache is not None:
             cached = cache.get(self.uuid)
+            if ensemble:
+                state_to_cache = state.view(-1, self.layermasks_len, state.shape[1]).mean(1)
+            else:
+                state_to_cache = state
             if cached is None:
                 pdb.set_trace()
                 cache[self.uuid] = state
@@ -422,7 +427,9 @@ class NewTransformer(nn.Module):
                                }
         args = [dec_attn_config, enc_dec_attn_config, config.num_heads, config.embedding_size, config.hidden_dim]
         decoders = nn.ModuleList([
-            TransformerDecoderLayer(*args, layer_i, **kwargs)
+            TransformerDecoderLayer(*args, layer_i,
+                                    self.layer_mask_predictor.get_layermasks.shape[0] if self.layermask_type == "ensemble" else None,
+                                    **kwargs)
             for layer_i in range(config.num_dec_layers)
         ])
 
