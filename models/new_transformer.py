@@ -556,6 +556,7 @@ class NewTransformer(nn.Module):
                                                                     emb_dim).contiguous().view(-1, length, emb_dim)
             decoded['mask'] = decoded['mask'].unsqueeze(1).expand(batch_size, raw_layermask_shape[0], length).contiguous().view(-1,
                                                                                                                    length)
+            pdb.set_trace()
             ensemble_layermask = raw_layermask.unsqueeze(0).expand(batch_size, raw_layermask_shape[0],
                                                                    raw_layermask_shape[1]).contiguous().view(-1,
                                                                                                 raw_layermask_shape[1])
