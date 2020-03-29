@@ -81,10 +81,11 @@ class TransformerFFN(nn.Module):
 
 class TransformerEncoderLayer(nn.Module):
     ''' Implements a single encoder layer in a transformer encoder stack '''
-    def __init__(self, attn_config, num_heads, dim, hidden_dim, layer_i, dropout_p=0.1):
+    def __init__(self, attn_config, num_heads, dim, hidden_dim, layer_i, dropout_p=0.1, ensemble=False):
         ''' Initialize the transformer layer '''
         super(TransformerEncoderLayer, self).__init__()
         self.no_attn = attn_config['no_attn']
+        self.ensemble = ensemble
 
         if attn_config['ffn_layer'][layer_i]:
             self.ffn = TransformerSublayer(
@@ -104,7 +105,7 @@ class TransformerEncoderLayer(nn.Module):
         self.ffn.reset_parameters()
         self.self_attention.reset_parameters()
 
-    def forward(self, inputs, layer_i, word_embedding, gating_weight=1, ensemble=False):  # pylint:disable=arguments-differ
+    def forward(self, inputs, layer_i, word_embedding, gating_weight=1):  # pylint:disable=arguments-differ
         ''' The forward pass '''
         mask = inputs['mask']
         state = inputs['state']
@@ -113,14 +114,14 @@ class TransformerEncoderLayer(nn.Module):
 
         if not self.no_attn:
             state = self.self_attention(
-                state, gating_weight, ensemble, # residual
+                state, gating_weight, self.ensemble, # residual
                 state, state, state, mask,  # passed to multiheaded attention
                 layer_i=layer_i, word_embedding=word_embedding
             )
 
         if hasattr(self, 'ffn'):
             state = self.ffn(
-                state, gating_weight, ensemble, # residual
+                state, gating_weight, self.ensemble, # residual
                 state, # passed to feed-forward network  
             )
 
@@ -130,7 +131,7 @@ class TransformerEncoderLayer(nn.Module):
 class TransformerDecoderLayer(nn.Module):
     ''' Implements a single decoder layer in a transformer decoder stack '''
     def __init__(self, dec_attn_config, enc_dec_attn_config, num_heads, dim, hidden_dim, layer_i, layermasks_len, causal=True, span=1,
-                 dropout_p=0.1):
+                 dropout_p=0.1, ensemble=False):
         ''' Initialize the transformer layer '''
         super(TransformerDecoderLayer, self).__init__()
 
@@ -141,7 +142,7 @@ class TransformerDecoderLayer(nn.Module):
         self.enc_dec_attn_config = enc_dec_attn_config
         self.no_attn = dec_attn_config['no_attn']
         self.layermasks_len = layermasks_len
-
+        self.ensemble = ensemble
 
         if dec_attn_config['ffn_layer'][layer_i]:
             self.ffn = TransformerSublayer(
@@ -181,7 +182,7 @@ class TransformerDecoderLayer(nn.Module):
         if hasattr(self, 'source_attention'):
             self.source_attention.reset_parameters()
 
-    def forward(self, inputs, sources, layer_i, word_embedding, gating_weight=1, ensemble=False): # pylint:disable=arguments-differ
+    def forward(self, inputs, sources, layer_i, word_embedding, gating_weight=1): # pylint:disable=arguments-differ
         ''' The forward pass '''
         mask = inputs['mask']
         state = inputs['state']
@@ -242,7 +243,7 @@ class TransformerDecoderLayer(nn.Module):
 
         if self.causal and cache is not None:
             cached = cache.get(self.uuid)
-            if ensemble:
+            if self.ensemble:
                 state_to_cache = state.view(-1, self.layermasks_len, state.shape[1]).mean(1)
             else:
                 state_to_cache = state
@@ -334,7 +335,7 @@ class NewTransformer(nn.Module):
     @classmethod
     def create_encoders(cls, config):
         ''' Create the transformer encoders '''
-        kwargs = {'dropout_p': config.dropout_p}
+        kwargs = {'dropout_p': config.dropout_p, 'ensemble': True if config.layermask_type == "ensemble" else False}
 
         if config.num_enc_layers is None:
             config.num_enc_layers = config.num_layers
@@ -380,7 +381,7 @@ class NewTransformer(nn.Module):
     # @classmethod
     def create_decoders(self, config):
         ''' Create the transformer decoders '''
-        kwargs = {'dropout_p': config.dropout_p, 'span': config.span}
+        kwargs = {'dropout_p': config.dropout_p, 'span': config.span, 'ensemble': True if config.layermask_type == "ensemble" else False}
 
         if config.num_dec_layers is None:
             config.num_dec_layers = config.num_layers
