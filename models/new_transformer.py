@@ -303,10 +303,6 @@ class NewTransformer(nn.Module):
         self.position_embedding = PositionEmbedding(config.embedding_size)
         self.dropout = nn.Dropout(config.dropout_p, inplace=True)
 
-        # Allow for overriding the encoders and decoders in dervied classes
-        self.encoders = type(self).create_encoders(config)
-        self.decoders = self.create_decoders(config)
-
         self.label_smoothing = LabelSmoothingLoss(
             config.label_smoothing or 0,
             ignore_index=self.padding_idx,
@@ -318,8 +314,8 @@ class NewTransformer(nn.Module):
         )
 
         # layermask predictor
-        self.layer_mask_predictor = LayerMaskPredictor(config.embedding_size, 
-                                                       config.num_layers, 
+        self.layer_mask_predictor = LayerMaskPredictor(config.embedding_size,
+                                                       config.num_layers,
                                                        config.layermask_type,
                                                        config.potential_threshold,
                                                        config.shuffle_lmp_configs,
@@ -330,6 +326,10 @@ class NewTransformer(nn.Module):
                                                        config.lmp_config_file,
                                                        config.random_config)
         self.layermask_type = config.layermask_type
+
+        # Allow for overriding the encoders and decoders in dervied classes
+        self.encoders = type(self).create_encoders(config)
+        self.decoders = self.create_decoders(config)
 
     @classmethod
     def create_encoders(cls, config):
@@ -428,7 +428,7 @@ class NewTransformer(nn.Module):
         args = [dec_attn_config, enc_dec_attn_config, config.num_heads, config.embedding_size, config.hidden_dim]
         decoders = nn.ModuleList([
             TransformerDecoderLayer(*args, layer_i,
-                                    self.layermask_predictor.layermasks.shape[0] if config.layermask_type == "ensemble" else None,
+                                    self.layer_mask_predictor.layermasks.shape[0] if config.layermask_type == "ensemble" else None,
                                     **kwargs)
             for layer_i in range(config.num_dec_layers)
         ])
