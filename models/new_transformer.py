@@ -248,13 +248,13 @@ class TransformerDecoderLayer(nn.Module):
             else:
                 state_to_cache = state
             if cached is None:
-                pdb.set_trace()
+                # pdb.set_trace()
                 cache[self.uuid] = state_to_cache
             else:
                 # print("cached", cached.shape)
                 # print("state", state.shape)
                 try:
-                    pdb.set_trace()
+                    # pdb.set_trace()
                     cache[self.uuid] = torch.cat((cached, state_to_cache), 1)
                     state = torch.cat((cached.unqueeze(1).expand(-1, self.layermasks_len, state.shape[1], state.shape[2]), state), 1)
                 except:
