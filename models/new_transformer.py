@@ -546,7 +546,6 @@ class NewTransformer(nn.Module):
             'mask': targets.eq(self.padding_idx) if mask is None else mask,
             'input_lens': input_lens
         }
-        pdb.set_trace()
 
         if self.layermask_type == "ensemble":
             batch_size = word_embedding.shape[0]

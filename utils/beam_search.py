@@ -10,9 +10,7 @@ class BeamHypothesis(object):
     def __init__(self, sequence, score, cache=None):
         self.score = score
         self.sequence = sequence
-        print("cache")
         self.cache = cache or {}
-        print("self.cache", self.cache)
 
     def __len__(self):
         ''' The length of the hypothesis is the length of the sequence '''
@@ -90,8 +88,6 @@ class BeamSearchDecoder(object):
 
                 batch_idx = len(batch)
                 cache.append(hypothesis.cache)
-                print("hypothesis.cache", hypothesis.cache)
-                print("cache", cache)
                 encoded_batch.append(encoded[i])
                 hypothesis_map[hypothesis] = batch_idx
                 batch.append(hypothesis.sequence)
@@ -225,8 +221,6 @@ class BeamSearchDecoder(object):
             encoded = utils.split_or_chunk(encoded, len(beams))
             while not self.all_done(beams):
                 encoded_batch, batch, beam_map, cache, beam_count = self.collate(encoded, beams)
-                print("cache after collate", cache)
-                pdb.set_trace()
 
                 logits = []
                 updated_cache = []
@@ -251,8 +245,6 @@ class BeamSearchDecoder(object):
                 while chunks:
                     try:
                         encoded_batch, batch, r_layermask = chunks.pop()
-
-                        pdb.set_trace()
                         
                         result = self.model(encoded_batch, batch, cache=cache, raw_layermask=r_layermask)
 
@@ -283,12 +275,10 @@ class BeamSearchDecoder(object):
                             torch.cuda.empty_cache()
                         else:
                             raise rte
-                # pdb.set_trace()
                 log_prob = torch.cat(logits).log_softmax(1)
                 if self.ensemble:
                     log_prob = log_prob.view(int(log_prob.shape[0] / raw_layermask.shape[0]), raw_layermask.shape[0], log_prob.shape[1], log_prob.shape[2]).mean(dim=1)
 
                 self.update_beams(log_prob, beam_map, updated_cache)
-            pdb.set_trace()
             return beams
 
