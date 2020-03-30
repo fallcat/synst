@@ -254,7 +254,7 @@ class TransformerDecoderLayer(nn.Module):
                 # print("cached", cached.shape)
                 # print("state", state.shape)
                 try:
-                    # pdb.set_trace()
+                    pdb.set_trace()
                     cache[self.uuid] = torch.cat((cached, state_to_cache), 1)
                     state = torch.cat((cached.unsqueeze(1).expand(-1,
                                                                   self.layermasks_len,
