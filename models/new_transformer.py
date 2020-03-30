@@ -244,11 +244,11 @@ class TransformerDecoderLayer(nn.Module):
         if self.causal and cache is not None:
             cached = cache.get(self.uuid)
             if self.ensemble:
-                state_to_cache = state.view(-1, self.layermasks_len, state.shape[1], state.shape[2]).mean(1).unsqueeze(1)
+                state_to_cache = state.view(-1, self.layermasks_len, state.shape[1], state.shape[2]).mean(1)
             else:
                 state_to_cache = state
             if cached is None:
-                # pdb.set_trace()
+                pdb.set_trace()
                 cache[self.uuid] = state_to_cache
             else:
                 # print("cached", cached.shape)
