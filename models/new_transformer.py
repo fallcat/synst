@@ -184,7 +184,7 @@ class TransformerDecoderLayer(nn.Module):
 
     def forward(self, inputs, sources, layer_i, word_embedding, gating_weight=1): # pylint:disable=arguments-differ
         ''' The forward pass '''
-        pdb.set_trace()
+        # pdb.set_trace()
         mask = inputs['mask']
         state = inputs['state']
         cache = inputs.get('cache')
@@ -245,7 +245,7 @@ class TransformerDecoderLayer(nn.Module):
                 state, # passed to feed-forward network
             )
 
-        print("3 state ", state.shape)
+        prpdbint("3 state ", state.shape)
 
         if self.causal and cache is not None:
             cached = cache.get(self.uuid)
@@ -260,7 +260,7 @@ class TransformerDecoderLayer(nn.Module):
                 # print("cached", cached.shape)
                 # print("state", state.shape)
                 try:
-                    # pdb.set_trace()
+                    # .set_trace()
                     cache[self.uuid] = torch.cat((cached, state_to_cache), 1)
                     if self.ensemble:
                         state = torch.cat((cached.unsqueeze(1).expand(-1,
