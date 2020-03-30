@@ -288,10 +288,10 @@ class BeamSearchDecoder(object):
 
                 # 2. nonnaive
 
-                # if self.ensemble:
-                #     log_prob = log_prob.view(int(log_prob.shape[0] / raw_layermask.shape[0]), raw_layermask.shape[0], log_prob.shape[1], log_prob.shape[2]).mean(dim=1)
-                #
-                # log_prob = log_prob.log_softmax(1)
+                if self.ensemble:
+                    log_prob = log_prob.view(int(log_prob.shape[0] / raw_layermask.shape[0]), raw_layermask.shape[0], log_prob.shape[1], log_prob.shape[2]).mean(dim=1)
+
+                log_prob = log_prob.log_softmax(1)
 
                 # 3. rank
                 # log_prob = log_prob.log_softmax(1)
@@ -303,14 +303,14 @@ class BeamSearchDecoder(object):
                 #     log_prob = log_prob[range(batch_size), max_indices]
 
                 # 4. rank with avg topk
-                log_prob = log_prob.log_softmax(1)
-                if self.ensemble:
-                    # pdb.set_trace()
-                    batch_size = int(log_prob.shape[0] / raw_layermask.shape[0])
-                    log_prob = log_prob.view(batch_size, raw_layermask.shape[0],
-                                             log_prob.shape[1], log_prob.shape[2])
-                    max_indices = log_prob.topk(self.beam_width, dim=2)[0].mean(2).argmax(dim=1).view(-1)
-                    log_prob = log_prob[range(batch_size), max_indices]
+                # log_prob = log_prob.log_softmax(1)
+                # if self.ensemble:
+                #     # pdb.set_trace()
+                #     batch_size = int(log_prob.shape[0] / raw_layermask.shape[0])
+                #     log_prob = log_prob.view(batch_size, raw_layermask.shape[0],
+                #                              log_prob.shape[1], log_prob.shape[2])
+                #     max_indices = log_prob.topk(self.beam_width, dim=2)[0].mean(2).argmax(dim=1).view(-1)
+                #     log_prob = log_prob[range(batch_size), max_indices]
 
                     # pdb.set_trace()
 
