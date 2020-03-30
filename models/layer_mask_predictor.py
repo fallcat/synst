@@ -41,7 +41,7 @@ class LayerMaskPredictor(nn.Module):
                 with open(layermask_file) as layermask_file:
                     self.layermasks = torch.stack([torch.tensor([float(x) for x in list(line.strip())], device=torch.device("cuda")) for line in layermask_file.readlines()])
                     print("Using layermasks from file, layermasks using: ", self.layermasks)
-        elif lmp_type == "ensemble":
+        elif "ensemble" in lmp_type:
             if layermask_file is None:
                 raise Exception("No layermask found for ensemble")
             else:
@@ -137,6 +137,12 @@ class LayerMaskPredictor(nn.Module):
 
         if self.lmp_type == "ensemble":
             return self.layermasks  # .unsqueeze(0).expand(batch_size, -1)
+
+        if self.lmp_type == "ensemble_total":
+            layermasks_shape = self.layermasks.shape
+            return self.layermasks.unsqueeze(0)\
+                .expand(tuple(int(batch_size) / self.layermasks.size(0)) + layermasks_shape).view(batch_size,
+                                                                                                  layermasks_shape[1])
 
         lmp_input = lmp_input.masked_fill_(lmp_input_mask[:, :, None], 0)
         layermask = self.proj1(torch.sum(lmp_input,1))

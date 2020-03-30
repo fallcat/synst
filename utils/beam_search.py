@@ -279,6 +279,9 @@ class BeamSearchDecoder(object):
                             raise rte
                 log_prob = torch.cat(logits)
 
+                # normal
+                log_prob = log_prob.log_softmax(1)
+
                 # 1. naive
 
                 # log_prob = log_prob.log_softmax(1)
@@ -288,10 +291,10 @@ class BeamSearchDecoder(object):
 
                 # 2. nonnaive
 
-                if self.ensemble:
-                    log_prob = log_prob.view(int(log_prob.shape[0] / raw_layermask.shape[0]), raw_layermask.shape[0], log_prob.shape[1], log_prob.shape[2]).mean(dim=1)
-
-                log_prob = log_prob.log_softmax(1)
+                # if self.ensemble:
+                #     log_prob = log_prob.view(int(log_prob.shape[0] / raw_layermask.shape[0]), raw_layermask.shape[0], log_prob.shape[1], log_prob.shape[2]).mean(dim=1)
+                #
+                # log_prob = log_prob.log_softmax(1)
 
                 # 3. rank
                 # log_prob = log_prob.log_softmax(1)

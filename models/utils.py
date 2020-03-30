@@ -306,7 +306,20 @@ class Translator(object):
             )
 
             # change to store distribution
-            encoded, lmp_raw_layermask = self.encoder(batch['inputs'], raw_layermask=raw_layermask)
+            if self.modules['model'].layermask_type == "ensemble_total":
+                batch_input_shape = batch['inputs'].shape
+                print("batch_input_shape", batch_input_shape)
+                num_layermasks = self.modules['model'].layer_mask_predictor.layermasks.shape[0]
+                batch_inputs = batch['inputs'].view(-1,
+                                                    1,
+                                                    batch_input_shape[1],
+                                                    batch_input_shape[2]).expand(-1,
+                                                                                 num_layermasks,
+                                                                                 batch_input_shape[1],
+                                                                                 batch_input_shape[2])
+            else:
+                batch_inputs = batch['inputs']
+            encoded, lmp_raw_layermask = self.encoder(batch_inputs, raw_layermask=raw_layermask)
 
             if raw_layermask is None:
                 raw_layermask = lmp_raw_layermask
