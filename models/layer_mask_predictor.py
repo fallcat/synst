@@ -142,8 +142,10 @@ class LayerMaskPredictor(nn.Module):
             layermasks_shape = self.layermasks.shape
             print("layermasks_shape", layermasks_shape)
             return self.layermasks.unsqueeze(0)\
-                .expand(tuple(int(batch_size / self.layermasks.size(0))) + layermasks_shape).view(batch_size,
-                                                                                                  layermasks_shape[1])
+                .expand(int(batch_size / self.layermasks.size(0)),
+                        layermasks_shape[0],
+                        layermasks_shape[1]).view(batch_size,
+                                                  layermasks_shape[1])
 
         lmp_input = lmp_input.masked_fill_(lmp_input_mask[:, :, None], 0)
         layermask = self.proj1(torch.sum(lmp_input,1))
