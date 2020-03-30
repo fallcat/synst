@@ -312,11 +312,10 @@ class Translator(object):
                 num_layermasks = self.modules['model'].layer_mask_predictor.layermasks.shape[0]
                 batch_inputs = batch['inputs'].view(-1,
                                                     1,
-                                                    batch_input_shape[1],
-                                                    batch_input_shape[2]).expand(-1,
+                                                    batch_input_shape[1]).expand(-1,
                                                                                  num_layermasks,
-                                                                                 batch_input_shape[1],
-                                                                                 batch_input_shape[2])
+                                                                                 batch_input_shape[1])\
+                    .contiguous().view(-1, batch_input_shape[1])
             else:
                 batch_inputs = batch['inputs']
             encoded, lmp_raw_layermask = self.encoder(batch_inputs, raw_layermask=raw_layermask)
@@ -328,9 +327,10 @@ class Translator(object):
                 self.layermasks.append(raw_layermask)
             # decode using top-k decoder layer
             beams = decoder.initialize_search(
-                [[self.sos_idx] * self.span for _ in range(len(batch['inputs']))],
+                [[self.sos_idx] * self.span for _ in range(len(batch_inputs))],
                 [l + self.config.max_decode_length + self.span + 1 for l in length_basis]
             )
+            pdb.set_trace()
             targets = [
                 beam.best_hypothesis.sequence[self.span - 1:]
                 for beam in decoder.decode(encoded, beams, raw_layermask)
