@@ -142,7 +142,7 @@ class LayerMaskPredictor(nn.Module):
             layermasks_shape = self.layermasks.shape
             print("layermasks_shape", layermasks_shape)
             return self.layermasks.unsqueeze(0)\
-                .expand(int(batch_size / self.layermasks.size(0)),
+                .expand(int(batch_size / self.layermasks_shape[0]),
                         layermasks_shape[0],
                         layermasks_shape[1]).contigous().view(batch_size,
                                                               layermasks_shape[1])
