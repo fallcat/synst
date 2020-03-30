@@ -324,12 +324,21 @@ class Translator(object):
             else:
                 self.layermasks.append(raw_layermask)
             # decode using top-k decoder layer
-            # pdb.set_trace()
+            pdb.set_trace()
 
             if self.config.length_basis:
                 length_basis = batch[self.config.length_basis]
+                if self.modules['model'].layermask_type == "ensemble_total":
+                    length_basis_shape = length_basis.shape
+                    length_basis = length_basis.view(-1,
+                                                     1,
+                                                     length_basis_shape[1]).expand(-1,
+                                                                                     num_layermasks,
+                                                                                     length_basis_shape[1]) \
+                        .contiguous().view(-1, length_basis_shape[1])
+
             else:
-                length_basis = [0] * len(batch['inputs'])
+                length_basis = [0] * len(batch_inputs)
 
             beams = decoder.initialize_search(
                 [[self.sos_idx] * self.span for _ in range(len(batch_inputs))],
