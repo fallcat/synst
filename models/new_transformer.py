@@ -267,8 +267,8 @@ class TransformerDecoderLayer(nn.Module):
                                                                       self.layermasks_len,
                                                                       cached.shape[1],
                                                                       cached.shape[2]).contiguous().view(-1,
-                                                                                                        state.shape[1],
-                                                                                                        state.shape[2]), state), 1)
+                                                                                                        cached.shape[1],
+                                                                                                        cached.shape[2]), state), 1)
                     else:
                         state = cache[self.uuid]
                 except:
