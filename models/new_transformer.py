@@ -184,6 +184,7 @@ class TransformerDecoderLayer(nn.Module):
 
     def forward(self, inputs, sources, layer_i, word_embedding, gating_weight=1): # pylint:disable=arguments-differ
         ''' The forward pass '''
+        pdb.set_trace()
         mask = inputs['mask']
         state = inputs['state']
         cache = inputs.get('cache')
