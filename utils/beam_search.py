@@ -251,7 +251,7 @@ class BeamSearchDecoder(object):
 
                         new_cache = result.get('cache')
                         if new_cache:
-                            pdb.set_trace()
+                            # pdb.set_trace()
                             updated_cache.extend(utils.split_or_chunk(new_cache, len(batch)))
 
                         full_logits = result['logits']

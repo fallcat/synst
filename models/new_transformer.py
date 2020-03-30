@@ -189,6 +189,7 @@ class TransformerDecoderLayer(nn.Module):
         state = inputs['state']
         cache = inputs.get('cache')
         input_lens = inputs.get('input_lens')
+        print("1 state ", state.shape)
 
         decoder_position = state.shape[1] - 1
 
@@ -217,6 +218,8 @@ class TransformerDecoderLayer(nn.Module):
             if self.causal and cache is not None:
                 state = state[:, -self.span:]
 
+        print("2 state ", state.shape)
+
         source = sources['state']
         # print("source", source)
         kwargs = {'key_mask': sources['mask'], 'layer_i': layer_i, 'input_lens': input_lens}
@@ -242,6 +245,8 @@ class TransformerDecoderLayer(nn.Module):
                 state, # passed to feed-forward network
             )
 
+        print("3 state ", state.shape)
+
         if self.causal and cache is not None:
             cached = cache.get(self.uuid)
             if self.ensemble:
@@ -249,13 +254,13 @@ class TransformerDecoderLayer(nn.Module):
             else:
                 state_to_cache = state
             if cached is None:
-                pdb.set_trace()
+                # pdb.set_trace()
                 cache[self.uuid] = state_to_cache
             else:
                 # print("cached", cached.shape)
                 # print("state", state.shape)
                 try:
-                    pdb.set_trace()
+                    # pdb.set_trace()
                     cache[self.uuid] = torch.cat((cached, state_to_cache), 1)
                     if self.ensemble:
                         state = torch.cat((cached.unsqueeze(1).expand(-1,
@@ -566,6 +571,8 @@ class NewTransformer(nn.Module):
             'mask': targets.eq(self.padding_idx) if mask is None else mask,
             'input_lens': input_lens
         }
+
+        pdb.set_trace()
 
         if self.layermask_type == "ensemble":
             batch_size = word_embedding.shape[0]
