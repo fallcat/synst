@@ -144,7 +144,7 @@ class LayerMaskPredictor(nn.Module):
             return self.layermasks.unsqueeze(0)\
                 .expand(int(batch_size / layermasks_shape[0]),
                         layermasks_shape[0],
-                        layermasks_shape[1]).contigous().view(batch_size,
+                        layermasks_shape[1]).contiguous().view(batch_size,
                                                               layermasks_shape[1])
 
         lmp_input = lmp_input.masked_fill_(lmp_input_mask[:, :, None], 0)
