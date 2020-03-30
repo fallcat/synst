@@ -189,7 +189,7 @@ class TransformerDecoderLayer(nn.Module):
         state = inputs['state']
         cache = inputs.get('cache')
         input_lens = inputs.get('input_lens')
-        print("1 state ", state.shape)
+        # print("1 state ", state.shape)
 
         decoder_position = state.shape[1] - 1
 
@@ -218,7 +218,7 @@ class TransformerDecoderLayer(nn.Module):
             if self.causal and cache is not None:
                 state = state[:, -self.span:]
 
-        print("2 state ", state.shape)
+        # print("2 state ", state.shape)
 
         source = sources['state']
         # print("source", source)
@@ -245,7 +245,7 @@ class TransformerDecoderLayer(nn.Module):
                 state, # passed to feed-forward network
             )
 
-        print("3 state ", state.shape)
+        # print("3 state ", state.shape)
 
         if self.causal and cache is not None:
             cached = cache.get(self.uuid)
