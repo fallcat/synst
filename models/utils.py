@@ -302,11 +302,11 @@ class Translator(object):
             )
 
             # change to store distribution
-            print("self.modules['model'].layermask_type", self.modules['model'].layermask_type)
-            pdb.set_trace()
+            # print("self.modules['model'].layermask_type", self.modules['model'].layermask_type)
+            # pdb.set_trace()
             if self.modules['model'].layermask_type == "ensemble_total":
                 batch_input_shape = batch['inputs'].shape
-                print("batch_input_shape", batch_input_shape)
+                # print("batch_input_shape", batch_input_shape)
                 num_layermasks = self.modules['model'].layer_mask_predictor.layermasks.shape[0]
                 batch_inputs = batch['inputs'].view(-1,
                                                     1,
@@ -324,7 +324,7 @@ class Translator(object):
             else:
                 self.layermasks.append(raw_layermask)
             # decode using top-k decoder layer
-            pdb.set_trace()
+            # pdb.set_trace()
 
             if self.config.length_basis:
                 length_basis = batch[self.config.length_basis]
