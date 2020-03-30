@@ -231,7 +231,7 @@ class BeamSearchDecoder(object):
                 elif len(raw_layermask.size()) == 1:
                     new_raw_layermask = raw_layermask
                 else:
-                    pdb.set_trace()
+                    # pdb.set_trace()
                     assert len(raw_layermask) == len(beam_count)
                     if sum(beam_count) != raw_layermask.shape[0]:
                         new_raw_layermask = []
