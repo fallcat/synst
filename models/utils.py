@@ -306,6 +306,8 @@ class Translator(object):
             )
 
             # change to store distribution
+            print("self.modules['model'].layermask_type", self.modules['model'].layermask_type)
+            pdb.set_trace()
             if self.modules['model'].layermask_type == "ensemble_total":
                 batch_input_shape = batch['inputs'].shape
                 print("batch_input_shape", batch_input_shape)
