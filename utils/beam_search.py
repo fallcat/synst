@@ -296,7 +296,6 @@ class BeamSearchDecoder(object):
                 # 3. rank
                 log_prob = log_prob.log_softmax(1)
                 if self.ensemble:
-                    pdb.set_trace()
                     batch_size = int(log_prob.shape[0] / raw_layermask.shape[0])
                     log_prob = log_prob.view(batch_size, raw_layermask.shape[0],
                                              log_prob.shape[1], log_prob.shape[2])
