@@ -300,7 +300,7 @@ class BeamSearchDecoder(object):
                     batch_size = int(log_prob.shape[0] / raw_layermask.shape[0])
                     log_prob = log_prob.view(batch_size, raw_layermask.shape[0],
                                              log_prob.shape[1], log_prob.shape[2])
-                    max_indices = log_prob.max(dim=2)[0].argmax(dim=1)
+                    max_indices = log_prob.max(dim=2)[0].argmax(dim=1).view(-1)
                     log_prob = log_prob[range(batch_size), max_indices]
 
                     # pdb.set_trace()
