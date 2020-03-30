@@ -265,8 +265,8 @@ class TransformerDecoderLayer(nn.Module):
                     if self.ensemble:
                         state = torch.cat((cached.unsqueeze(1).expand(-1,
                                                                       self.layermasks_len,
-                                                                      state.shape[1],
-                                                                      state.shape[2]).contiguous().view(-1,
+                                                                      cached.shape[1],
+                                                                      cached.shape[2]).contiguous().view(-1,
                                                                                                         state.shape[1],
                                                                                                         state.shape[2]), state), 1)
                     else:
