@@ -106,7 +106,7 @@ class BeamSearchDecoder(object):
 
     def initialize_search(self, start_sequences, max_lengths=0, initial_scores=0):
         ''' Initialize a batch of beams '''
-        pdb.set_trace()
+        # pdb.set_trace()
         beams = []
         if isinstance(max_lengths, int):
             max_lengths = [max_lengths] * len(start_sequences)

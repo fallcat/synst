@@ -292,10 +292,6 @@ class Translator(object):
     def translate(self, batch, raw_layermask=None, loss_func="binary_cls"):
         ''' Generate with the given batch '''
         with torch.no_grad():
-            if self.config.length_basis:
-                length_basis = batch[self.config.length_basis]
-            else:
-                length_basis = [0] * len(batch['inputs'])
 
             decoder = BeamSearchDecoder(
                 self.decoder,
@@ -328,12 +324,18 @@ class Translator(object):
             else:
                 self.layermasks.append(raw_layermask)
             # decode using top-k decoder layer
-            pdb.set_trace()
+            # pdb.set_trace()
+
+            if self.config.length_basis:
+                length_basis = batch[self.config.length_basis]
+            else:
+                length_basis = [0] * len(batch['inputs'])
+
             beams = decoder.initialize_search(
                 [[self.sos_idx] * self.span for _ in range(len(batch_inputs))],
                 [l + self.config.max_decode_length + self.span + 1 for l in length_basis]
             )
-            pdb.set_trace()
+            # pdb.set_trace()
             targets = [
                 beam.best_hypothesis.sequence[self.span - 1:]
                 for beam in decoder.decode(encoded, beams, raw_layermask)
