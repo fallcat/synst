@@ -328,6 +328,7 @@ class Translator(object):
             else:
                 self.layermasks.append(raw_layermask)
             # decode using top-k decoder layer
+            pdb.set_trace()
             beams = decoder.initialize_search(
                 [[self.sos_idx] * self.span for _ in range(len(batch_inputs))],
                 [l + self.config.max_decode_length + self.span + 1 for l in length_basis]
