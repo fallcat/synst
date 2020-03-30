@@ -245,7 +245,7 @@ class TransformerDecoderLayer(nn.Module):
                 state, # passed to feed-forward network
             )
 
-        prpdbint("3 state ", state.shape)
+        print("3 state ", state.shape)
 
         if self.causal and cache is not None:
             cached = cache.get(self.uuid)
