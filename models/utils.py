@@ -330,12 +330,7 @@ class Translator(object):
                 length_basis = batch[self.config.length_basis]
                 if self.modules['model'].layermask_type == "ensemble_total":
                     length_basis_shape = length_basis.shape
-                    length_basis = length_basis.view(-1,
-                                                     1,
-                                                     length_basis_shape[1]).expand(-1,
-                                                                                     num_layermasks,
-                                                                                     length_basis_shape[1]) \
-                        .contiguous().view(-1, length_basis_shape[1])
+                    length_basis = length_basis.view(-1, 1).expand(-1, num_layermasks) .contiguous().view(-1)
 
             else:
                 length_basis = [0] * len(batch_inputs)
