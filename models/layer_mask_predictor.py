@@ -140,7 +140,6 @@ class LayerMaskPredictor(nn.Module):
 
         if self.lmp_type == "ensemble_total":
             layermasks_shape = self.layermasks.shape
-            print("layermasks_shape", layermasks_shape)
             return self.layermasks.unsqueeze(0)\
                 .expand(int(batch_size / layermasks_shape[0]),
                         layermasks_shape[0],
