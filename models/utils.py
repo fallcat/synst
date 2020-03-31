@@ -340,10 +340,24 @@ class Translator(object):
                 [l + self.config.max_decode_length + self.span + 1 for l in length_basis]
             )
             # pdb.set_trace()
-            targets = [
-                beam.best_hypothesis.sequence[self.span - 1:]
-                for beam in decoder.decode(encoded, beams, raw_layermask)
-            ]
+            if self.modules['model'].layermask_type == "ensemble_total":
+                decoded_beams = decoder.decode(encoded, beams, raw_layermask)
+                targets = np.array([
+                    beam.best_hypothesis.sequence[self.span - 1:]
+                    for beam in decoded_beams
+                ]).reshape(-1, num_layermasks)
+                scores = np.array([
+                    beam.best_hypothesis.score
+                    for beam in decoded_beams
+                ]).reshape(-1, num_layermasks)
+                targets = targets[np.arange(scores.shape[0]), np.argmax(scores, axis=1)]
+            else:
+                targets = [
+                    beam.best_hypothesis.sequence[self.span - 1:]
+                    for beam in decoder.decode(encoded, beams, raw_layermask)
+                ]
+
+
 
             gold_targets = []
             gold_target_lens = batch['target_lens']
