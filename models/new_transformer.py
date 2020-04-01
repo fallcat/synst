@@ -626,3 +626,23 @@ class NewTransformer(nn.Module):
 
         self.layer_mask_predictor.lmp_type = lmp_type
 
+    def rerank(self, batch, length_penalty): # pylint:disable=arguments-differ
+        ''' A batch of inputs and targets '''
+        """
+            step_progress = curr_step / max-step
+        """
+
+        encoded, raw_layermask = self.encode(batch['inputs'])
+        decoded = self.decode(
+            encoded,
+            right_shift(right_shift(batch['gen_targets']), shift=self.span - 1, fill=self.sos_idx),
+            input_lens=batch['input_lens'],
+            raw_layermask=raw_layermask
+        )
+
+        logits = decoded['logits']
+
+        scores = logits * ((5 + 1) / (5 + batch['gen_target_lens'])) ** length_penalty
+
+        return scores
+

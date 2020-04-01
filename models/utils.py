@@ -289,6 +289,17 @@ class Translator(object):
         ''' Get the padding index '''
         return self.dataset.padding_idx
 
+    def reranking(self, inputs, targets):
+        encoded, raw_layermask = self.encode(inputs)
+        decoded = self.decode(
+            encoded,
+            right_shift(right_shift(batch['targets']), shift=self.span - 1, fill=self.sos_idx),
+            input_lens=batch['input_lens'],
+            raw_layermask=raw_layermask
+        )
+
+        logits = decoded['logits']
+
     def translate(self, batch, raw_layermask=None, loss_func="binary_cls"):
         ''' Generate with the given batch '''
         with torch.no_grad():
@@ -339,18 +350,25 @@ class Translator(object):
                 [[self.sos_idx] * self.span for _ in range(len(batch_inputs))],
                 [l + self.config.max_decode_length + self.span + 1 for l in length_basis]
             )
-            # pdb.set_trace()
+            pdb.set_trace()
             if self.modules['model'].layermask_type == "ensemble_total":
                 decoded_beams = decoder.decode(encoded, beams, raw_layermask)
-                targets = np.array([
-                    beam.best_hypothesis.sequence[self.span - 1:]
+                # targets = np.array([
+                #     beam.best_hypothesis.sequence[self.span - 1:]
+                #     for beam in decoded_beams
+                # ]).reshape(-1, num_layermasks)
+                # scores = np.array([
+                #     beam.best_hypothesis.score
+                #     for beam in decoded_beams
+                # ]).reshape(-1, num_layermasks)
+                # targets = targets[np.arange(scores.shape[0]), np.argmax(scores, axis=1)]
+                targets = [torch.LongTensor(
+                    beam.best_hypothesis.sequence[self.span - 1:])
                     for beam in decoded_beams
-                ]).reshape(-1, num_layermasks)
-                scores = np.array([
-                    beam.best_hypothesis.score
-                    for beam in decoded_beams
-                ]).reshape(-1, num_layermasks)
-                targets = targets[np.arange(scores.shape[0]), np.argmax(scores, axis=1)]
+                ]
+                self.dataset.collate_field(batch, 'gen_target', targets)
+                scores = self.modules['model'].rerank(batch, self.config.length_penalty).view(-1, num_layermasks)
+                targets = torch.stack(targets).view(-1, num_layermasks)[torch.arange(scores.shape[0]), torch.argmax(scores, 1)]
             else:
                 targets = [
                     beam.best_hypothesis.sequence[self.span - 1:]
