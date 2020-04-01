@@ -379,7 +379,7 @@ class Translator(object):
                     for beam in decoded_beams
                 ]
                 self.dataset.collate_field(batch, 'gen_target', targets)
-                scores = self.modules['model'].rerank(batch, self.config.length_penalty).view(-1, num_layermasks)
+                scores = self.rerank(batch, self.config.length_penalty).view(-1, num_layermasks)
                 targets = torch.stack(targets).view(-1, num_layermasks)[torch.arange(scores.shape[0]), torch.argmax(scores, 1)]
                 targets = [target for target in targets]
             else:
