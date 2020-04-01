@@ -17,6 +17,7 @@ from torch.nn import functional as F
 
 from utils.beam_search import BeamSearchDecoder
 from utils.probe_beam_search import ProbeBeamSearchDecoder
+from utils import left_shift, right_shift
 
 MODEL_STATS = ['encoder_stats', 'decoder_stats', 'enc_dec_stats']
 STATS_TYPES = ['entropies', 'argmax_probabilities', 'argmax_distances', 'abs_argmax_distances']
@@ -289,16 +290,27 @@ class Translator(object):
         ''' Get the padding index '''
         return self.dataset.padding_idx
 
-    def reranking(self, inputs, targets):
-        encoded, raw_layermask = self.encode(inputs)
-        decoded = self.decode(
+    def rerank(self, batch, length_penalty):  # pylint:disable=arguments-differ
+        ''' A batch of inputs and targets '''
+        """
+            step_progress = curr_step / max-step
+        """
+
+        encoded, raw_layermask = self.encoder(batch['inputs'],
+                                             raw_layermask=torch.tensor([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                                                                        device='cuda'))
+        decoded = self.decoder(
             encoded,
-            right_shift(right_shift(batch['targets']), shift=self.span - 1, fill=self.sos_idx),
+            right_shift(right_shift(batch['gen_targets']), shift=self.span - 1, fill=self.sos_idx),
             input_lens=batch['input_lens'],
             raw_layermask=raw_layermask
         )
 
         logits = decoded['logits']
+
+        scores = logits * ((5 + 1) / (5 + batch['gen_target_lens'])) ** length_penalty
+
+        return scores
 
     def translate(self, batch, raw_layermask=None, loss_func="binary_cls"):
         ''' Generate with the given batch '''
