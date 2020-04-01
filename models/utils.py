@@ -309,7 +309,7 @@ class Translator(object):
         logits = decoded['logits']
         pdb.set_trace()
 
-        scores = logits * ((5 + 1) / (5 + batch['gen_target_lens'])) ** length_penalty
+        scores = logits * ((5 + 1) / (5 + batch['gen_target_lens'].unsqueeze(-1).unsqueeze(-1).to('cuda').float())) ** length_penalty
 
         return scores
 
