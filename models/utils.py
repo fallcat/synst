@@ -310,6 +310,7 @@ class Translator(object):
         pdb.set_trace()
 
         scores = logits * ((5 + 1) / (5 + batch['gen_target_lens'].unsqueeze(-1).unsqueeze(-1).to('cuda').float())) ** length_penalty
+        scores = scores.argmax(1).sum(1)
 
         return scores.contiguous()
 
