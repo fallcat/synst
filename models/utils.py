@@ -384,10 +384,10 @@ class Translator(object):
                 # batch_input_len_shape = batch['input_lens'].shape
                 batch_input_lens = batch['input_lens'].view(-1, 1).expand(-1, num_layermasks) \
                     .contiguous().view(-1)
-                indices = self.rerank(batch_inputs, batch_input_lens, batch, self.config.length_penalty)
+                indices = self.rerank(batch_inputs, batch_input_lens, batch, self.config.length_penalty).view(-1, num_layermasks)
                 print("indices", indices.shape)
                 pdb.set_trace()
-                targets = [targets[i * num_layermasks + idx] for i, idx in enumerate(indices)]
+                targets = [targets[i * num_layermasks + idx] for i, idx in enumerate(indices.argmax(1))]
                 targets = [target for target in targets]
             else:
                 targets = [
