@@ -363,7 +363,7 @@ class Translator(object):
                 # ]).reshape(-1, num_layermasks)
                 # targets = targets[np.arange(scores.shape[0]), np.argmax(scores, axis=1)]
                 targets = [torch.LongTensor(
-                    beam.best_hypothesis.sequence[self.span - 1:], device='cuda')
+                    beam.best_hypothesis.sequence[self.span - 1:]).to('cuda')
                     for beam in decoded_beams
                 ]
                 self.dataset.collate_field(batch, 'gen_target', targets)
