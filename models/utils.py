@@ -307,7 +307,7 @@ class Translator(object):
         )
 
         logits = decoded['logits']
-        pdb.set_trace()
+        # pdb.set_trace()
 
         scores = logits * ((5 + 1) / (5 + batch['gen_target_lens'].unsqueeze(-1).unsqueeze(-1).to('cuda').float())) ** length_penalty
         indices = scores.argmax(1).sum(1)
@@ -385,8 +385,8 @@ class Translator(object):
                 batch_input_lens = batch['input_lens'].view(-1, 1).expand(-1, num_layermasks) \
                     .contiguous().view(-1)
                 indices = self.rerank(batch_inputs, batch_input_lens, batch, self.config.length_penalty).view(-1, num_layermasks)
-                print("indices", indices.shape)
-                pdb.set_trace()
+                # print("indices", indices.shape)
+                # pdb.set_trace()
                 targets = [targets[i * num_layermasks + idx] for i, idx in enumerate(indices.argmax(1))]
                 targets = [target for target in targets]
             else:
