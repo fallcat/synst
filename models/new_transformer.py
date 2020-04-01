@@ -632,7 +632,7 @@ class NewTransformer(nn.Module):
             step_progress = curr_step / max-step
         """
 
-        encoded, raw_layermask = self.encode(batch['inputs'], raw_layermask=torch.tensor([1,1,1,1,1,1,1,1,1,1,1,1]))
+        encoded, raw_layermask = self.encode(batch['inputs'], raw_layermask=torch.tensor([1,1,1,1,1,1,1,1,1,1,1,1], device='cuda'))
         decoded = self.decode(
             encoded,
             right_shift(right_shift(batch['gen_targets']), shift=self.span - 1, fill=self.sos_idx),
