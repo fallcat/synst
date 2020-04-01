@@ -381,7 +381,7 @@ class Translator(object):
                 self.dataset.collate_field(batch, 'gen_target', targets)
                 # batch_input_len_shape = batch['input_lens'].shape
                 batch_input_lens = batch['input_lens'].view(-1, 1).expand(-1, num_layermasks) \
-                    .contiguous().view(-1, batch_input_shape[1])
+                    .contiguous().view(-1)
                 scores = self.rerank(batch_inputs, batch_input_lens, batch, self.config.length_penalty).view(-1, num_layermasks)
                 targets = torch.stack(targets).view(-1, num_layermasks)[torch.arange(scores.shape[0]), torch.argmax(scores, 1)]
                 targets = [target for target in targets]
