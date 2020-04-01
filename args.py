@@ -1523,6 +1523,12 @@ def parse_args(argv=None):
         help='Location of the checkpoint to restore'
     )
     parser.add_argument(
+        '--average-layers',
+        default=False,
+        action='store_true',
+        help='Whether to average the enc/dec layers'
+    )
+    parser.add_argument(
         '--reset-parameters',
         type=str,
         nargs='*',

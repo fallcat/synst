@@ -23,7 +23,7 @@ from torch.autograd import profiler, set_detect_anomaly
 
 from args import parse_args
 from data.utils import get_dataloader
-from models.utils import restore, init_indices_q, init_attended_indices, encoder_indices_matq, decoder_indices_matq, encoder_attended_indices, decoder_attended_indices
+from models.utils import restore, restore_average_layers, init_indices_q, init_attended_indices, encoder_indices_matq, decoder_indices_matq, encoder_attended_indices, decoder_attended_indices
 from models.utils import init_indices
 from utils import profile
 
@@ -115,20 +115,27 @@ def main(argv=None):
             for module_name, module in action.modules.items()
             if module_name not in args.reset_parameters
         }
-
-        epoch, step = restore(
-            args.restore,
-            restore_modules,
-            num_checkpoints=args.average_checkpoints,
-            map_location=args.device.type,
-            strict=not args.reset_parameters
-        )
+        if args.average_layers:
+            epoch, step = restore_average_layers(
+                args.restore,
+                restore_modules,
+                num_checkpoints=args.average_checkpoints,
+                map_location=args.device.type,
+                strict=not args.reset_parameters
+            )
+        else:
+            epoch, step = restore(
+                args.restore,
+                restore_modules,
+                num_checkpoints=args.average_checkpoints,
+                map_location=args.device.type,
+                strict=not args.reset_parameters
+            )
 
         model.reset_named_parameters(args.reset_parameters)
         if 'step' in args.reset_parameters:
             step = 0
             epoch = 0
-
     args.experiment.set_step(step)
 
     with ExitStack() as stack:
