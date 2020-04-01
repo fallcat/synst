@@ -311,7 +311,7 @@ class Translator(object):
 
         scores = logits * ((5 + 1) / (5 + batch['gen_target_lens'].unsqueeze(-1).unsqueeze(-1).to('cuda').float())) ** length_penalty
 
-        return scores
+        return scores.contiguous()
 
     def translate(self, batch, raw_layermask=None, loss_func="binary_cls"):
         ''' Generate with the given batch '''
