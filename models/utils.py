@@ -302,11 +302,12 @@ class Translator(object):
         decoded = self.decoder(
             encoded,
             right_shift(right_shift(batch['gen_targets']), shift=self.span - 1, fill=self.sos_idx),
-            input_lens=batch['input_lens'],
+            input_lens=batch_input_lens,
             raw_layermask=raw_layermask
         )
 
         logits = decoded['logits']
+        pdb.set_trace()
 
         scores = logits * ((5 + 1) / (5 + batch['gen_target_lens'])) ** length_penalty
 
@@ -362,7 +363,7 @@ class Translator(object):
                 [[self.sos_idx] * self.span for _ in range(len(batch_inputs))],
                 [l + self.config.max_decode_length + self.span + 1 for l in length_basis]
             )
-            pdb.set_trace()
+            # pdb.set_trace()
             if self.modules['model'].layermask_type == "ensemble_total":
                 decoded_beams = decoder.decode(encoded, beams, raw_layermask)
                 # targets = np.array([
