@@ -310,9 +310,9 @@ class Translator(object):
         pdb.set_trace()
 
         scores = logits * ((5 + 1) / (5 + batch['gen_target_lens'].unsqueeze(-1).unsqueeze(-1).to('cuda').float())) ** length_penalty
-        scores = scores.argmax(1).sum(1)
+        indices = scores.argmax(1).sum(1)
 
-        return scores.contiguous()
+        return indices.contiguous()
 
     def translate(self, batch, raw_layermask=None, loss_func="binary_cls"):
         ''' Generate with the given batch '''
@@ -384,10 +384,10 @@ class Translator(object):
                 # batch_input_len_shape = batch['input_lens'].shape
                 batch_input_lens = batch['input_lens'].view(-1, 1).expand(-1, num_layermasks) \
                     .contiguous().view(-1)
-                scores = self.rerank(batch_inputs, batch_input_lens, batch, self.config.length_penalty)
-                print("scores", scores.shape)
+                indices = self.rerank(batch_inputs, batch_input_lens, batch, self.config.length_penalty)
+                print("indices", indices.shape)
                 pdb.set_trace()
-                targets = torch.stack(targets).view(-1, num_layermasks)[torch.arange(scores.shape[0]), torch.argmax(scores, 1)]
+                targets = [targets[i * num_layermasks + idx] for i, idx in enumerate(indices)]
                 targets = [target for target in targets]
             else:
                 targets = [
