@@ -290,13 +290,13 @@ class Translator(object):
         ''' Get the padding index '''
         return self.dataset.padding_idx
 
-    def rerank(self, batch, length_penalty):  # pylint:disable=arguments-differ
+    def rerank(self, batch_inputs, batch_input_lens, batch, length_penalty):  # pylint:disable=arguments-differ
         ''' A batch of inputs and targets '''
         """
             step_progress = curr_step / max-step
         """
 
-        encoded, raw_layermask = self.encoder(batch['inputs'],
+        encoded, raw_layermask = self.encoder(batch_inputs,
                                              raw_layermask=torch.tensor([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
                                                                         device='cuda'))
         decoded = self.decoder(
@@ -379,7 +379,10 @@ class Translator(object):
                     for beam in decoded_beams
                 ]
                 self.dataset.collate_field(batch, 'gen_target', targets)
-                scores = self.rerank(batch, self.config.length_penalty).view(-1, num_layermasks)
+                # batch_input_len_shape = batch['input_lens'].shape
+                batch_input_lens = batch['input_lens'].view(-1, 1).expand(-1, num_layermasks) \
+                    .contiguous().view(-1, batch_input_shape[1])
+                scores = self.rerank(batch_inputs, batch_input_lens, batch, self.config.length_penalty).view(-1, num_layermasks)
                 targets = torch.stack(targets).view(-1, num_layermasks)[torch.arange(scores.shape[0]), torch.argmax(scores, 1)]
                 targets = [target for target in targets]
             else:
