@@ -39,6 +39,12 @@ class OracleTranslator(object):
             'model': model
         }
 
+        if self.config.combination_file is not None:
+            with open(self.config.combination_file, 'r') as f:
+                self.configs_totranslate = [l.strip() for l in f.readlines()]
+        else:
+            self.configs_totranslate = None
+
     @property
     def dataset(self):
         ''' Get the dataset '''
@@ -75,17 +81,65 @@ class OracleTranslator(object):
 
         return ret
 
-    def translate_all(self, epoch, verbose=0):
-        ''' Generate all predictions from the dataset '''
+    def translate(self, epoch, combination, verbose=0):
+
         def get_description():
             description = f'Generate #{epoch}'
             if verbose > 1:
                 description += f' [{profile.mem_stat_string(["allocated"])}]'
             return description
 
+        batches = tqdm(
+            self.dataloader,
+            unit='batch',
+            dynamic_ncols=True,
+            desc=get_description(),
+            file=sys.stdout  # needed to make tqdm_wrap_stdout work
+        )
+
+        combination_str = ''.join([str(int(c.item())) for c in combination])
+        filename = f'{self.config.output_filename}_{combination_str}.txt' if self.config.output_filename is not None else f'oracle_{combination_str}.txt'
+        filepath = os.path.join(self.config.output_directory, filename)
+
+        with tqdm_wrap_stdout():
+            ordered_outputs = []
+            for batch in batches:
+                batches.set_description_str(get_description())
+                sequences, _ = self.translator.translate(batch, raw_layermask=combination)
+
+                if self.config.timed:
+                    continue
+
+                target_sequences = next(iter(sequences.values()))
+                for i, example_id in enumerate(batch['example_ids']):
+                    sequence = target_sequences[i]
+                    decoded = ' '.join(self.dataset.decode(sequence, trim=not verbose))
+
+                    target_text = ' '.join(
+                        self.dataset.decode(batch['targets'][i].numpy().tolist(), trim=not verbose))
+                    bleu = sacrebleu.corpus_bleu([decoded], [[target_text]], tokenize="none").score
+
+                    ordered_outputs.append((example_id, f'{decoded}', bleu))
+
+
+            with open(filepath, 'w') as output_file:
+                for _, outputs, bleu in sorted(ordered_outputs,
+                                         key=lambda x: x[0]):  # pylint:disable=consider-using-enumerate
+                    output_file.write(outputs + "\t" + str(bleu) + "\n")
+
+    def translate_all(self, epoch, verbose=0):
+        ''' Generate all predictions from the dataset '''
+        
+
         # generate all combinations
         total_num_layer = len(self.modules['model'].encoders) * 2
         all_combinations = self.instantiate_combination(total_num_layer) # {k: [[0,1,0,0...], [1,0,0,0...]]}
+
+        if self.configs_totranslate is not None:
+            for c in self.configs_totranslate:
+                c = torch.tensor([float(x) for x in c], device=torch.device("cuda"))
+                self.translate(epoch, c)
+            return
 
         if self.config.fix_combination is not None:
             fix_combination_tensor = torch.tensor([float(x) for x in self.config.fix_combination])
@@ -96,47 +150,11 @@ class OracleTranslator(object):
             for combination in all_combinations[k]:
                 if self.config.fix_combination is not None and torch.sum(combination[:len_fcl] == fix_combination_tensor) != len_fcl:
                     continue
-                combination_str = ''.join([str(int(c.item())) for c in combination])
-                filename = f'{self.config.output_filename}_{combination_str}.txt' if self.config.output_filename is not None else f'oracle_{combination_str}.txt'
-                filepath = os.path.join(self.config.output_directory, filename)
-                if os.path.exists(filepath) and len(open(filepath).readlines()) == 1999:
-                    continue
+                # if os.path.exists(filepath) and len(open(filepath).readlines()) == 1999:
+                #     continue
                 print("Generation combination", combination_str)
+                self.translate(epoch, combination)
 
-                batches = tqdm(
-                    self.dataloader,
-                    unit='batch',
-                    dynamic_ncols=True,
-                    desc=get_description(),
-                    file=sys.stdout  # needed to make tqdm_wrap_stdout work
-                )
-                # pdb.set_trace()
-
-                with tqdm_wrap_stdout():
-                    ordered_outputs = []
-                    for batch in batches:
-                        batches.set_description_str(get_description())
-                        sequences, _ = self.translator.translate(batch, raw_layermask=combination)
-
-                        if self.config.timed:
-                            continue
-
-                        target_sequences = next(iter(sequences.values()))
-                        for i, example_id in enumerate(batch['example_ids']):
-                            sequence = target_sequences[i]
-                            decoded = ' '.join(self.dataset.decode(sequence, trim=not verbose))
-
-                            target_text = ' '.join(
-                                self.dataset.decode(batch['targets'][i].numpy().tolist(), trim=not verbose))
-                            bleu = sacrebleu.corpus_bleu([decoded], [[target_text]], tokenize="none").score
-
-                            ordered_outputs.append((example_id, f'{decoded}', bleu))
-
-
-                    with open(filepath, 'w') as output_file:
-                        for _, outputs, bleu in sorted(ordered_outputs,
-                                                 key=lambda x: x[0]):  # pylint:disable=consider-using-enumerate
-                            output_file.write(outputs + "\t" + str(bleu) + "\n")
 
     def __call__(self, epoch, experiment, verbose=0):
         ''' Generate from the model '''

@@ -1277,6 +1277,12 @@ def add_translate_args(parser):
         help='Whether to print the translated strings in the original dataset ordering'
     )
     group.add_argument(
+        '--combination-file',
+        type=str,
+        default=None,
+        help='file path of the configs to be translated'
+    )
+    group.add_argument(
         '--gold-annotations',
         default=False,
         action='store_true',
