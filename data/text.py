@@ -7,6 +7,7 @@ from itertools import chain
 import torch
 from torch import nn
 from torch.utils.data import Dataset
+import utils
 
 import metrics
 
@@ -91,6 +92,15 @@ class TextDataset(Dataset):
             values, batch_first=True, padding_value=self.padding_idx)
         batch[field_name + '_lens'] = torch.LongTensor([len(sequence) for sequence in values])
 
+    def collate_fields(self, batch, field_names, values):
+        ''' Collate a specific field '''
+        batch_size = int(len(values) / len(field_names))
+        padded_all = nn.utils.rnn.pad_sequence(values, batch_first=True, padding_value=self.padding_idx)
+        padded_all = utils.split_or_chunk(padded_all, len(field_names))
+        for i, field_name in enumerate(field_names):
+            batch[field_name + 's'] = padded_all[i]
+            batch[field_name + '_lens'] = torch.LongTensor([len(sequence) for sequence in values[i * batch_size:(i + 1) * batch_size]])
+
     def collate(self, data, sort=False):
         ''' Collate the data into a batch '''
         if not data:
@@ -100,8 +110,18 @@ class TextDataset(Dataset):
             ''' Make a batch given a dict of lists with inputs and targets '''
             # must store off lengths before padding sequence
             batch = {'example_ids': ids}
-            for key, values in examples.items():
-                self.collate_field(batch, key, values)
+            if self.config.same_length:
+                keys = []
+                values = []
+                for key, value in examples.items():
+                    keys.append(key)
+                    values.extend(value)
+                print("values", values)
+                self.collate_fields(batch, keys, values)
+                print("collated_fields", batch['inputs'].shape, batch['targets'].shape)
+            else:
+                for key, values in examples.items():
+                    self.collate_field(batch, key, values)
 
             return batch
 

@@ -256,6 +256,12 @@ def add_data_args(parser):
         choices=['train', 'valid', 'test', 'dev'],
         help='Location for the preprocessed data'
     )
+    group.add_argument(
+        '--same-length',
+        default=False,
+        action='store_true',
+        help='Pad inputs and targets to the same length'
+    )
 
     return group
 
@@ -580,6 +586,7 @@ def parse_args(argv=None):
 
     model_groups = {}
     model_groups['transformer'] = add_transformer_args(parser)
+    model_groups['new_transformer'] = add_transformer_args(parser)
     model_groups['parse_transformer'] = add_parse_transformer_args(parser)
 
     subparsers = parser.add_subparsers()
