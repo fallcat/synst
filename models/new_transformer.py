@@ -299,6 +299,12 @@ class NewTransformer(nn.Module):
         logits = decoded['logits']
         dims = list(range(1, logits.dim()))
         targets = left_shift(batch['targets'])
+        print("logits shape", logits[0].shape)
+        print("logits", logits[0])
+        print("targets[0].shape", targets[0].shape)
+        print("targets[0]", targets[0])
+        print("batch['targets'][0].shape", batch['targets'][0].shape)
+        print("batch['targets'][0]", batch['targets'][0])
         nll = self.cross_entropy(logits, targets).sum(dims[:-1])
         smoothed_nll = self.label_smoothing(logits, targets).sum(dims)
 
