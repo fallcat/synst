@@ -288,7 +288,9 @@ class NewTransformer(nn.Module):
         ''' A batch of inputs and targets '''
         print("batch['inputs']", batch['inputs'].shape)
         print("batch['targets']", batch['targets'].shape)
+        print(batch['targets'][0])
         print("right shift targets", right_shift(right_shift(batch['targets']), shift=self.span - 1, fill=self.sos_idx).shape)
+        print(right_shift(batch['targets'])[0])
         decoded = self.decode(
             self.encode(batch['inputs']),
             right_shift(right_shift(batch['targets']), shift=self.span - 1, fill=self.sos_idx),
