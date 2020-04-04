@@ -293,7 +293,7 @@ class NewTransformer(nn.Module):
         # print(right_shift(batch['targets'])[0])
         decoded = self.decode(
             self.encode(batch['inputs']),
-            batch['targets'] # right_shift(right_shift(batch['targets']), shift=self.span - 1, fill=self.sos_idx),
+            right_shift(right_shift(batch['targets']), shift=self.span - 1, fill=self.sos_idx),
         )
 
         logits = decoded['logits']
