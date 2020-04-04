@@ -116,7 +116,6 @@ class TextDataset(Dataset):
                 for key, value in examples.items():
                     keys.append(key)
                     values.extend(value)
-                print("values", values)
                 self.collate_fields(batch, keys, values)
                 print("collated_fields", batch['inputs'].shape, batch['targets'].shape)
             else:

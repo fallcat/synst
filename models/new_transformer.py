@@ -286,6 +286,9 @@ class NewTransformer(nn.Module):
 
     def forward(self, batch): # pylint:disable=arguments-differ
         ''' A batch of inputs and targets '''
+        print("batch['inputs']", batch['inputs'].shape)
+        print("batch['targets']", batch['targets'].shape)
+        print("right shift targets", right_shift(right_shift(batch['targets']), shift=self.span - 1, fill=self.sos_idx).shape)
         decoded = self.decode(
             self.encode(batch['inputs']),
             right_shift(right_shift(batch['targets']), shift=self.span - 1, fill=self.sos_idx),
