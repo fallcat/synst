@@ -327,7 +327,7 @@ class NewTransformer(nn.Module):
                                                    sentence_length).contiguous()
 
         decoded_embedding = self.embed(new_targets, embedding)  # (B x T x T x E)
-        decoded_embedding += attention_mask.unsqueeze(-1)
+        decoded_embedding *= attention_mask.unsqueeze(-1)
         decoded_embedding = decoded_embedding.view(batch_size * sentence_length,
                                                    sentence_length,
                                                    -1)
