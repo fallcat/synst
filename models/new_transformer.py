@@ -314,6 +314,7 @@ class NewTransformer(nn.Module):
 
     def decode(self, encoded, targets, decoders=None, embedding=None, cache=None, mask=None):
         ''' Decode the encoded sequence to the targets '''
+        pdb.set_trace()
         if decoders is None:
             decoders = self.decoders
 
@@ -323,22 +324,23 @@ class NewTransformer(nn.Module):
         attention_mask = self.mask(targets)  # (T x T)
         batch_size, sentence_length = targets.shape  # (B x T)
         new_targets = targets.unsqueeze(2).expand(batch_size,
-                                                   sentence_length,
-                                                   sentence_length).contiguous()
+                                                  sentence_length,
+                                                  sentence_length).contiguous() * attention_mask
+
+        new_targets = new_targets.view(batch_size * sentence_length,
+                                       sentence_length)
 
         decoded_embedding = self.embed(new_targets, embedding)  # (B x T x T x E)
         decoded_embedding *= attention_mask.unsqueeze(-1)
-        decoded_embedding = decoded_embedding.view(batch_size * sentence_length,
-                                                   sentence_length,
-                                                   -1)
+        # decoded_embedding = decoded_embedding.view(batch_size * sentence_length,
+        #                                            sentence_length,
+        #                                            -1)
         encoded_embedding = encoded['state'].unsqueeze(2).expand(batch_size,
                                                                  sentence_length,
                                                                  sentence_length,
                                                                  -1).contiguous().view(batch_size * sentence_length,
                                                                                         sentence_length,
                                                                                         -1)
-        new_targets = new_targets.view(batch_size * sentence_length,
-                                       sentence_length)
 
         decoded = {
             'cache': cache,
