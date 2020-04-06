@@ -153,7 +153,7 @@ class TransformerDecoderLayer(nn.Module):
 
         state = self.self_attention(
             residual, # residual
-            state, state, state, sources, **kwargs # passed to multiheaded attention
+            state, state, state, **kwargs # passed to multiheaded attention
         )
 
         # source = sources['state']
