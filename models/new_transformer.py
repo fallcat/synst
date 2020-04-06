@@ -292,7 +292,7 @@ class NewTransformer(nn.Module):
         # print("right shift targets", right_shift(right_shift(batch['targets']), shift=self.span - 1, fill=self.sos_idx).shape)
         # print(right_shift(batch['targets'])[0])
         decoded = self.decode(
-            self.encode(batch['inputs']),
+            self.encode(batch['inputs'][:, :-1]),
             right_shift(right_shift(batch['targets']), shift=self.span - 1, fill=self.sos_idx),
         )
 
@@ -313,7 +313,7 @@ class NewTransformer(nn.Module):
     def encode(self, inputs):
         ''' Encode the inputs '''
         encoded = {
-            'state': self.embed(inputs, self.embedding)[:, :-1],
+            'state': self.embed(inputs, self.embedding),
             'mask': inputs.eq(self.padding_idx)
         }
         # for encoder in self.encoders:
@@ -332,7 +332,7 @@ class NewTransformer(nn.Module):
         attention_mask = self.mask(targets)  # (T x T)
         print("attn mask", attention_mask)
         batch_size, sentence_length = targets.shape  # (B x T)
-        new_targets = targets.unsqueeze(-1).expand(batch_size,
+        new_targets = targets.unsqueeze(2).expand(batch_size,
                                                    sentence_length,
                                                    sentence_length).contiguous()
 
@@ -341,10 +341,10 @@ class NewTransformer(nn.Module):
         decoded_embedding = decoded_embedding.view(batch_size * sentence_length,
                                                    sentence_length,
                                                    -1)
-        encoded_embedding = encoded['state'].unsqueeze(-1).expand(batch_size,
-                                                                  sentence_length,
-                                                                  sentence_length,
-                                                                  -1).contiguous().view(batch_size * sentence_length,
+        encoded_embedding = encoded['state'].unsqueeze(2).expand(batch_size,
+                                                                 sentence_length,
+                                                                 sentence_length,
+                                                                 -1).contiguous().view(batch_size * sentence_length,
                                                                                         sentence_length,
                                                                                         -1)
 
