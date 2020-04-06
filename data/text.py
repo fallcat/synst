@@ -10,6 +10,7 @@ from torch.utils.data import Dataset
 import utils
 
 import metrics
+import pdb
 
 
 PAD = '<PAD>'
@@ -137,7 +138,10 @@ class TextDataset(Dataset):
 
         def sorter(examples, key='input'):
             ''' Sort the list of examples based on the length of the sequence for the given key '''
-            return sorted(examples, key=lambda x: len(x[1][key]), reverse=True)
+            try:
+                return sorted(examples, key=lambda x: len(x[1][key]), reverse=True)
+            except:
+                pdb.set_trace()
 
         if any(
                 isinstance(d, tuple) and len(d) and
