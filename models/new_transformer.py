@@ -331,7 +331,7 @@ class NewTransformer(nn.Module):
 
         decoded = {
             'cache': cache,
-            'state': self.embed(targets, embedding) + encoded['state'],
+            'state': self.embed(targets, embedding) + encoded['state'][:-1],
             'mask': targets.eq(self.padding_idx) if mask is None else mask
         }
         for decoder in decoders:
