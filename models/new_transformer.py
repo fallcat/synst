@@ -7,7 +7,7 @@ import threading
 import torch
 from torch import nn
 
-from models.attention import MultiHeadedAttention
+from models.new_attention import NewMultiHeadedAttention
 from models.embeddings import PositionEmbedding, TokenEmbedding
 from models.utils import LabelSmoothingLoss, Translator
 from utils import left_shift, right_shift, triu
@@ -77,7 +77,7 @@ class TransformerEncoderLayer(nn.Module):
         )
 
         self.self_attention = TransformerSublayer(
-            MultiHeadedAttention(dim, num_heads),
+            NewMultiHeadedAttention(dim, num_heads),
             dim, dropout_p
         )
 
@@ -119,14 +119,14 @@ class TransformerDecoderLayer(nn.Module):
         )
 
         self.self_attention = TransformerSublayer(
-            MultiHeadedAttention(dim, num_heads),
+            NewMultiHeadedAttention(dim, num_heads),
             dim, dropout_p
         )
 
-        self.source_attention = TransformerSublayer(
-            MultiHeadedAttention(dim, num_heads),
-            dim, dropout_p
-        )
+        # self.source_attention = TransformerSublayer(
+        #     MultiHeadedAttention(dim, num_heads),
+        #     dim, dropout_p
+        # )
 
     def reset_parameters(self):
         ''' Reset the parameters of the module '''
@@ -149,11 +149,11 @@ class TransformerDecoderLayer(nn.Module):
             # If not caching, use the full sequence and ensure an appropriate causal mask
             residual = state
             kwargs['key_mask'] = mask
-            kwargs['attention_mask'] = self.mask(state)
+            # kwargs['attention_mask'] = self.mask(state)
 
         state = self.self_attention(
             residual, # residual
-            state, state, state, **kwargs # passed to multiheaded attention
+            state, state, state, sources, **kwargs # passed to multiheaded attention
         )
 
         # source = sources['state']
@@ -313,7 +313,7 @@ class NewTransformer(nn.Module):
     def encode(self, inputs):
         ''' Encode the inputs '''
         encoded = {
-            'state': self.embed(inputs, self.embedding),
+            'state': self.embed(inputs, self.embedding)[:, :-1],
             'mask': inputs.eq(self.padding_idx)
         }
         # for encoder in self.encoders:
@@ -329,11 +329,30 @@ class NewTransformer(nn.Module):
         if embedding is None:
             embedding = self.embedding
 
+        attention_mask = self.mask(targets)  # (T x T)
+        batch_size, sentence_length = targets.shape  # (B x T)
+        new_targets = targets.unsqueeze(-1).expand(batch_size,
+                                                   sentence_length,
+                                                   sentence_length).contiguous()
+
+        decoded_embedding = self.embed(new_targets, embedding)  # (B x T x T x E)
+        decoded_embedding += attention_mask.unsqueeze(0).unsqueeze(-1)
+        decoded_embedding = decoded_embedding.view(batch_size * sentence_length,
+                                                   sentence_length,
+                                                   -1)
+        encoded_embedding = encoded['state'].unsqueeze(-1).expand(batch_size,
+                                                                  sentence_length,
+                                                                  sentence_length,
+                                                                  -1).contiguous().view(batch_size * sentence_length,
+                                                                                        sentence_length,
+                                                                                        -1)
+
         decoded = {
             'cache': cache,
-            'state': self.embed(targets, embedding) + encoded['state'][:-1],
-            'mask': targets.eq(self.padding_idx) if mask is None else mask
+            'state': decoded_embedding + encoded_embedding,
+            'mask': new_targets.eq(self.padding_idx) if mask is None else mask
         }
+
         for decoder in decoders:
             decoded = decoder(decoded, encoded)
 
@@ -341,6 +360,11 @@ class NewTransformer(nn.Module):
         state = decoded['state']
         if cache is not None:
             state = state[:, -self.span:]
+
+        state = state.view(batch_size,
+                           sentence_length,
+                           sentence_length,
+                           -1)[:, range(sentence_length), range(sentence_length), -1]
 
         return {
             'cache': decoded.get('cache'),
