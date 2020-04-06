@@ -383,8 +383,8 @@ class NewTransformer(nn.Module):
         Input shape:  (B x T)
         Output shape: (T x T)
         '''
-        if not self.causal:
-            return None
+        # if not self.causal:
+        #     return None
 
         dim = inputs.shape[1]
         device = inputs.device
