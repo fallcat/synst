@@ -95,12 +95,12 @@ class TextDataset(Dataset):
     def collate_fields(self, batch, field_names, values):
         ''' Collate a specific field '''
         batch_size = int(len(values) / len(field_names))
-        # temp_tensor = values[0].new_ones(max([v.size(0) for v in values]) + 1)
-        # padded_all = nn.utils.rnn.pad_sequence([temp_tensor] + values, batch_first=True, padding_value=self.padding_idx)
-        # padded_all = utils.split_or_chunk(padded_all[1:], len(field_names))
+        temp_tensor = values[0].new_ones(max([v.size(0) for v in values]) + 1)
+        padded_all = nn.utils.rnn.pad_sequence([temp_tensor] + values, batch_first=True, padding_value=self.padding_idx)
+        padded_all = utils.split_or_chunk(padded_all[1:], len(field_names))
 
-        padded_all = nn.utils.rnn.pad_sequence(values, batch_first=True, padding_value=self.padding_idx)
-        padded_all = utils.split_or_chunk(padded_all, len(field_names))
+        # padded_all = nn.utils.rnn.pad_sequence(values, batch_first=True, padding_value=self.padding_idx)
+        # padded_all = utils.split_or_chunk(padded_all, len(field_names))
         for i, field_name in enumerate(field_names):
             batch[field_name + 's'] = padded_all[i]
             batch[field_name + '_lens'] = torch.LongTensor([len(sequence) for sequence in values[i * batch_size:(i + 1) * batch_size]])
