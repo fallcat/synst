@@ -393,7 +393,7 @@ class NewTransformer(nn.Module):
             mask_store[device] = triu(mask, 1, self.span, self.span, lower_tri=1)
             mask = mask_store[device]
 
-        return mask[None, :dim, :dim]
+        return mask[None, :dim, :dim].float()
 
     def embed(self, inputs, token_embedding):
         ''' Embed the given inputs '''
