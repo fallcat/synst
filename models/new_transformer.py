@@ -291,6 +291,7 @@ class NewTransformer(nn.Module):
         decoded = self.decode(
             self.encode(batch['inputs'][:, :-1]),
             right_shift(right_shift(batch['targets']), shift=self.span - 1, fill=self.sos_idx),
+            inputs=batch['inputs'][:, :-1]
         )
 
         logits = decoded['logits']
@@ -313,7 +314,7 @@ class NewTransformer(nn.Module):
 
         return encoded
 
-    def decode(self, encoded, targets, decoders=None, embedding=None, cache=None, mask=None):
+    def decode(self, encoded, targets, decoders=None, embedding=None, cache=None, mask=None, inputs=None):
         ''' Decode the encoded sequence to the targets '''
         pdb.set_trace()
         if decoders is None:
@@ -331,6 +332,13 @@ class NewTransformer(nn.Module):
         new_targets = new_targets.view(batch_size * sentence_length,
                                        sentence_length)
 
+        new_inputs = inputs.unsqueeze(2).expand(batch_size,
+                                                sentence_length,
+                                                sentence_length).contiguous() * attention_mask
+
+        new_inputs = new_inputs.view(batch_size * sentence_length,
+                                       sentence_length)
+
         decoded_embedding = self.embed(new_targets, embedding)  # (B x T x T x E)
         # decoded_embedding *= attention_mask.unsqueeze(-1)
         # decoded_embedding = decoded_embedding.view(batch_size * sentence_length,
@@ -346,7 +354,7 @@ class NewTransformer(nn.Module):
         decoded = {
             'cache': cache,
             'state': decoded_embedding + encoded_embedding,
-            'mask': new_targets.eq(self.padding_idx) if mask is None else mask
+            'mask': new_inputs.eq(self.padding_idx) if mask is None else mask
         }
 
         for decoder in decoders:
