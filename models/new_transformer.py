@@ -166,6 +166,7 @@ class TransformerDecoderLayer(nn.Module):
         #     state, # residual
         #     source, source, state, **kwargs # passed to multiheaded attention
         # )
+        print("state", state)
 
         state = self.ffn(
             state, # residual
