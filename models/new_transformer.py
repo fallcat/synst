@@ -12,6 +12,7 @@ from models.embeddings import PositionEmbedding, TokenEmbedding
 from models.utils import LabelSmoothingLoss, Translator
 from utils import left_shift, right_shift, triu
 
+import pdb
 
 class TransformerSublayer(nn.Module):
     '''
@@ -294,6 +295,7 @@ class NewTransformer(nn.Module):
         logits = decoded['logits']
         dims = list(range(1, logits.dim()))
         targets = left_shift(batch['targets'])
+        pdb.set_trace()
         nll = self.cross_entropy(logits, targets).sum(dims[:-1])
         smoothed_nll = self.label_smoothing(logits, targets).sum(dims)
 
