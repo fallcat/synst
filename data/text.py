@@ -141,8 +141,8 @@ class TextDataset(Dataset):
             try:
                 return sorted(examples, key=lambda x: len(x[1][key]), reverse=True)
             except:
-                print("hi", len(examples['inputs']))
-                print(examples['inputs'])
+                print("hi", len(examples))
+                print(examples)
                 pdb.set_trace()
 
         if any(
