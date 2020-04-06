@@ -398,7 +398,7 @@ class NewTransformer(nn.Module):
 
         mask = mask_store[device]
         if mask.shape[0] < dim:
-            mask = mask.resize_(dim, dim).fill_(float(0.), dtype=torch.float32)
+            mask = mask.resize_(dim, dim).fill_(float(0.))
             mask_store[device] = triu(mask, 1, self.span, self.span, lower_tri=1)
             mask = mask_store[device]
 
