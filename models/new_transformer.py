@@ -368,6 +368,7 @@ class NewTransformer(nn.Module):
                            sentence_length,
                            sentence_length,
                            -1)[:, range(sentence_length), range(sentence_length), :]
+        print("State", state.shape)
 
         return {
             'cache': decoded.get('cache'),
