@@ -347,6 +347,8 @@ class NewTransformer(nn.Module):
                                                                  -1).contiguous().view(batch_size * sentence_length,
                                                                                         sentence_length,
                                                                                         -1)
+        new_targets = new_targets.view(batch_size * sentence_length,
+                                       sentence_length)
 
         decoded = {
             'cache': cache,

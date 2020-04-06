@@ -64,8 +64,6 @@ class NewMultiHeadedAttention(nn.Module):
     def attention(self, values, keys, queries, key_mask=None, mask=None):
         ''' Scaled dot product attention with optional masks '''
         logits = self.scale * torch.bmm(queries, keys.transpose(2, 1))
-        # if sources is not None:
-        #     logits_sources = self.scale * torch.bmm(sources, keys.transpose(2, 1))
         if mask is not None:
             logits += mask
 
