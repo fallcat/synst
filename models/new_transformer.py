@@ -384,16 +384,16 @@ class NewTransformer(nn.Module):
         device = inputs.device
         mask_store = TransformerDecoderLayer._masks.__dict__
         if device not in mask_store:
-            mask = inputs.new_full((dim, dim), float(0.), dtype=torch.float32)
+            mask = inputs.new_zeros((dim, dim))
             mask_store[device] = triu(mask, 1, self.span, self.span, lower_tri=1)
 
         mask = mask_store[device]
         if mask.shape[0] < dim:
-            mask = mask.resize_(dim, dim).fill_(float(0.))
+            mask = mask.resize_(dim, dim).fill_(0)
             mask_store[device] = triu(mask, 1, self.span, self.span, lower_tri=1)
             mask = mask_store[device]
 
-        return mask[None, :dim, :dim].float()
+        return mask[None, :dim, :dim]
 
     def embed(self, inputs, token_embedding):
         ''' Embed the given inputs '''
