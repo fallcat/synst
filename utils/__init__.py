@@ -65,7 +65,7 @@ def divvy(num, chunks):
     return [chunk_size + 1] * chunk_mod + [chunk_size] * (chunks - chunk_mod)
 
 
-def triu(inputs, diagonal=0, span=1, stride=1, offset=0):
+def triu(inputs, diagonal=0, span=1, stride=1, offset=0, lower_tri=0.):
     '''
     Returns an upper triangular matrix, but allows span which determines how many contiguous
     elements of the matrix to consider as a "single" number, e.g.
@@ -81,7 +81,7 @@ def triu(inputs, diagonal=0, span=1, stride=1, offset=0):
             [0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000]])
     '''
     for i, row in enumerate(inputs):
-        row[:span * (diagonal + i // stride) + offset] = 0.
+        row[:span * (diagonal + i // stride) + offset] = lower_tri
 
     return inputs
 
