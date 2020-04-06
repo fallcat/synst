@@ -286,11 +286,6 @@ class NewTransformer(nn.Module):
 
     def forward(self, batch): # pylint:disable=arguments-differ
         ''' A batch of inputs and targets '''
-        # print("batch['inputs']", batch['inputs'].shape)
-        # print("batch['targets']", batch['targets'].shape)
-        # print(batch['targets'][0])
-        # print("right shift targets", right_shift(right_shift(batch['targets']), shift=self.span - 1, fill=self.sos_idx).shape)
-        # print(right_shift(batch['targets'])[0])
         decoded = self.decode(
             self.encode(batch['inputs'][:, :-1]),
             right_shift(right_shift(batch['targets']), shift=self.span - 1, fill=self.sos_idx),
@@ -299,12 +294,6 @@ class NewTransformer(nn.Module):
         logits = decoded['logits']
         dims = list(range(1, logits.dim()))
         targets = left_shift(batch['targets'])
-        print("logits shape", logits[0].shape)
-        print("logits", logits[0])
-        print("targets[0].shape", targets[0].shape)
-        print("targets[0]", targets[0])
-        print("batch['targets'][0].shape", batch['targets'][0].shape)
-        print("batch['targets'][0]", batch['targets'][0])
         nll = self.cross_entropy(logits, targets).sum(dims[:-1])
         smoothed_nll = self.label_smoothing(logits, targets).sum(dims)
 
@@ -330,7 +319,6 @@ class NewTransformer(nn.Module):
             embedding = self.embedding
 
         attention_mask = self.mask(targets)  # (T x T)
-        print("attn mask", attention_mask)
         batch_size, sentence_length = targets.shape  # (B x T)
         new_targets = targets.unsqueeze(2).expand(batch_size,
                                                    sentence_length,
@@ -368,7 +356,6 @@ class NewTransformer(nn.Module):
                            sentence_length,
                            sentence_length,
                            -1)[:, range(sentence_length), range(sentence_length), :]
-        print("State", state.shape)
 
         return {
             'cache': decoded.get('cache'),
