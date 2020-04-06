@@ -390,12 +390,12 @@ class NewTransformer(nn.Module):
         device = inputs.device
         mask_store = TransformerDecoderLayer._masks.__dict__
         if device not in mask_store:
-            mask = inputs.new_full((dim, dim), float(1))
+            mask = inputs.new_full((dim, dim), float(1), dtype=torch.float32)
             mask_store[device] = 1 - triu(mask, 1, self.span, self.span)
 
         mask = mask_store[device]
         if mask.shape[0] < dim:
-            mask = mask.resize_(dim, dim).fill_(float(1))
+            mask = mask.resize_(dim, dim).fill_(float(1), dtype=torch.float32)
             mask_store[device] = 1 - triu(mask, 1, self.span, self.span)
             mask = mask_store[device]
 
