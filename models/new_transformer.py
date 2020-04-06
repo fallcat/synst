@@ -334,7 +334,7 @@ class NewTransformer(nn.Module):
 
         new_inputs = inputs.unsqueeze(2).expand(batch_size,
                                                 sentence_length,
-                                                sentence_length).contiguous() * attention_mask
+                                                sentence_length).contiguous()
 
         new_inputs = new_inputs.view(batch_size * sentence_length,
                                        sentence_length)
