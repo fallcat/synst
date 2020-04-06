@@ -64,6 +64,7 @@ class NewMultiHeadedAttention(nn.Module):
     def attention(self, values, keys, queries, key_mask=None, mask=None):
         ''' Scaled dot product attention with optional masks '''
         logits = self.scale * torch.bmm(queries, keys.transpose(2, 1))
+        print("logits", logits)
         if mask is not None:
             logits += mask
 
@@ -74,8 +75,10 @@ class NewMultiHeadedAttention(nn.Module):
             logits.masked_fill_(key_mask[:, None, None], float('-inf'))
             logits = logits.view(logits_shape)
 
+        print("logits2", logits)
         # logits = logits + logits_sources
         attended = torch.bmm(F.softmax(logits, dim=-1), values)
+        print("attended", attended)
 
         # By this point the values, keys, and queries all have B * H as their first dimension
         batch_size = queries.shape[0] // self.num_heads
