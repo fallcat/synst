@@ -325,14 +325,14 @@ class NewTransformer(nn.Module):
 
         attention_mask = self.mask(targets)  # (T x T)
         batch_size, sentence_length = targets.shape  # (B x T)
-        new_targets = targets.unsqueeze(2).expand(batch_size,
+        new_targets = targets.unsqueeze(1).expand(batch_size,
                                                   sentence_length,
                                                   sentence_length).contiguous() * attention_mask
 
         new_targets = new_targets.view(batch_size * sentence_length,
                                        sentence_length)
 
-        new_inputs = inputs.unsqueeze(2).expand(batch_size,
+        new_inputs = inputs.unsqueeze(1).expand(batch_size,
                                                 sentence_length,
                                                 sentence_length).contiguous()
 
