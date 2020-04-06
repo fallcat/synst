@@ -166,7 +166,7 @@ class TransformerDecoderLayer(nn.Module):
         #     state, # residual
         #     source, source, state, **kwargs # passed to multiheaded attention
         # )
-        print("state", state)
+        # print("state", state)
 
         state = self.ffn(
             state, # residual
@@ -297,7 +297,7 @@ class NewTransformer(nn.Module):
         logits = decoded['logits']
         dims = list(range(1, logits.dim()))
         targets = left_shift(batch['targets'])
-        pdb.set_trace()
+        # pdb.set_trace()
         nll = self.cross_entropy(logits, targets).sum(dims[:-1])
         smoothed_nll = self.label_smoothing(logits, targets).sum(dims)
 
@@ -316,7 +316,7 @@ class NewTransformer(nn.Module):
 
     def decode(self, encoded, targets, decoders=None, embedding=None, cache=None, mask=None, inputs=None):
         ''' Decode the encoded sequence to the targets '''
-        pdb.set_trace()
+        # pdb.set_trace()
         if decoders is None:
             decoders = self.decoders
 

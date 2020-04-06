@@ -6,6 +6,7 @@ from torch import nn
 from torch.nn import functional as F
 
 from utils import same_tensor
+import pdb
 
 
 class NewMultiHeadedAttention(nn.Module):
@@ -65,6 +66,7 @@ class NewMultiHeadedAttention(nn.Module):
         ''' Scaled dot product attention with optional masks '''
         logits = self.scale * torch.bmm(queries, keys.transpose(2, 1))
         print("logits", logits)
+        pdb.set_trace()
         if mask is not None:
             logits += mask
 
