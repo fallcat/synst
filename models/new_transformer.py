@@ -367,7 +367,7 @@ class NewTransformer(nn.Module):
         state = state.view(batch_size,
                            sentence_length,
                            sentence_length,
-                           -1)[:, range(sentence_length), range(sentence_length), -1]
+                           -1)[:, range(sentence_length), range(sentence_length), :]
 
         return {
             'cache': decoded.get('cache'),
