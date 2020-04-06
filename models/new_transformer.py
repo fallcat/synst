@@ -316,7 +316,7 @@ class NewTransformer(nn.Module):
 
     def decode(self, encoded, targets, decoders=None, embedding=None, cache=None, mask=None, inputs=None):
         ''' Decode the encoded sequence to the targets '''
-        # pdb.set_trace()
+        pdb.set_trace()
         if decoders is None:
             decoders = self.decoders
 
@@ -338,6 +338,7 @@ class NewTransformer(nn.Module):
 
         new_inputs = new_inputs.view(batch_size * sentence_length,
                                        sentence_length)
+        print("new_inputs", new_inputs)
 
         decoded_embedding = self.embed(new_targets, embedding)  # (B x T x T x E)
         # decoded_embedding *= attention_mask.unsqueeze(-1)
