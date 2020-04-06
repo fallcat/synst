@@ -330,6 +330,7 @@ class NewTransformer(nn.Module):
             embedding = self.embedding
 
         attention_mask = self.mask(targets)  # (T x T)
+        print("attn mask", attention_mask)
         batch_size, sentence_length = targets.shape  # (B x T)
         new_targets = targets.unsqueeze(-1).expand(batch_size,
                                                    sentence_length,
@@ -370,6 +371,35 @@ class NewTransformer(nn.Module):
             'cache': decoded.get('cache'),
             'logits': embedding(state, transpose=True).transpose(2, 1),  # transpose to B x C x ...
         }
+
+    _masks = threading.local()
+
+    def mask(self, inputs):
+        '''
+        Get a self-attention mask
+
+        The mask will be of shape [T x T] containing elements from the set {1, 0}
+
+        Input shape:  (B x T)
+        Output shape: (T x T)
+        '''
+        if not self.causal:
+            return None
+
+        dim = inputs.shape[1]
+        device = inputs.device
+        mask_store = TransformerDecoderLayer._masks.__dict__
+        if device not in mask_store:
+            mask = inputs.new_full((dim, dim), float(1))
+            mask_store[device] = 1 - triu(mask, 1, self.span, self.span)
+
+        mask = mask_store[device]
+        if mask.shape[0] < dim:
+            mask = mask.resize_(dim, dim).fill_(float(1))
+            mask_store[device] = 1 - triu(mask, 1, self.span, self.span)
+            mask = mask_store[device]
+
+        return mask[None, :dim, :dim]
 
     def embed(self, inputs, token_embedding):
         ''' Embed the given inputs '''
