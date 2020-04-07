@@ -5,12 +5,13 @@
 """
 import os
 import sys
+import pdb
 import array
 import struct
 import numpy as np
 
 # SAVE PATH
-SAVE_PATH = "/mnt/nfs/work1/miyyer/wyou/data/small_enro/"
+SAVE_PATH = "/mnt/nfs/work1/miyyer/simengsun/data/small_enro/"
 
 np.random.seed(42)
 
@@ -48,7 +49,7 @@ def binarize(fold, vocab):
 	tgt_path = os.path.join(SAVE_PATH, f'{fold}.tok.bpe.32000.ro')
 	src_path = os.path.join(SAVE_PATH, f'{fold}.tok.bpe.32000.en')
 	out_path = os.path.join(SAVE_PATH, f'{fold}.tok.bpe.32000.bin')
-
+	pdb.set_trace()
 	with open(src_path, 'r') as f_src, \
 			open(tgt_path, 'r') as f_tgt, \
 			open(out_path, 'wb') as f_out:
@@ -68,8 +69,11 @@ if __name__ == "__main__":
 
 	if sys.argv[1] == "binarize":
 		vocab = load_vocab()
-		binarize("train2000", vocab)
-		binarize("train4000", vocab)
+		# binarize("train", vocab)
 		# binarize("test", vocab)
 		# binarize("valid", vocab)
+		# binarize("valid-train", vocab)
+		# binarize("valid-val", vocab)
+		binarize("train4000", vocab)
+
 
