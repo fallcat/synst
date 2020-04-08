@@ -365,6 +365,7 @@ class NewTransformer(nn.Module):
 
         decoded_embedding = self.embed(targets, embedding)  # (B x T x T x E)
         encoded_embedding = encoded
+        pdb.set_trace()
 
         decoded = {
             'cache': cache,
