@@ -302,7 +302,7 @@ class NewTransformer(nn.Module):
 
         decoded = self.decode(
             encoded_embedding,
-            targets,
+            new_targets,
             mask=mask
         )
 
