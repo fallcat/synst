@@ -306,7 +306,13 @@ class NewTransformer(nn.Module):
             mask=mask
         )
 
-        logits = decoded['logits']
+        batch_size, sentence_length = targets.shape
+
+        logits = decoded['logits'].view(batch_size,
+                                        sentence_length,
+                                        -1,
+                                        sentence_length).transpose(2, 3).contiguous()[:, range(sentence_length),
+                                                                                      range(sentence_length), :].transpose(1, 2).contiguous()
         print("logits", logits.shape)
         dims = list(range(1, logits.dim()))
         targets = left_shift(batch['targets'])
