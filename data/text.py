@@ -143,6 +143,7 @@ class TextDataset(Dataset):
             except:
                 print("hi", len(examples))
                 print(examples)
+                print(data)
                 pdb.set_trace()
 
         if any(

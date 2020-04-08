@@ -218,6 +218,7 @@ class NewTransformer(nn.Module):
         super(NewTransformer, self).__init__()
 
         self.dataset = dataset
+        self.config = config
         self.span = config.span
         self.embedding = TokenEmbedding(
             dataset.vocab_size,
@@ -240,6 +241,10 @@ class NewTransformer(nn.Module):
             ignore_index=self.padding_idx,
             reduction='none'
         )
+        if config.combine_type == 'concat':
+            self.concat_enc_dec = nn.Linear(config.embedding_size * 2, config.embedding_size)
+        else:
+            self.concat_enc_dec = None
 
     @classmethod
     def create_encoders(cls, config):
@@ -354,7 +359,8 @@ class NewTransformer(nn.Module):
 
         decoded = {
             'cache': cache,
-            'state': decoded_embedding + encoded_embedding,
+            'state': decoded_embedding + encoded_embedding if self.config.combine_type == "add"
+            else self.concat_enc_dec(torch.cat((decoded_embedding, encoded_embedding), -1)),
             'mask': new_inputs.eq(self.padding_idx) if mask is None else mask
         }
 
