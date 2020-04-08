@@ -293,13 +293,21 @@ class NewTransformer(nn.Module):
 
     def forward(self, batch): # pylint:disable=arguments-differ
         ''' A batch of inputs and targets '''
+        encoded = self.encode(batch['inputs'][:, :-1])
+
+        inputs = batch['inputs'][:, :-1]
+        targets = right_shift(right_shift(batch['targets']), shift=self.span - 1, fill=self.sos_idx)
+
+        new_targets, encoded_embedding, mask = self.prepare_masked_data(encoded, inputs, targets)
+
         decoded = self.decode(
-            self.encode(batch['inputs'][:, :-1]),
-            right_shift(right_shift(batch['targets']), shift=self.span - 1, fill=self.sos_idx),
-            inputs=batch['inputs'][:, :-1]
+            encoded_embedding,
+            targets,
+            mask=mask
         )
 
         logits = decoded['logits']
+        print("logits", logits.shape)
         dims = list(range(1, logits.dim()))
         targets = left_shift(batch['targets'])
         # pdb.set_trace()
@@ -308,26 +316,7 @@ class NewTransformer(nn.Module):
 
         return smoothed_nll, nll
 
-    def encode(self, inputs):
-        ''' Encode the inputs '''
-        encoded = {
-            'state': self.embed(inputs, self.embedding),
-            'mask': inputs.eq(self.padding_idx)
-        }
-        # for encoder in self.encoders:
-        #     encoded = encoder(encoded)
-
-        return encoded
-
-    def decode(self, encoded, targets, decoders=None, embedding=None, cache=None, mask=None, inputs=None):
-        ''' Decode the encoded sequence to the targets '''
-        # pdb.set_trace()
-        if decoders is None:
-            decoders = self.decoders
-
-        if embedding is None:
-            embedding = self.embedding
-
+    def prepare_masked_data(self, encoded, inputs, targets):
         attention_mask = self.mask(targets)  # (T x T)
         batch_size, sentence_length = targets.shape  # (B x T)
         new_targets = targets.unsqueeze(1).expand(batch_size,
@@ -342,26 +331,46 @@ class NewTransformer(nn.Module):
                                                 sentence_length).contiguous()
 
         new_inputs = new_inputs.view(batch_size * sentence_length,
-                                       sentence_length)
-        # print("new_inputs", new_inputs)
+                                     sentence_length)
 
-        decoded_embedding = self.embed(new_targets, embedding)  # (B x T x T x E)
-        # decoded_embedding *= attention_mask.unsqueeze(-1)
-        # decoded_embedding = decoded_embedding.view(batch_size * sentence_length,
-        #                                            sentence_length,
-        #                                            -1)
         encoded_embedding = encoded['state'].unsqueeze(2).expand(batch_size,
                                                                  sentence_length,
                                                                  sentence_length,
                                                                  -1).contiguous().view(batch_size * sentence_length,
-                                                                                        sentence_length,
-                                                                                        -1)
+                                                                                       sentence_length,
+                                                                                       -1)
+        mask = new_inputs.eq(self.padding_idx)
+
+        return new_targets, encoded_embedding, mask
+
+    def encode(self, inputs):
+        ''' Encode the inputs '''
+        encoded = {
+            'state': self.embed(inputs, self.embedding),
+            'mask': inputs.eq(self.padding_idx)
+        }
+        # for encoder in self.encoders:
+        #     encoded = encoder(encoded)
+
+        return encoded
+
+    def decode(self, encoded, targets, decoders=None, embedding=None, cache=None, mask=None):
+        ''' Decode the encoded sequence to the targets '''
+        # pdb.set_trace()
+        if decoders is None:
+            decoders = self.decoders
+
+        if embedding is None:
+            embedding = self.embedding
+
+        decoded_embedding = self.embed(targets, embedding)  # (B x T x T x E)
+        encoded_embedding = encoded
 
         decoded = {
             'cache': cache,
             'state': decoded_embedding + encoded_embedding if self.config.combine_type == "add"
             else self.concat_enc_dec(torch.cat((decoded_embedding, encoded_embedding), -1)),
-            'mask': new_inputs.eq(self.padding_idx) if mask is None else mask
+            'mask': mask
         }
 
         for decoder in decoders:
@@ -372,10 +381,11 @@ class NewTransformer(nn.Module):
         if cache is not None:
             state = state[:, -self.span:]
 
-        state = state.view(batch_size,
-                           sentence_length,
-                           sentence_length,
-                           -1)[:, range(sentence_length), range(sentence_length), :]
+        print("state", state.shape)
+        # state = state.view(batch_size,
+        #                    sentence_length,
+        #                    sentence_length,
+        #                    -1)[:, range(sentence_length), range(sentence_length), :]
 
         return {
             'cache': decoded.get('cache'),
