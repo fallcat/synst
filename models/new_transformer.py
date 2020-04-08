@@ -297,22 +297,18 @@ class NewTransformer(nn.Module):
 
         inputs = batch['inputs'][:, :-1]
         targets = right_shift(right_shift(batch['targets']), shift=self.span - 1, fill=self.sos_idx)
+        batch_size, sentence_length = targets.shape
 
         new_targets, encoded_embedding, mask = self.prepare_masked_data(encoded, inputs, targets)
 
         decoded = self.decode(
             encoded_embedding,
             new_targets,
-            mask=mask
+            mask=mask,
+            batch_size=batch_size
         )
 
-        batch_size, sentence_length = targets.shape
-
-        logits = decoded['logits'].view(batch_size,
-                                        sentence_length,
-                                        -1,
-                                        sentence_length).transpose(2, 3).contiguous()[:, range(sentence_length),
-                                                                                      range(sentence_length), :].transpose(1, 2).contiguous()
+        logits = decoded['logits']
         dims = list(range(1, logits.dim()))
         targets = left_shift(batch['targets'])
         nll = self.cross_entropy(logits, targets).sum(dims[:-1])
@@ -356,7 +352,7 @@ class NewTransformer(nn.Module):
 
         return encoded
 
-    def decode(self, encoded, targets, decoders=None, embedding=None, cache=None, mask=None):
+    def decode(self, encoded, targets, decoders=None, embedding=None, cache=None, mask=None, batch_size=None):
         ''' Decode the encoded sequence to the targets '''
         if decoders is None:
             decoders = self.decoders
@@ -381,6 +377,13 @@ class NewTransformer(nn.Module):
         state = decoded['state']
         if cache is not None:
             state = state[:, -self.span:]
+
+        if batch_size is not None:
+            sentence_length = int(targets.shape[0]/batch_size)
+            state = state.view(batch_size,
+                               sentence_length,
+                               sentence_length,
+                               -1)[:, range(sentence_length), range(sentence_length), :]
 
         return {
             'cache': decoded.get('cache'),
