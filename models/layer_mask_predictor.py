@@ -21,7 +21,8 @@ class LayerMaskPredictor(nn.Module):
                        lmp_eval_mode,
                        layermask_file,
                        config_file,
-                       random_config):
+                       random_config, 
+                       ):
         super(LayerMaskPredictor, self).__init__()
 
         self.num_layers = num_layers
@@ -34,17 +35,25 @@ class LayerMaskPredictor(nn.Module):
         self.layermask_file = layermask_file
         self.random_inference = random_config
 
+        self.gpu_count = torch.cuda.device_count()
+
         if lmp_type != "random":
             self.proj1 = nn.Linear(embedding_size, self.all_configs.shape[0]-1)
             if self.loss_func == 'binary_cls':
                 self.bce_loss = BCELoss(reduction='none')
             self.reset_parameters()
         else:
+            self.sample_distribution = []
+
             if layermask_file is None:
-                self.sample_distribution = torch.ones((1, 2 * num_layers), device=torch.device("cuda")) * 0.5 # init 0.5
+                for i in range(self.gpu_count):
+                    self.sample_distribution.append(torch.ones((1, 2 * num_layers), device=torch.cuda(i)) * 0.5) # init 0.5
+
             else:
                 with open(layermask_file) as layermask_file:
-                    self.sample_distribution = torch.stack([torch.tensor([float(x) for x in list(line.strip())], device=torch.device("cuda")) for line in layermask_file.readlines()])
+                    sample_distribution = torch.stack([torch.tensor([float(x) for x in list(line.strip())]) for line in layermask_file.readlines()])
+                for i in range(self.gpu_count):
+                    self.sample_distribution.append(sample_distribution.cuda(i))
 
         # print configs for LMP
         print("lmp type : %s" % self.lmp_type)
@@ -111,9 +120,10 @@ class LayerMaskPredictor(nn.Module):
                     dec_sample = np.random.randint(self.num_layers, self.num_layers * 2, size=dec_sample_size)
                     sample[violate_indices, dec_sample] = 1
                 return sample
+
             else:
-                indices = torch.multinomial(torch.ones(self.sample_distribution.size(0)), batch_size, replacement=True)
-                return self.sample_distribution[indices]
+                indices = torch.multinomial(torch.ones(self.sample_distribution[0].size(0)), batch_size, replacement=True)
+                return self.sample_distribution[lmp_input.device.index][indices]
 
         lmp_input = lmp_input.masked_fill_(lmp_input_mask[:, :, None], 0)
         layermask = self.proj1(torch.sum(lmp_input,1))

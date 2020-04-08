@@ -47,10 +47,14 @@ class TransformerSublayer(nn.Module):
         if len(gating_weight.size()) == 0:
             return self.norm(inputs + self.dropout(self.sublayer(*sublayer_args, **sublayer_kwargs)))
         else:
-            out_dropout = self.dropout(self.sublayer(*sublayer_args, **sublayer_kwargs))
-            ret = self.norm(inputs + gating_weight[:, None, None] * out_dropout)
-            skip = inputs * (1-gating_weight)[:, None, None]
-            ret = gating_weight[:, None, None] * ret + skip
+            try:
+                out_dropout = self.dropout(self.sublayer(*sublayer_args, **sublayer_kwargs))
+                ret = self.norm(inputs + gating_weight[:, None, None] * out_dropout)
+                ret = self.norm(inputs + out_dropout)
+                skip = inputs * (1-gating_weight)[:, None, None]
+                ret = gating_weight[:, None, None] * ret + skip
+            except:
+                pdb.set_trace()
             return ret
 
 class TransformerFFN(nn.Module):
@@ -321,7 +325,8 @@ class NewTransformer(nn.Module):
                                                        config.lmp_eval_mode,
                                                        config.layermask_file,
                                                        config.lmp_config_file,
-                                                       config.random_config)
+                                                       config.random_config,
+                                                       )
 
     @classmethod
     def create_encoders(cls, config):
