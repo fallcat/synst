@@ -142,7 +142,8 @@ def add_new_transformer_args(parser):
     group.add_argument(
         '--combine-type',
         type=str,
-        default=['add', 'concat'],
+        default='add',
+        choices=['add', 'concat'],
         help='How many tokens to decode at once'
     )
 
