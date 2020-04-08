@@ -313,10 +313,8 @@ class NewTransformer(nn.Module):
                                         -1,
                                         sentence_length).transpose(2, 3).contiguous()[:, range(sentence_length),
                                                                                       range(sentence_length), :].transpose(1, 2).contiguous()
-        print("logits", logits.shape)
         dims = list(range(1, logits.dim()))
         targets = left_shift(batch['targets'])
-        # pdb.set_trace()
         nll = self.cross_entropy(logits, targets).sum(dims[:-1])
         smoothed_nll = self.label_smoothing(logits, targets).sum(dims)
 
@@ -355,14 +353,11 @@ class NewTransformer(nn.Module):
             'state': self.embed(inputs, self.embedding),
             'mask': inputs.eq(self.padding_idx)
         }
-        # for encoder in self.encoders:
-        #     encoded = encoder(encoded)
 
         return encoded
 
     def decode(self, encoded, targets, decoders=None, embedding=None, cache=None, mask=None):
         ''' Decode the encoded sequence to the targets '''
-        # pdb.set_trace()
         if decoders is None:
             decoders = self.decoders
 
@@ -371,7 +366,6 @@ class NewTransformer(nn.Module):
 
         decoded_embedding = self.embed(targets, embedding)  # (B x T x T x E)
         encoded_embedding = encoded
-        pdb.set_trace()
 
         decoded = {
             'cache': cache,
@@ -387,12 +381,6 @@ class NewTransformer(nn.Module):
         state = decoded['state']
         if cache is not None:
             state = state[:, -self.span:]
-
-        print("state", state.shape)
-        # state = state.view(batch_size,
-        #                    sentence_length,
-        #                    sentence_length,
-        #                    -1)[:, range(sentence_length), range(sentence_length), :]
 
         return {
             'cache': decoded.get('cache'),
