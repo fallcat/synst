@@ -629,7 +629,7 @@ def parse_args(argv=None):
 
     model_groups = {}
     model_groups['transformer'] = add_transformer_args(parser)
-    model_groups['new_transformer'] = add_transformer_args(parser)
+    model_groups['new_transformer'] = add_new_transformer_args(parser)
     model_groups['parse_transformer'] = add_parse_transformer_args(parser)
 
     subparsers = parser.add_subparsers()
