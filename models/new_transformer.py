@@ -10,7 +10,7 @@ from torch import nn
 from models.new_attention import NewMultiHeadedAttention
 from models.embeddings import PositionEmbedding, TokenEmbedding
 from models.utils import LabelSmoothingLoss, NewTranslator
-from utils import left_shift, right_shift, triu
+from utils import left_shift, right_shift, triu, right_pad
 
 import pdb
 
@@ -361,14 +361,20 @@ class NewTransformer(nn.Module):
             embedding = self.embedding
 
         decoded_embedding = self.embed(targets, embedding)  # (B x T x T x E)
-        encoded_embedding = encoded
+
+        if self.config.combine_type == "add":
+            combined_embedding = encoded
+            combined_embedding[:, :decoded_embedding.shape[1]] += decoded_embedding
+        else:  # concat
+            combined_embedding = torch.cat((right_pad(decoded_embedding, dim=1, count=encoded.shape[1] - decoded_embedding.shape[1]), encoded), -1)
+            combined_embedding = self.concat_enc_dec(combined_embedding)
+
         print("decoded_embedding", decoded_embedding.shape)
-        print("encoded_embedding", encoded_embedding.shape)
+        print("encoded_embedding", combined_embedding.shape)
 
         decoded = {
             'cache': cache,
-            'state': decoded_embedding + encoded_embedding if self.config.combine_type == "add"
-            else self.concat_enc_dec(torch.cat((decoded_embedding, encoded_embedding), -1)),
+            'state': combined_embedding,
             'mask': mask
         }
 
