@@ -485,8 +485,7 @@ class NewTransformer(nn.Module):
         nll = self.cross_entropy(logits, targets).sum(dims[:-1])
         smoothed_nll = self.label_smoothing(logits, targets).sum(dims)
 
-        sum_layermask = raw_layermask.sum(dim=1) # [bs, ]
-
+        sum_layermask = raw_layermask.sum(dim=1) if len(raw_layermask.size()) == 2 else raw_layermask
         loss = smoothed_nll
 
         return loss, nll, None, sum_layermask.mean()
