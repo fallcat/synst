@@ -395,6 +395,8 @@ class NewTransformer(nn.Module):
                                sentence_length,
                                sentence_length,
                                -1)[:, range(sentence_length), range(sentence_length), :]
+        else:
+            state = state[:, decoded_embedding.shape[1] - 1 : decoded_embedding.shape[1]]
 
         return {
             'cache': decoded.get('cache'),
