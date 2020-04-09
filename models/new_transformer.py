@@ -9,7 +9,7 @@ from torch import nn
 
 from models.new_attention import NewMultiHeadedAttention
 from models.embeddings import PositionEmbedding, TokenEmbedding
-from models.utils import LabelSmoothingLoss, Translator
+from models.utils import LabelSmoothingLoss, NewTranslator
 from utils import left_shift, right_shift, triu
 
 import pdb
@@ -278,7 +278,7 @@ class NewTransformer(nn.Module):
 
     def translator(self, config):
         ''' Get a translator for this model '''
-        return Translator(config, self, self.dataset)
+        return NewTranslator(config, self, self.dataset)
 
     def reset_named_parameters(self, modules):
         ''' Get a translator for this model '''
