@@ -365,7 +365,7 @@ class NewTransformer(nn.Module):
         longer_length = max(decoded_embedding.shape[1], encoded.shape[1])
 
         if self.config.combine_type == "add":
-            combined_embedding = encoded
+            combined_embedding = right_pad(encoded, dim=1, count=longer_length - encoded.shape[1])
             combined_embedding[:, :decoded_embedding.shape[1]] += decoded_embedding
         else:  # concat
             combined_embedding = torch.cat((right_pad(decoded_embedding, dim=1, count=longer_length - decoded_embedding.shape[1]),
