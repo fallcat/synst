@@ -362,8 +362,8 @@ class NewTransformer(nn.Module):
 
         decoded_embedding = self.embed(targets, embedding)  # (B x T x T x E)
         encoded_embedding = encoded
-        print("decoded_embedding", decoded_embedding)
-        print("encoded_embedding", encoded_embedding)
+        print("decoded_embedding", decoded_embedding.shape)
+        print("encoded_embedding", encoded_embedding.shape)
 
         decoded = {
             'cache': cache,
