@@ -144,7 +144,8 @@ class TransformerDecoderLayer(nn.Module):
         kwargs = {}
         if self.causal and cache is not None:
             # If caching, only want the last k=span sequence values. Requires no causal masking.
-            residual = state[:, -self.span:]
+            # residual = state[:, -self.span:]
+            residual = state
             kwargs['num_queries'] = self.span
         else:
             # If not caching, use the full sequence and ensure an appropriate causal mask
@@ -173,12 +174,12 @@ class TransformerDecoderLayer(nn.Module):
             state # passed to feed-forward network
         )
 
-        if self.causal and cache is not None:
-            cached = cache.get(self.uuid)
-            if cached is None:
-                cache[self.uuid] = state
-            else:
-                state = cache[self.uuid] = torch.cat((cached, state), 1)
+        # if self.causal and cache is not None:
+        #     cached = cache.get(self.uuid)
+        #     if cached is None:
+        #         cache[self.uuid] = state
+        #     else:
+        #         state = cache[self.uuid] = torch.cat((cached, state), 1)
 
         return {'state': state, 'mask': mask, 'cache': cache}
 
