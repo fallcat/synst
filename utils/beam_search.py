@@ -216,7 +216,7 @@ class BeamSearchDecoder(object):
                 while chunks:
                     try:
                         encoded_batch, batch = chunks.pop()
-                        result = self.model(encoded_batch, batch, cache=cache)
+                        result = self.model(encoded_batch['state'], batch, cache=cache)
 
                         new_cache = result.get('cache')
                         if new_cache:
