@@ -10,7 +10,6 @@ from __future__ import print_function
 import os
 import sys
 import timeit
-import numpy as np
 from contextlib import ExitStack
 
 import torch
@@ -28,8 +27,6 @@ class Translator(object):
         self.config = config
         self.dataloader = dataloader
         self.translator = model.translator(config).to(device)
-
-        self.time_profile = []
 
         self.modules = {
             'model': model
@@ -76,15 +73,7 @@ class Translator(object):
             for batch in batches:
                 # run the data through the model
                 batches.set_description_str(get_description())
-
-                start_event = torch.cuda.Event(enable_timing=True)
-                end_event = torch.cuda.Event(enable_timing=True)
-                start_event.record()
-                sequences = self.translator.translate(batch)    # step to be profiled
-                end_event.record()
-                torch.cuda.synchronize()
-                self.time_profile.append(start_event.elapsed_time(end_event))
-
+                sequences = self.translator.translate(batch)
 
                 if self.config.timed:
                     continue
@@ -112,8 +101,6 @@ class Translator(object):
 
             for _, outputs in sorted(ordered_outputs, key=lambda x: x[0]): # pylint:disable=consider-using-enumerate
                 output_file.writelines(outputs)
-
-
 
     def __call__(self, epoch, experiment, verbose=0):
         ''' Generate from the model '''
@@ -143,10 +130,3 @@ class Translator(object):
                     print(f'Outputting to {output_path}')
 
                 self.translate_all(output_file, epoch, experiment, verbose)
-
-                with open(os.path.join(self.config.output_directory, f'elapsed_time_{step}.txt'), 'w') as f:
-                    f.write('mean %0.2f std %0.2f\n' % (np.mean(self.time_profile), np.std(self.time_profile)))
-                    for time in self.time_profile:
-                        f.write(str(time) + '\n')
-
-

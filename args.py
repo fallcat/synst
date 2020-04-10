@@ -12,8 +12,7 @@ import torch
 
 from data import DATASETS
 from models import MODELS
-from actions import Trainer, Evaluator, Translator, Pass, Prober, ProbeTrainer, ProbeEvaluator, ProbeNewTranslator, \
-    ProbeOffDiagonal
+from actions import Trainer, Evaluator, Translator, Pass
 from utils import get_version_string, get_random_seed_fn
 
 
@@ -102,390 +101,6 @@ def add_transformer_args(parser):
         type=int,
         default=1,
         help='How many tokens to decode at once'
-    )
-
-    return group
-
-
-def add_probe_transformer_args(parser):
-    ''' Defines Transformer model specific arguments '''
-    group = ArgGroup(parser.add_argument_group('Probe Transformer Model'))
-    group.add_argument(
-        '--num-layers',
-        type=int,
-        default=6,
-        help='Number of layers in each Transformer stack'
-    )
-    group.add_argument(
-        '--num-heads',
-        type=int,
-        default=8,
-        help='Number of heads in each Transformer layer for multi-headed attention'
-    )
-    group.add_argument(
-        '--embedding-size',
-        type=int,
-        default=512,
-        help='The size of the Transformer model dimension'
-    )
-    group.add_argument(
-        '--hidden-dim',
-        type=int,
-        default=2048,
-        help='The size of the Transformer feed-forward hidden layer'
-    )
-    group.add_argument(
-        '--span',
-        type=int,
-        default=1,
-        help='How many tokens to decode at once'
-    )
-
-    return group
-
-
-def add_new_transformer_args(parser):
-    ''' Defines Transformer model specific arguments '''
-    group = ArgGroup(parser.add_argument_group('New Transformer Model'))
-    group.add_argument(
-        '--num-layers',
-        type=int,
-        default=6,
-        help='Number of layers in each Transformer stack'
-    )
-    group.add_argument(
-        '--num-heads',
-        type=int,
-        default=8,
-        help='Number of heads in each Transformer layer for multi-headed attention'
-    )
-    group.add_argument(
-        '--embedding-size',
-        type=int,
-        default=512,
-        help='The size of the Transformer model dimension'
-    )
-    group.add_argument(
-        '--hidden-dim',
-        type=int,
-        default=2048,
-        help='The size of the Transformer feed-forward hidden layer'
-    )
-    group.add_argument(
-        '--span',
-        type=int,
-        default=1,
-        help='How many tokens to decode at once'
-    )
-    group.add_argument(
-        '--attn-type',
-        type=str,
-        nargs='+',
-        default='normal',
-        choices=['normal', 'uniform', 'no', 'learned'],
-        help='What type of attention we are using for the rules'
-    )
-    group.add_argument(
-        '--attn-position',
-        type=str,
-        nargs='+',
-        default='center',
-        choices=['center', 'left', 'right', 'first', 'last', 'bin'],
-        help='Where to put the attention. Center is centered at the word.'
-    )
-    group.add_argument(
-        '--attn-param',
-        type=float,
-        nargs='+',
-        default=1,
-        help='when attention type is normal. The standard deviation.'
-             'when attention type is uniform. The number of tokens to focus on to each direction.'
-             'If window size is 2, then we have uniform distribution on 5 words.'
-    )
-    group.add_argument(
-        '--attn-threshold',
-        type=float,
-        default=-1,
-        help='when attention type is normal, '
-             'Only attend to places where distribution is above or equal to the attn-threshold'
-    )
-    group.add_argument(
-        '--attn-window',
-        type=int,
-        default=-1,
-        help='The window to do convolution at'
-    )
-    group.add_argument(
-        '--attn-displacement',
-        type=int,
-        nargs='+',
-        default=1,
-        help='Only works when corresponding attn-position is left or right.'
-             'The number of steps to take to that direction.'
-             'When attn-position is bin, this number has to be between 1 and number of attn-bins'
-    )
-    group.add_argument(
-        '--attn-concat',
-        type=int,
-        default=0,
-        choices=[0, 1, 2, 3],
-        help='Whether or not concat previous embedding with new embedded. 0 to not concat, '
-             '1 to concat just previous embedding, 2 to concat just word embedding, 3 to concat both.'
-    )
-    group.add_argument(
-        '--attn-weights',
-        type=int,
-        default=1,
-        choices=[0, 1, 2],
-        help='Whether or not use weights in non-learned attention. 0 no weights, 1 all with weights, '
-             '2 weight only for key and query but not value.'
-    )
-    group.add_argument(
-        '--attn-score',
-        type=int,
-        default=0,
-        choices=[0, 1],
-        help='Whether or not use query to score the different heads. 0 do not score, 1 do score.'
-    )
-    group.add_argument(
-        '--attn-bins',
-        type=int,
-        default=2,
-        help='Number of bins to look at in total'
-    )
-
-    group.add_argument(
-        '--dec-attn-type',
-        type=str,
-        nargs='+',
-        default='learned',
-        choices=['normal', 'uniform', 'no', 'learned'],
-        help='What type of attention we are using for the rules'
-    )
-    group.add_argument(
-        '--dec-attn-position',
-        type=str,
-        nargs='+',
-        default='center',
-        choices=['center', 'left', 'right', 'first', 'last', 'bin'],
-        help='Where to put the attention. Center is centered at the word.'
-    )
-    group.add_argument(
-        '--dec-attn-param',
-        type=float,
-        nargs='+',
-        default=1,
-        help='when attention type is normal. The standard deviation.'
-             'when attention type is uniform. The number of tokens to focus on to each direction.'
-             'If window size is 2, then we have uniform distribution on 5 words.'
-    )
-    group.add_argument(
-        '--dec-attn-threshold',
-        type=float,
-        default=-1,
-        help='when attention type is normal, '
-             'Only attend to places where distribution is above or equal to the attn-threshold'
-    )
-    group.add_argument(
-        '--dec-attn-window',
-        type=int,
-        default=-1,
-        help='The window to do convolution at'
-    )
-    group.add_argument(
-        '--dec-attn-displacement',
-        type=int,
-        nargs='+',
-        default=1,
-        help='Only works when corresponding attn-position is left or right.'
-             'The number of steps to take to that direction.'
-             'When attn-position is bin, this number has to be between 1 and number of attn-bins'
-    )
-    group.add_argument(
-        '--dec-attn-concat',
-        type=int,
-        default=0,
-        choices=[0, 1, 2, 3],
-        help='Whether or not concat previous embedding with new embedded. 0 to not concat, '
-             '1 to concat just previous embedding, 2 to concat just word embedding, 3 to concat both.'
-    )
-    group.add_argument(
-        '--dec-attn-weights',
-        type=int,
-        default=1,
-        choices=[0, 1, 2],
-        help='Whether or not use weights in non-learned attention. 0 no weights, 1 all with weights, '
-             '2 weight only for key and query but not value.'
-    )
-    group.add_argument(
-        '--dec-attn-score',
-        type=int,
-        default=0,
-        choices=[0, 1],
-        help='Whether or not use query to score the different heads. 0 do not score, 1 do score.'
-    )
-    group.add_argument(
-        '--dec-attn-bins',
-        type=int,
-        default=2,
-        help='Number of bins to look at in total'
-    )
-
-    group.add_argument(
-        '--enc-dec-attn-type',
-        type=str,
-        nargs='+',
-        default='learned',
-        choices=['normal', 'uniform', 'no', 'learned'],
-        help='What type of attention we are using for the rules'
-    )
-    group.add_argument(
-        '--enc-dec-attn-position',
-        type=str,
-        nargs='+',
-        default='center',
-        choices=['center', 'left', 'right', 'first', 'last', 'bin'],
-        help='Where to put the attention. Center is centered at the word.'
-    )
-    group.add_argument(
-        '--enc-dec-attn-param',
-        type=float,
-        nargs='+',
-        default=1,
-        help='when attention type is normal. The standard deviation.'
-             'when attention type is uniform. The number of tokens to focus on to each direction.'
-             'If window size is 2, then we have uniform distribution on 5 words.'
-    )
-    group.add_argument(
-        '--enc-dec-attn-threshold',
-        type=float,
-        default=-1,
-        help='when attention type is normal, '
-             'Only attend to places where distribution is above or equal to the attn-threshold'
-    )
-    group.add_argument(
-        '--enc-dec-attn-window',
-        type=int,
-        default=-1,
-        help='The window to do convolution at'
-    )
-    group.add_argument(
-        '--enc-dec-attn-displacement',
-        type=int,
-        nargs='+',
-        default=1,
-        help='Only works when corresponding attn-position is left or right.'
-             'The number of steps to take to that direction.'
-             'When attn-position is bin, this number has to be between 1 and number of attn-bins'
-    )
-
-    group.add_argument(
-        '--enc-dec-attn-concat',
-        type=int,
-        default=0,
-        choices=[0, 1, 2, 3],
-        help='Whether or not concat previous embedding with new embedded. 0 to not concat, '
-             '1 to concat just previous embedding, 2 to concat just word embedding, 3 to concat both.'
-    )
-
-    group.add_argument(
-        '--enc-dec-attn-weights',
-        type=int,
-        default=1,
-        choices=[0, 1, 2],
-        help='Whether or not use weights in non-learned attention. 0 no weights, 1 all with weights, '
-             '2 weight only for key and query but not value.'
-    )
-
-    group.add_argument(
-        '--enc-dec-attn-score',
-        type=int,
-        default=0,
-        choices=[0, 1],
-        help='Whether or not use query to score the different heads. 0 do not score, 1 do score.'
-    )
-    group.add_argument(
-        '--enc-dec-attn-bins',
-        type=int,
-        default=2,
-        help='Number of bins to look at in total'
-    )
-
-    group.add_argument(
-        '--enc-dec-attn-layer',
-        type=int,
-        nargs='+',
-        default=1,
-        choices=[0, 1],
-        help="Determine the presence of encoder-decoder (source) attention after the decoder self-attention layer. "
-             "Length of list should be equal to the number of layers. "
-    )
-
-    group.add_argument(
-        '--enc-dec-attn-num-heads',
-        type=int,
-        nargs='+',
-        default=-1,
-        help="number of heads for enc-dec-attn at each layer; length of list should be equal to the number of layers. "
-             "if a layer does not have source attention, it should be 0."
-             "If the number of heads is same as encoder/decoder self attentions, then use -1 to specify that."
-    )
-
-    group.add_argument(
-        '--enc-attn-indexing',
-        type=bool,
-        default=False,
-        help="flag indicating whether use indexing(window-size=1) or not. if use, center+displacement word will be selected directly from values."
-    )
-
-    group.add_argument(
-        '--dec-attn-indexing',
-        type=bool,
-        default=False,
-        help="flag indicating whether use indexing(window-size=1) or not. if use, center+displacement word will be selected directly from values."
-    )
-
-    group.add_argument(
-        '--enc-dec-attn-indexing',
-        type=bool,
-        default=False,
-        help="flag indicating whether use indexing(window-size=1) or not. if use, center+displacement word will be selected directly from values."
-    )
-
-    group.add_argument(
-        '--enc-no-attn',
-        default=False,
-        action='store_true',
-        help="flag indicating not using attention for encoder self-attention"
-    )
-
-    group.add_argument(
-        '--dec-no-attn',
-        default=False,
-        action='store_true',
-        help="flag indicating not using attention for decoder self-attention"
-    )
-
-    group.add_argument(
-        '--indexing-type',
-        type=str,
-        choices=['gather', 'bmm'],
-        default='gather'
-    )
-
-    group.add_argument(
-        '--tie-ffn-weights',
-        type=bool,
-        help="whether tie ffn layer weights or not",
-        default=False
-    )
-
-    group.add_argument(
-        '--ffn-layer',
-        type=int,
-        nargs='+',
-        help="which layer has ffn layer, 0 no 1 yes",
-        default=-1
     )
 
     return group
@@ -641,12 +256,6 @@ def add_data_args(parser):
         choices=['train', 'valid', 'test', 'dev'],
         help='Location for the preprocessed data'
     )
-    group.add_argument(
-        '--align-stats-bin-size',
-        type=int,
-        default=4,
-        help='Bin size for word align stats'
-    )
 
     return group
 
@@ -770,135 +379,6 @@ def add_train_args(parser):
         help='For the linear annealing schedule'
     )
     group.add_argument(
-        '--peak-learning-rate',
-        dest='peak_lr',
-        type=float,
-        default=1e-3,
-        help='For the linear annealing schedule'
-    )
-    group.add_argument(
-        '--learning-rate-scheduler',
-        dest='lr_scheduler',
-        type=str,
-        default='warmup',
-        choices=['exponential', 'warmup', 'linear','warmup2'],
-        help='The learning rate schedule of the optimizer'
-    )
-    group.add_argument(
-        '-w',
-        '--warmup-steps',
-        type=int,
-        default=4000,
-        help='Number of warmup steps for the Transformer learning rate'
-    )
-    group.add_argument(
-        '--optimizer',
-        type=str,
-        default='adam',
-        choices=['adam', 'sgd', 'adam-fixed'],
-        help='add optimizer'
-    )
-
-    return group
-
-
-def add_probe_train_args(parser):
-    ''' Defines the training specific arguments '''
-    group = ArgGroup(parser.add_argument_group('Training'))
-    group.add_argument(
-        '-A',
-        '--accumulate-steps',
-        type=int,
-        default=1,
-        help='How many batches of data to accumulate gradients over'
-    )
-    group.add_argument(
-        '--gold-p',
-        type=float,
-        default=1.0,
-        help='The percentage of time to select gold targets during training (for LSTMs)'
-    )
-    group.add_argument(
-        '--dropout-p',
-        type=float,
-        default=0.1,
-        help='The dropout percentage during training'
-    )
-    group.add_argument(
-        '--early-stopping',
-        type=_integer_geq(),
-        default=0,
-        help='If > 0, stop training after this many checkpoints of increasing nll on the validation'
-        ' set. This also implies storing of the best_checkpoint.'
-    )
-    group.add_argument(
-        '--label-smoothing',
-        type=float,
-        default=0.1,
-        help='The amount of label smoothing'
-    )
-    group.add_argument(
-        '-c',
-        '--checkpoint-directory',
-        type=str,
-        default='/tmp/synst/checkpoints',
-        help='Where to store model checkpoints'
-    )
-    group.add_argument(
-        '--stats-directory',
-        type=str,
-        default='/tmp/synst/stats',
-        help='Where to store stats'
-    )
-    group.add_argument(
-        '--checkpoint-interval',
-        type=int,
-        default=10*60,
-        help='Generate a checkpoint every `n` seconds'
-    )
-    group.add_argument(
-        '--max-checkpoints',
-        type=int,
-        default=5,
-        help='The maximum number of checkpoints to keep'
-    )
-    group.add_argument(
-        '-e',
-        '--max-epochs',
-        type=int,
-        default=0,
-        help='Maximum number of epochs for training the model'
-    )
-    group.add_argument(
-        '--max-steps',
-        type=int,
-        default=100000,
-        help='Maximum number of steps for training the model'
-    )
-    group.add_argument(
-        '-l',
-        '--learning-rate',
-        dest='base_lr',
-        type=float,
-        default=None,
-        help='The initial learning rate of the optimizer. Defaults to embedding_size ** -0.5'
-    )
-    group.add_argument(
-        '-L',
-        '--learning-rate-decay',
-        dest='lr_decay',
-        type=float,
-        default=.999995,
-        help='The learning rate decay of the optimizer'
-    )
-    group.add_argument(
-        '--final-learning-rate',
-        dest='final_lr',
-        type=float,
-        default=1e-5,
-        help='For the linear annealing schedule'
-    )
-    group.add_argument(
         '--learning-rate-scheduler',
         dest='lr_scheduler',
         type=str,
@@ -932,36 +412,6 @@ def add_evaluate_args(parser):
         default=None,
         help='What directory to watch for new checkpoints.'
         ' If not provided, run a single evaluation using the restore parameter.'
-    )
-
-    group.set_defaults(gold_p=0)
-    group.set_defaults(dropout_p=0)
-
-    return group
-
-
-def add_probe_evaluate_args(parser):
-    ''' Defines the evaluation specific arguments '''
-    group = ArgGroup(parser.add_argument_group('Evaluation'))
-    group.add_argument(
-        '--polling',
-        default=False,
-        action='store_true',
-        help='Use a polling observer rather than the default inotify based observer.'
-    )
-    group.add_argument(
-        '--watch-directory',
-        type=str,
-        default=None,
-        help='What directory to watch for new checkpoints.'
-        ' If not provided, run a single evaluation using the restore parameter.'
-    )
-
-    group.add_argument(
-        '--stats-directory',
-        type=str,
-        default='/tmp/synst/stats',
-        help='Where to store stats'
     )
 
     group.set_defaults(gold_p=0)
@@ -1009,200 +459,6 @@ def add_translate_args(parser):
         type=str,
         default='/tmp/synst/output',
         help='Where to store translated strings'
-    )
-    group.add_argument(
-        '--output-filename',
-        type=str,
-        default=None,
-        help='Default output filename is translated_{step}.txt'
-    )
-    group.add_argument(
-        '--order-output',
-        default=False,
-        action='store_true',
-        help='Whether to print the translated strings in the original dataset ordering'
-    )
-    group.add_argument(
-        '--gold-annotations',
-        default=False,
-        action='store_true',
-        help='Whether to use gold annotations rather than have the network predict the annotations'
-    )
-    group.add_argument(
-        '--annotations-only',
-        default=False,
-        action='store_true',
-        help='Whether to only output annotations rather than the predicted translation'
-    )
-    group.add_argument(
-        '--timed',
-        type=int,
-        default=0,
-        const=1,
-        nargs='?',
-        help='How many times to run translation to gauge the translation speed'
-    )
-
-    group.set_defaults(gold_p=0)
-    group.set_defaults(dropout_p=0)
-
-    return group
-
-
-def add_probe_off_diagonal_args(parser):
-    ''' Defines the generation specific arguments '''
-    group = ArgGroup(parser.add_argument_group('Generation'))
-    group.add_argument(
-        '--beam-width',
-        default=4,
-        type=int,
-        help='Default beam width for beam search decoder.'
-    )
-    group.add_argument(
-        '--disable-cache',
-        default=False,
-        action='store_true',
-        help='Whether to disable the use of caching in beam search decoder'
-    )
-    group.add_argument(
-        '--length-penalty',
-        type=float,
-        default=0.6,
-        help='Divides the hypothesis log probabilities in beam search by length^<length penalty>.'
-    )
-    group.add_argument(
-        '--length-basis',
-        type=str,
-        default=None,
-        choices=['input_lens', 'target_lens'],
-        help='The basis for max decoding length. Default of None implies no basis, i.e. 0.'
-    )
-    group.add_argument(
-        '--max-decode-length',
-        default=50,
-        type=int,
-        help='How many tokens beyond the length basis to allow decoding to continue.'
-    )
-    group.add_argument(
-        '--output-directory',
-        type=str,
-        default='/tmp/synst/output',
-        help='Where to store translated strings'
-    )
-    group.add_argument(
-        '--output-filename',
-        type=str,
-        default=None,
-        help='Default output filename is translated_{step}.txt'
-    )
-    group.add_argument(
-        '--order-output',
-        default=False,
-        action='store_true',
-        help='Whether to print the translated strings in the original dataset ordering'
-    )
-    group.add_argument(
-        '--gold-annotations',
-        default=False,
-        action='store_true',
-        help='Whether to use gold annotations rather than have the network predict the annotations'
-    )
-    group.add_argument(
-        '--annotations-only',
-        default=False,
-        action='store_true',
-        help='Whether to only output annotations rather than the predicted translation'
-    )
-    group.add_argument(
-        '--timed',
-        type=int,
-        default=0,
-        const=1,
-        nargs='?',
-        help='How many times to run translation to gauge the translation speed'
-    )
-    group.add_argument(
-        '--off-diagonal-threshold-type',
-        type=str,
-        default='number',
-        choices=['offset', 'prob', 'number'],
-        help='The type of threshold to determine if the attention of this sentence is considered off-diagonal.'
-             'offset puts sentences whose argmax offset exceed threshold number into off-diagonal category,'
-             'prob puts sentences whose argmax prob among off diagonal words exceed threshould number into off-diagonal category,'
-             'number puts sentences whose number of argmax that is off diagonal exceed the threshold into off-diagonal category.'
-             'Only for source attention.'
-    )
-    group.add_argument(
-        '--off-diagonal-threshold-param',
-        type=float,
-        default=3,
-        help='The type of threshold to determine if the attention of this sentence is considered off-diagonal.'
-             'Only for source attention'
-    )
-    group.add_argument(
-        '--off-diagonal-distance-threshold',
-        type=float,
-        default=2,
-        help='How far away from the diagonal do we consider it as off-diagonal'
-    )
-    group.add_argument(
-        '--off-diagonal-bins',
-        type=int,
-        default=5,
-        help='Bins for off-diagonal analysis'
-    )
-
-    group.set_defaults(gold_p=0)
-    group.set_defaults(dropout_p=0)
-
-    return group
-
-
-def add_probe_args(parser):
-    ''' Defines the generation specific arguments '''
-    group = ArgGroup(parser.add_argument_group('Probe'))
-    group.add_argument(
-        '--beam-width',
-        default=4,
-        type=int,
-        help='Default beam width for beam search decoder.'
-    )
-    group.add_argument(
-        '--disable-cache',
-        default=False,
-        action='store_true',
-        help='Whether to disable the use of caching in beam search decoder'
-    )
-    group.add_argument(
-        '--length-penalty',
-        type=float,
-        default=0.6,
-        help='Divides the hypothesis log probabilities in beam search by length^<length penalty>.'
-    )
-    group.add_argument(
-        '--length-basis',
-        type=str,
-        default=None,
-        choices=['input_lens', 'target_lens'],
-        help='The basis for max decoding length. Default of None implies no basis, i.e. 0.'
-    )
-    group.add_argument(
-        '--max-decode-length',
-        default=50,
-        type=int,
-        help='How many tokens beyond the length basis to allow decoding to continue.'
-    )
-    group.add_argument(
-        '--output-directory',
-        type=str,
-        default='/tmp/synst/output',
-        help='Where to store translated strings'
-    )
-    group.add_argument(
-        '--stats-directory',
-        type=str,
-        default='/tmp/synst/stats',
-        help='Where to store stats'
     )
     group.add_argument(
         '--output-filename',
@@ -1310,13 +566,6 @@ def parse_args(argv=None):
         the existing experiment. If a filename ending with guid it is provided, it will wait \
         until the file exists, then start tracking that experiment.'
     )
-
-    parser.add_argument(
-        '--project-name',
-        default='probe-transformer',
-        type=str,
-        help='Specify where to store in comet'
-    )
     parser.add_argument(
         '-v',
         '--verbose',
@@ -1331,10 +580,7 @@ def parse_args(argv=None):
 
     model_groups = {}
     model_groups['transformer'] = add_transformer_args(parser)
-    model_groups['probe_transformer'] = add_probe_transformer_args(parser)
-    model_groups['new_transformer'] = add_new_transformer_args(parser)
     model_groups['parse_transformer'] = add_parse_transformer_args(parser)
-    model_groups['probe_new_transformer'] = add_new_transformer_args(parser)
 
     subparsers = parser.add_subparsers()
     train_parser = subparsers.add_parser('train', help='Train a model')
@@ -1343,15 +589,6 @@ def parse_args(argv=None):
         action=Trainer,
         action_type='train',
         action_config=groups['train'],
-        shuffle=True
-    )
-
-    probe_train_parser = subparsers.add_parser('probe_train', help='Train a model while probing')
-    groups['probe_train'] = add_probe_train_args(probe_train_parser)
-    probe_train_parser.set_defaults(
-        action=ProbeTrainer,
-        action_type='probe_train',
-        action_config=groups['probe_train'],
         shuffle=True
     )
 
@@ -1364,48 +601,12 @@ def parse_args(argv=None):
         shuffle=False
     )
 
-    probe_evaluate_parser = subparsers.add_parser('probe_evaluate', help='Probe Evaluate a model')
-    groups['probe_evaluate'] = add_probe_evaluate_args(probe_evaluate_parser)
-    probe_evaluate_parser.set_defaults(
-        action=ProbeEvaluator,
-        action_type='probe_evaluate',
-        action_config=groups['probe_evaluate'],
-        shuffle=False
-    )
-
     translate_parser = subparsers.add_parser('translate', help='Translate from a model')
     groups['translate'] = add_translate_args(translate_parser)
     translate_parser.set_defaults(
         action=Translator,
         action_type='translate',
         action_config=groups['translate'],
-        shuffle=False
-    )
-
-    probe_new_translate_parser = subparsers.add_parser('probe_new_translate', help='Probe New Translate from a model')
-    groups['probe_new_translate'] = add_translate_args(probe_new_translate_parser)
-    probe_new_translate_parser.set_defaults(
-        action=ProbeNewTranslator,
-        action_type='probe_new_translate',
-        action_config=groups['probe_new_translate'],
-        shuffle=False
-    )
-
-    probe_off_diagonal_parser = subparsers.add_parser('probe_off_diagonal', help='Probe the performance of sentences where learned attention looks off diagonal')
-    groups['probe_off_diagonal'] = add_probe_off_diagonal_args(probe_off_diagonal_parser)
-    probe_off_diagonal_parser.set_defaults(
-        action=ProbeOffDiagonal,
-        action_type='probe_off_diagonal',
-        action_config=groups['probe_off_diagonal'],
-        shuffle=False
-    )
-
-    probe_parser = subparsers.add_parser('probe', help='Probe a model')
-    groups['probe'] = add_probe_args(probe_parser)
-    probe_parser.set_defaults(
-        action=Prober,
-        action_type='probe',
-        action_config=groups['probe'],
         shuffle=False
     )
 
@@ -1460,7 +661,7 @@ Commit your changes first, then try again.''')
 
     args.experiment = experiment_type(
         *experiment_args,
-        project_name=args.project_name,
+        project_name='synst',
         workspace='umass-nlp',
         disabled=not args.track,
         auto_metric_logging=False,
@@ -1514,7 +715,7 @@ Commit your changes first, then try again.''')
     if args.action_type == 'evaluate':
         args.action_config.average_checkpoints = args.average_checkpoints
 
-    if (args.action_type in ['translate', 'probe_new_translate', 'probe_off_diagonal']) and args.num_devices > 1:
+    if args.action_type == 'translate' and args.num_devices > 1:
         # Caching is currently not thread-safe
         args.action_config.disable_cache = True
 

@@ -2,7 +2,6 @@
 A module which implements various attention mechanisms
 '''
 import torch
-import time
 from torch import nn
 from torch.nn import functional as F
 
@@ -64,7 +63,6 @@ class MultiHeadedAttention(nn.Module):
 
     def attention(self, values, keys, queries, key_mask=None, mask=None):
         ''' Scaled dot product attention with optional masks '''
-        # start = time.time()
         logits = self.scale * torch.bmm(queries, keys.transpose(2, 1))
         if mask is not None:
             logits += mask
@@ -76,14 +74,10 @@ class MultiHeadedAttention(nn.Module):
             logits.masked_fill_(key_mask[:, None, None], float('-inf'))
             logits = logits.view(logits_shape)
 
-        attn_weights = F.softmax(logits, dim=-1)
-
-        # print("time", time.time() - start)
-        attended = torch.bmm(attn_weights, values)
+        attended = torch.bmm(F.softmax(logits, dim=-1), values)
 
         # By this point the values, keys, and queries all have B * H as their first dimension
         batch_size = queries.shape[0] // self.num_heads
-
         return attended.view(
             batch_size,
             self.num_heads,
@@ -99,17 +93,6 @@ class MultiHeadedAttention(nn.Module):
                 key_mask=None, attention_mask=None, num_queries=0):
         ''' Forward pass of the attention '''
         # pylint:disable=unbalanced-tuple-unpacking
-        # print("multiheaded attention")
-        # print("values", values.shape)
-        #
-        # print("start forward in multihead attention")
-        # print("============================")
-        # print("values", values)
-        # print("keys", keys)
-        # print("queries", queries)
-        print("key_mask", key_mask)
-        print("attention_mask", attention_mask)
-        print("num_queries", num_queries)
         if same_tensor(values, keys, queries):
             values, keys, queries = self.project(values, chunks=3)
         elif same_tensor(values, keys):

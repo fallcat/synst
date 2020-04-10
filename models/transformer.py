@@ -184,7 +184,9 @@ class TransformerDecoderLayer(nn.Module):
     def mask(self, inputs):
         '''
         Get a self-attention mask
+
         The mask will be of shape [T x T] containing elements from the set {0, -inf}
+
         Input shape:  (B x T x E)
         Output shape: (T x T)
         '''
