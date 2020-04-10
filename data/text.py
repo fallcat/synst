@@ -3,7 +3,7 @@ Base for text datasets.
 '''
 import collections
 from itertools import chain
-import pdb
+
 import torch
 from torch import nn
 from torch.utils.data import Dataset
@@ -24,7 +24,6 @@ class TextDataset(Dataset):
         self.skipped = 0
         self.token2id = {}
         self.id2token = []
-        self.word_align_stats = []
         self.split = split
         self.config = config
         self.reserved_range = len(self.id2token)
@@ -96,8 +95,6 @@ class TextDataset(Dataset):
         ''' Collate the data into a batch '''
         if not data:
             return []
-        if data == [()]:
-            return []
 
         def make_batch(ids, examples):
             ''' Make a batch given a dict of lists with inputs and targets '''
@@ -118,25 +115,16 @@ class TextDataset(Dataset):
 
         def sorter(examples, key='input'):
             ''' Sort the list of examples based on the length of the sequence for the given key '''
-            #print(examples)
-            #print(examples[0])
-            #print(examples[1])
-            #pdb.set_trace()
-            ret = sorted(examples, key=lambda x: len(x[1][key]), reverse=True)
-            return ret
+            return sorted(examples, key=lambda x: len(x[1][key]), reverse=True)
 
         if any(
                 isinstance(d, tuple) and len(d) and
                 isinstance(d[0], collections.Sequence)
                 for d in data
         ):
-            try:
-                if sort:
-                    # Sort within each chunk
-                    data = [sorter(d) for d in data]
-            except:
-                print(data)
-                exit(-1)
+            if sort:
+                # Sort within each chunk
+                data = [sorter(d) for d in data]
 
             ids, examples = zip(*(flatten(d) for d in data))
             ids = chain.from_iterable(ids)
@@ -146,12 +134,8 @@ class TextDataset(Dataset):
             batch['chunk_sizes'] = [len(l) for l in data]
             return batch
         else:
-            try:
-                if sort:
-                    data = sorter(data)
-            except:
-                print(data)
-                exit(-1)
+            if sort:
+                data = sorter(data)
 
             return make_batch(*flatten(data))
 
@@ -184,6 +168,7 @@ class TextDataset(Dataset):
 
         self.load_vocab()
         self.load_text()
+
         return self
 
     @property

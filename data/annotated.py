@@ -3,14 +3,12 @@ Data loader for annotated text datasets.
 '''
 import os
 import re
-import pdb
 import enum
 import glob
 import array
 import random
 import shutil
 import struct
-import pickle
 import tempfile
 from collections import Counter
 from contextlib import ExitStack
@@ -56,7 +54,6 @@ class AnnotatedTextDataset(TextDataset):
     ''' Class that encapsulates an annotated text dataset '''
     NAME = ''
     LANGUAGE_PAIR = ('en', 'en')
-    WORD_COUNT = (4215814, 4186988)
 
     URLS = []
     RAW_SPLITS = {}
@@ -96,12 +93,6 @@ class AnnotatedTextDataset(TextDataset):
     def target_language(self):
         ''' Return the target language '''
         return type(self).LANGUAGE_PAIR[0 if self.swap else 1]
-
-    @property
-    def word_count_ratio(self):
-        ''' Return the word count ratio between source and target languages '''
-        return type(self).WORD_COUNT[1] / type(self).WORD_COUNT[0] if self.swap \
-            else type(self).WORD_COUNT[0] / type(self).WORD_COUNT[1]
 
     @property
     def mask_idx(self):
@@ -397,7 +388,6 @@ class AnnotatedTextDataset(TextDataset):
 
     def preprocess(self):
         ''' Do any data preprocessing if needed '''
-        #pdb.set_trace()
         if (
                 all(os.path.exists(p) for p in self.data_paths) and
                 all(os.path.exists(p) for p in self.vocab_paths)
@@ -619,7 +609,5 @@ class AnnotatedTextDataset(TextDataset):
                 ):
                     example['source_annotation'] = source_annotation_data_file.readline()
                     example['target_annotation'] = target_annotation_data_file.readline()
-                
-                if example == {}:
-                    return
+
                 self.add_datum(example)

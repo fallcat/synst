@@ -1,7 +1,6 @@
 '''
 Utilities useful for datasets
 '''
-import pdb
 import os
 from functools import partial
 from urllib.request import urlretrieve
@@ -100,7 +99,6 @@ def download_from_google_drive(filepath, url):
 
 def get_dataloader(config, worker_init_fn=None, pin_memory=True, num_devices=1, shuffle=False):
     ''' Utility function that gets a data loader '''
-    #pdb.set_trace()
     dataset = config.dataset(config, split=config.split).load()
     if config.batch_method == 'token':
         # Calculate batch sizes for each device. Potentially reduce the batch size on device 0 as
