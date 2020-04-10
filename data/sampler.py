@@ -8,7 +8,6 @@ from torch.utils.data import Sampler
 
 from utils import ceildiv
 
-np.random.seed(42)
 
 class TokenBucket(object):
     ''' A bucket of sequence ids '''

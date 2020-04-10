@@ -12,8 +12,8 @@ import torch
 
 from data import DATASETS
 from models import MODELS
-from actions import Trainer, Evaluator, Translator, Pass, Prober, ProbeTrainer, ProbeEvaluator, ProbeNewTranslator, \
-    ProbeOffDiagonal, IterativeTrainer, OracleTranslator
+from actions import Trainer, Evaluator, Translator, Pass, \
+    IterativeTrainer, OracleTranslator
 from utils import get_version_string, get_random_seed_fn
 
 
@@ -1609,30 +1609,12 @@ def parse_args(argv=None):
         shuffle=True
     )
 
-    probe_train_parser = subparsers.add_parser('probe_train', help='Train a model while probing')
-    groups['probe_train'] = add_probe_train_args(probe_train_parser)
-    probe_train_parser.set_defaults(
-        action=ProbeTrainer,
-        action_type='probe_train',
-        action_config=groups['probe_train'],
-        shuffle=True
-    )
-
     evaluate_parser = subparsers.add_parser('evaluate', help='Evaluate a model')
     groups['evaluate'] = add_evaluate_args(evaluate_parser)
     evaluate_parser.set_defaults(
         action=Evaluator,
         action_type='evaluate',
         action_config=groups['evaluate'],
-        shuffle=False
-    )
-
-    probe_evaluate_parser = subparsers.add_parser('probe_evaluate', help='Probe Evaluate a model')
-    groups['probe_evaluate'] = add_probe_evaluate_args(probe_evaluate_parser)
-    probe_evaluate_parser.set_defaults(
-        action=ProbeEvaluator,
-        action_type='probe_evaluate',
-        action_config=groups['probe_evaluate'],
         shuffle=False
     )
 
@@ -1651,33 +1633,6 @@ def parse_args(argv=None):
         action=OracleTranslator,
         action_type='oracle_translate',
         action_config=groups['oracle_translate'],
-        shuffle=False
-    )
-
-    probe_new_translate_parser = subparsers.add_parser('probe_new_translate', help='Probe New Translate from a model')
-    groups['probe_new_translate'] = add_translate_args(probe_new_translate_parser)
-    probe_new_translate_parser.set_defaults(
-        action=ProbeNewTranslator,
-        action_type='probe_new_translate',
-        action_config=groups['probe_new_translate'],
-        shuffle=False
-    )
-
-    probe_off_diagonal_parser = subparsers.add_parser('probe_off_diagonal', help='Probe the performance of sentences where learned attention looks off diagonal')
-    groups['probe_off_diagonal'] = add_probe_off_diagonal_args(probe_off_diagonal_parser)
-    probe_new_translate_parser.set_defaults(
-        action=ProbeOffDiagonal,
-        action_type='probe_off_diagonal',
-        action_config=groups['probe_off_diagonal'],
-        shuffle=False
-    )
-
-    probe_parser = subparsers.add_parser('probe', help='Probe a model')
-    groups['probe'] = add_probe_args(probe_parser)
-    probe_parser.set_defaults(
-        action=Prober,
-        action_type='probe',
-        action_config=groups['probe'],
         shuffle=False
     )
 
