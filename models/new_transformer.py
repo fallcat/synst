@@ -373,8 +373,8 @@ class NewTransformer(nn.Module):
                                             right_pad(encoded, dim=1, count=longer_length - encoded.shape[1])), -1)
             combined_embedding = self.concat_enc_dec(combined_embedding)
 
-        print("decoded_embedding", decoded_embedding.shape)
-        print("encoded_embedding", combined_embedding.shape)
+        # print("decoded_embedding", decoded_embedding.shape)
+        # print("encoded_embedding", combined_embedding.shape)
 
         decoded = {
             'cache': cache,
