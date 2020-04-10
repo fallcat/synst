@@ -7,8 +7,10 @@ from itertools import chain
 import torch
 from torch import nn
 from torch.utils.data import Dataset
+import utils
 
 import metrics
+import pdb
 
 
 PAD = '<PAD>'
@@ -91,6 +93,17 @@ class TextDataset(Dataset):
             values, batch_first=True, padding_value=self.padding_idx)
         batch[field_name + '_lens'] = torch.LongTensor([len(sequence) for sequence in values])
 
+    def collate_fields(self, batch, field_names, values):
+        ''' Collate a specific field '''
+        batch_size = int(len(values) / len(field_names))
+        temp_tensor = values[0].new_ones(max([v.size(0) for v in values]) + 1)
+        padded_all = nn.utils.rnn.pad_sequence([temp_tensor] + values, batch_first=True, padding_value=self.padding_idx)
+        padded_all = utils.split_or_chunk(padded_all[1:], len(field_names))
+
+        for i, field_name in enumerate(field_names):
+            batch[field_name + 's'] = padded_all[i]
+            batch[field_name + '_lens'] = torch.LongTensor([len(sequence) for sequence in values[i * batch_size:(i + 1) * batch_size]])
+
     def collate(self, data, sort=False):
         ''' Collate the data into a batch '''
         if not data:
@@ -100,8 +113,16 @@ class TextDataset(Dataset):
             ''' Make a batch given a dict of lists with inputs and targets '''
             # must store off lengths before padding sequence
             batch = {'example_ids': ids}
-            for key, values in examples.items():
-                self.collate_field(batch, key, values)
+            if self.config.same_length:
+                keys = []
+                values = []
+                for key, value in examples.items():
+                    keys.append(key)
+                    values.extend(value)
+                self.collate_fields(batch, keys, values)
+            else:
+                for key, values in examples.items():
+                    self.collate_field(batch, key, values)
 
             return batch
 
@@ -115,7 +136,13 @@ class TextDataset(Dataset):
 
         def sorter(examples, key='input'):
             ''' Sort the list of examples based on the length of the sequence for the given key '''
-            return sorted(examples, key=lambda x: len(x[1][key]), reverse=True)
+            try:
+                return sorted(examples, key=lambda x: len(x[1][key]), reverse=True)
+            except:
+                print("hi", len(examples))
+                print(examples)
+                print(data)
+                pdb.set_trace()
 
         if any(
                 isinstance(d, tuple) and len(d) and

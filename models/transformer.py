@@ -3,7 +3,7 @@ A module which implements the basic Transformer
 '''
 import uuid
 import threading
-
+import pdb
 import torch
 from torch import nn
 
@@ -149,7 +149,7 @@ class TransformerDecoderLayer(nn.Module):
             # If not caching, use the full sequence and ensure an appropriate causal mask
             residual = state
             kwargs['key_mask'] = mask
-            kwargs['attention_mask'] = self.mask(state)
+            # kwargs['attention_mask'] = self.mask(state)
 
         state = self.self_attention(
             residual, # residual
@@ -161,7 +161,7 @@ class TransformerDecoderLayer(nn.Module):
         if self.causal and cache is not None:
             kwargs['num_queries'] = self.span
 
-        state = self.source_attention(
+        state = self.source_attention( # TODO: dim:4 --> dim:3
             state, # residual
             source, source, state, **kwargs # passed to multiheaded attention
         )
@@ -286,9 +286,13 @@ class Transformer(nn.Module):
 
     def forward(self, batch): # pylint:disable=arguments-differ
         ''' A batch of inputs and targets '''
+        batch_tgt = right_shift(right_shift(batch['targets']), shift=self.span - 1, fill=self.sos_idx)
+        encoded, decoded_embedding, mask_both = self.encode(batch['inputs'][:,:-1], batch_tgt)
         decoded = self.decode(
-            self.encode(batch['inputs']),
-            right_shift(right_shift(batch['targets']), shift=self.span - 1, fill=self.sos_idx),
+            encoded,
+            batch_tgt, 
+            decoded_embedding,
+            mask=mask_both
         )
 
         logits = decoded['logits']
@@ -299,18 +303,28 @@ class Transformer(nn.Module):
 
         return smoothed_nll, nll
 
-    def encode(self, inputs):
+    def encode(self, inputs, targets):
         ''' Encode the inputs '''
         encoded = {
             'state': self.embed(inputs, self.embedding),
             'mask': inputs.eq(self.padding_idx)
         }
+
+        new_targets, encoded_embedding, mask_src, mask_tgt, mask_both = self.prepare_masked_data(encoded, inputs, targets)
+
+        decoded_embedding = self.embed(new_targets, self.embedding)
+
+        encoded = {
+            'state' : encoded_embedding + decoded_embedding,
+            'mask': mask_both
+        }
+
         for encoder in self.encoders:
             encoded = encoder(encoded)
 
-        return encoded
+        return encoded, decoded_embedding, mask_both
 
-    def decode(self, encoded, targets, decoders=None, embedding=None, cache=None, mask=None):
+    def decode(self, encoded, targets, decoded_embedding, decoders=None, embedding=None, cache=None, mask=None):
         ''' Decode the encoded sequence to the targets '''
         if decoders is None:
             decoders = self.decoders
@@ -320,8 +334,8 @@ class Transformer(nn.Module):
 
         decoded = {
             'cache': cache,
-            'state': self.embed(targets, embedding),
-            'mask': targets.eq(self.padding_idx) if mask is None else mask
+            'state': decoded_embedding, 
+            'mask': mask
         }
         for decoder in decoders:
             decoded = decoder(decoded, encoded)
@@ -331,11 +345,93 @@ class Transformer(nn.Module):
         if cache is not None:
             state = state[:, -self.span:]
 
+        sentence_length = state.shape[1]
+        batch_size = int(state.shape[0]/sentence_length)
+        state = state.view(batch_size,
+                           sentence_length,
+                           sentence_length,
+                           -1)[:, range(sentence_length), range(sentence_length), :]
+
         return {
             'cache': decoded.get('cache'),
             'logits': embedding(state, transpose=True).transpose(2, 1),  # transpose to B x C x ...
         }
 
+    def prepare_masked_data(self, encoded, inputs, targets):
+        """
+            return:
+
+                new_targets: (B x L) x L
+                encoded_embedding: (BxL) x L x D 
+                mask_src : B x L
+                mask_tgt : B x L
+                mask_both: (B x L) x L
+
+        """
+        attention_mask = self.mask(targets)  # (T x T)
+        batch_size, sentence_length = targets.shape  # (B x T)
+        new_targets = targets.unsqueeze(1).expand(batch_size,
+                                                  sentence_length,
+                                                  sentence_length).contiguous() * attention_mask
+
+        new_targets = new_targets.view(batch_size * sentence_length,
+                                       sentence_length)
+        
+        new_inputs = inputs.unsqueeze(1).expand(batch_size,
+                                                sentence_length,
+                                                sentence_length).contiguous()
+
+        new_inputs = new_inputs.view(batch_size * sentence_length,
+                                     sentence_length)
+
+        encoded_embedding = encoded['state'].unsqueeze(2).expand(batch_size,
+                                                                 sentence_length,
+                                                                 sentence_length,
+                                                                 -1).contiguous().view(batch_size * sentence_length,
+                                                                                       sentence_length,
+                                                                                       -1)
+        mask_src = inputs.eq(self.padding_idx)
+        mask_tgt = targets.eq(self.padding_idx)
+        mask_both = mask_src | mask_tgt
+        mask_both = mask_both.unsqueeze(1).expand(batch_size,
+                                                sentence_length,
+                                                sentence_length).contiguous().view(batch_size * sentence_length, sentence_length)
+
+
+        return new_targets, encoded_embedding, mask_src, mask_tgt, mask_both
+
+    _masks = threading.local()
+
+    def mask(self, inputs):
+        '''
+        inputs: B x T
+
+        Get a self-attention mask
+
+        The mask will be of shape [T x T] containing elements from the set {1, 0}
+
+        Input shape:  (B x T)
+        Output shape: (T x T)
+        '''
+        # if not self.causal:
+        #     return None
+
+        dim = inputs.shape[1]
+        device = inputs.device
+        mask_store = TransformerDecoderLayer._masks.__dict__
+        if device not in mask_store:
+            mask = inputs.new_zeros((dim, dim))
+            mask_store[device] = triu(mask, 1, self.span, self.span, lower_tri=1)
+
+        mask = mask_store[device]
+        if mask.shape[0] < dim:
+            mask = mask.resize_(dim, dim).fill_(0)
+            mask_store[device] = triu(mask, 1, self.span, self.span, lower_tri=1)
+            mask = mask_store[device]
+
+        return mask[None, :dim, :dim]
+
     def embed(self, inputs, token_embedding):
         ''' Embed the given inputs '''
         return self.dropout(token_embedding(inputs) + self.position_embedding(inputs))
+

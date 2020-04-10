@@ -102,7 +102,12 @@ def add_transformer_args(parser):
         default=1,
         help='How many tokens to decode at once'
     )
-
+    group.add_argument(
+        '--same-length',
+        default=False,
+        action='store_true',
+        help=''
+    )
     return group
 
 
@@ -256,7 +261,12 @@ def add_data_args(parser):
         choices=['train', 'valid', 'test', 'dev'],
         help='Location for the preprocessed data'
     )
-
+    group.add_argument(
+        '--same-length',
+        default=False,
+        action='store_true',
+        help=''
+    )
     return group
 
 
