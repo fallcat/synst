@@ -11,8 +11,6 @@ class WMTEnDeDataset(AnnotatedTextDataset):
     ''' Class that encapsulates the WMT En-De dataset '''
     NAME = 'wmt'
     LANGUAGE_PAIR = ('en', 'de')
-    # WORD_COUNT = (128379994, 133122832)
-    WORD_COUNT = (1.0230453807056377, 1)
 
     URLS = [
         (
