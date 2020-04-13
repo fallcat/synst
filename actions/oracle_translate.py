@@ -117,15 +117,16 @@ class OracleTranslator(object):
 
                     target_text = ' '.join(
                         self.dataset.decode(batch['targets'][i].numpy().tolist(), trim=not verbose))
-                    bleu = sacrebleu.corpus_bleu([decoded], [[target_text]], tokenize="none").score
+                    #bleu = sacrebleu.corpus_bleu([decoded], [[target_text]], tokenize="none").score
 
-                    ordered_outputs.append((example_id, f'{decoded}', bleu))
-
+                    #ordered_outputs.append((example_id, f'{decoded}', bleu))
+                    ordered_outputs.append((example_id, f'{decoded}'))
 
             with open(filepath, 'w') as output_file:
-                for _, outputs, bleu in sorted(ordered_outputs,
+                for _, outputs in sorted(ordered_outputs,
                                          key=lambda x: x[0]):  # pylint:disable=consider-using-enumerate
-                    output_file.write(outputs + "\t" + str(bleu) + "\n")
+                    #output_file.write(outputs + "\t" + str(bleu) + "\n")
+                    output_file.write(outputs+'\n')
 
     def translate_all(self, epoch, verbose=0):
         ''' Generate all predictions from the dataset '''
