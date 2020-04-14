@@ -108,6 +108,12 @@ def add_transformer_args(parser):
         action='store_true',
         help=''
     )
+    group.add_argument(
+        '--concat-emb',
+        default=False,
+        action='store_true',
+        help='whether to concatenate src embedding and tgt emb in the 1st layer of encoder'
+    )
     return group
 
 

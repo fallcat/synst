@@ -239,11 +239,16 @@ class Transformer(nn.Module):
             reduction='none'
         )
 
+        self.concat_emb = config.concat_emb
+        if self.concat_emb:
+            self.proj_enc = nn.Linear(config.embedding_size*2, config.embedding_size)
+
     @classmethod
     def create_encoders(cls, config):
         ''' Create the transformer encoders '''
         kwargs = {'dropout_p': config.dropout_p}
-        args = [config.num_heads, config.embedding_size, config.hidden_dim]
+        emb_size = config.embedding_size if not config.concat_emb else 2 * config.embedding_size
+        args = [config.num_heads, emb_size, config.hidden_dim]
         return nn.ModuleList([
             TransformerEncoderLayer(*args, **kwargs)
             for _ in range(config.num_layers)
@@ -284,10 +289,19 @@ class Transformer(nn.Module):
         if 'embeddings' in modules:
             self.embedding.reset_parameters()
 
+        if hasattr(self, 'proj_enc'):
+            gain = nn.init.calculate_gain('linear')
+            nn.init.xavier_uniform_(self.proj_enc.weight, gain)
+            nn.init.constant_(self.proj_enc.bias, 0.)
+
     def forward(self, batch): # pylint:disable=arguments-differ
         ''' A batch of inputs and targets '''
         batch_tgt = right_shift(right_shift(batch['targets']), shift=self.span - 1, fill=self.sos_idx)
         encoded, decoded_embedding, mask_both = self.encode(batch['inputs'][:,:-1], batch_tgt)
+
+        if self.concat_emb:
+            encoded['state'] = self.proj_enc(encoded['state'])
+
         decoded = self.decode(
             encoded,
             batch_tgt, 
@@ -314,8 +328,12 @@ class Transformer(nn.Module):
 
         decoded_embedding = self.embed(new_targets, self.embedding)
 
+        if self.concat_emb:
+            encoder_state = torch.cat((encoded_embedding, decoded_embedding), 2)
+        else:
+            encoder_state = encoded_embedding + decoded_embedding
         encoded = {
-            'state' : encoded_embedding + decoded_embedding,
+            'state' : encoder_state,
             'mask': mask_both
         }
 
