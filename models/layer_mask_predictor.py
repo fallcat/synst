@@ -160,7 +160,6 @@ class LayerMaskPredictor(nn.Module):
                 if l < length:
                     b = i
                     break
-            print("length", l, "bin", b)
             return random.choice(self.combs_by_bin[b])
 
         if self.lmp_type == "ensemble":

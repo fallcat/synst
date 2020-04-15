@@ -600,7 +600,6 @@ class NewTransformer(nn.Module):
             if self.layermask_type == "ensemble":
                 decoded = decoder(decoded, encoded, i, word_embedding, gating_weight=ensemble_layermask[:, len(decoders) + i])
             elif len(raw_layermask.shape) == 1:
-                print("raw_layermask", raw_layermask)
                 if raw_layermask[len(decoders) + i]:
                     decoded = decoder(decoded, encoded, i, word_embedding,
                                       gating_weight=raw_layermask[len(decoders) + i])
