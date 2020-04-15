@@ -43,9 +43,9 @@ class LayerMaskPredictor(nn.Module):
                     self.layermasks = torch.stack([torch.tensor([float(x) for x in list(line.strip())], device=torch.device("cuda")) for line in layermask_file.readlines()])
                     print("Using layermasks from file, layermasks using: ", self.layermasks)
         elif lmp_type == "lengths":
-            all_combs = sum([list(combinations(range(num_layers), k)) for k in range(1, num_layers + 1)], [])
-            all_combs = [x for x in all_combs if any(y >= num_layers // 2 for y in x)]
-            all_combs_array = np.zeros((len(all_combs), num_layers))
+            all_combs = sum([list(combinations(range(num_layers * 2), k)) for k in range(1, num_layers * 2 + 1)], [])
+            all_combs = [x for x in all_combs if any(y >= num_layers for y in x)]
+            all_combs_array = np.zeros((len(all_combs), num_layers * 2))
             for i, comb in enumerate(all_combs):
                 all_combs_array[i, np.array(comb)] = 1
             combs_by_k = defaultdict(list)
@@ -58,7 +58,7 @@ class LayerMaskPredictor(nn.Module):
             bin_width = self.num_layers / bins
             self.combs_by_bin = defaultdict(list)
             for k in combs_by_k:
-                self.combs_by_bin[np.floor(k / bin_width)].extend(combs_by_k[k])
+                self.combs_by_bin[np.floor((k - 1) / bin_width)].extend(combs_by_k[k])
         elif "ensemble" in lmp_type:
             if layermask_file is None:
                 raise Exception("No layermask found for ensemble")
