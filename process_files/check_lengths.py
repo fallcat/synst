@@ -14,7 +14,7 @@ with open(file_path) as file:
 pp = pprint.PrettyPrinter(indent=4)
 pp.pprint(lengths)
 
-bins = 5
+bins = 6
 bins_list = []
 curr_bin = 0
 max_sentences = count/bins
@@ -25,3 +25,4 @@ for key in sorted(lengths.keys()):
         curr_bin = 0
 
 print(bins_list)
+# [15, 22, 30, 42]

@@ -8,6 +8,7 @@ from itertools import combinations
 from torch.nn import BCELoss
 from torch import nn
 from torch.distributions import Bernoulli
+from collections import defaultdict
 
 
 class LayerMaskPredictor(nn.Module):
@@ -41,6 +42,15 @@ class LayerMaskPredictor(nn.Module):
                 with open(layermask_file) as layermask_file:
                     self.layermasks = torch.stack([torch.tensor([float(x) for x in list(line.strip())], device=torch.device("cuda")) for line in layermask_file.readlines()])
                     print("Using layermasks from file, layermasks using: ", self.layermasks)
+        elif lmp_type == "lengths":
+            all_combs = sum([list(combinations(range(num_layers), k)) for k in range(1, num_layers + 1)], [])
+            all_combs = [x for x in all_combs if any(y >= num_layers // 2 for y in x)]
+            all_combs_array = np.zeros((len(all_combs), num_layers))
+            for i, comb in enumerate(all_combs):
+                all_combs_array[i, np.array(comb)] = 1
+            self.all_combs = torch.tensor(all_combs_array)
+            with open(layermask_file) as layermask_file:
+                self.cut_offs = layermask_file.readline().strip().split()
         elif "ensemble" in lmp_type:
             if layermask_file is None:
                 raise Exception("No layermask found for ensemble")
@@ -134,6 +144,10 @@ class LayerMaskPredictor(nn.Module):
             else:
                 indices = torch.multinomial(torch.ones(self.layermasks.size(0)), batch_size, replacement=True)
                 return self.layermasks[indices]
+
+        if self.lmp_type == "lenghts":
+            l = lmp_input.shape[1]
+
 
         if self.lmp_type == "ensemble":
             return self.layermasks  # .unsqueeze(0).expand(batch_size, -1)
