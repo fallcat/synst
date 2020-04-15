@@ -506,11 +506,14 @@ class NewTransformer(nn.Module):
         nll = self.cross_entropy(logits, targets).sum(dims[:-1])
         smoothed_nll = self.label_smoothing(logits, targets).sum(dims)
 
-        sum_layermask = raw_layermask.sum(dim=1) # [bs, ]
+        try:
+            sum_layermask = raw_layermask.sum(dim=1).mean() # [bs, ]
+        except:
+            sum_layermask = raw_layermask.sum(dim=0)
 
         loss = smoothed_nll
 
-        return loss, nll, None, sum_layermask.mean()
+        return loss, nll, None, sum_layermask
 
     def encode(self, inputs, raw_layermask=None):
         ''' Encode the inputs '''
