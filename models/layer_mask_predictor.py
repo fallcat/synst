@@ -53,8 +53,8 @@ class LayerMaskPredictor(nn.Module):
                 k = np.sum(comb)
                 combs_by_k[k].append(torch.tensor(comb))
             with open(layermask_file) as layermask_file:
-                self.cut_offs = [int(x) for x in layermask_file.readline().strip().split()]
-            bins = len(self.cut_offs) + 1
+                self.cut_offs = torch.tensor([int(x) for x in layermask_file.readline().strip().split()]).unsqueeze(0)
+            bins = self.cut_offs.shape[1] + 1
             bin_width = 2 * num_layers / bins
             self.combs_by_bin = defaultdict(list)
             for k in combs_by_k:
@@ -155,14 +155,12 @@ class LayerMaskPredictor(nn.Module):
                 indices = torch.multinomial(torch.ones(self.layermasks.size(0)), batch_size, replacement=True)
                 return self.layermasks[indices]
 
+        print("lmp_input_mask", lmp_input_mask)
         if self.lmp_type == "lengths":
-            l = lmp_input.shape[1]
-            b = len(self.cut_offs)
-            for i, length in enumerate(self.cut_offs):
-                if l < length:
-                    b = i
-                    break
-            return random.choice(self.combs_by_bin[b])
+            cut_offs = ((self.cut_offs - lmp_input_mask.where(lmp_input_mask == 0).sum(1).unsqueeze(1)) >= 0)
+            bins = [(cut_off == 1).nonzero()[0] for cut_off in cut_offs]
+            print("bins", bins)
+            return torch.stack([random.choice(self.combs_by_bin[b]) for b in bins])
 
         if self.lmp_type == "ensemble":
             return self.layermasks  # .unsqueeze(0).expand(batch_size, -1)
