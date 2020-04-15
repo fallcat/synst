@@ -25,4 +25,5 @@ for key in sorted(lengths.keys()):
         curr_bin = 0
 
 print(bins_list)
+# [14, 20, 26, 33, 45]
 # [15, 22, 30, 42]
