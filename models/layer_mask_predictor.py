@@ -58,7 +58,9 @@ class LayerMaskPredictor(nn.Module):
             bin_width = self.num_layers / bins
             self.combs_by_bin = defaultdict(list)
             for k in combs_by_k:
+                print("k", k, "np.floor((k - 1) / bin_width)", np.floor((k - 1) / bin_width))
                 self.combs_by_bin[np.floor((k - 1) / bin_width)].extend(combs_by_k[k])
+            print("self.combs_by_bin", self.combs_by_bin)
         elif "ensemble" in lmp_type:
             if layermask_file is None:
                 raise Exception("No layermask found for ensemble")
