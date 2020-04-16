@@ -158,7 +158,10 @@ class LayerMaskPredictor(nn.Module):
         # print("lmp_input_mask", lmp_input_mask)
         if self.lmp_type == "lengths":
             cut_offs = ((self.cut_offs - (lmp_input_mask == 0).sum(1).unsqueeze(1)) >= 0)
-            bins = [(cut_off == 1).nonzero()[0] for cut_off in cut_offs]
+            try:
+                bins = [(cut_off == 1).nonzero()[0] for cut_off in cut_offs]
+            except:
+                pdb.set_trace()
             # print("bins", bins)
             return torch.stack([random.choice(self.combs_by_bin[b.item()]) for b in bins]).float()
 
