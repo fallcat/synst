@@ -53,7 +53,7 @@ class LayerMaskPredictor(nn.Module):
                 k = np.sum(comb)
                 combs_by_k[k].append(torch.tensor(comb))
             with open(layermask_file) as layermask_file:
-                self.cut_offs = torch.tensor([int(x) for x in layermask_file.readline().strip().split()]).unsqueeze(0)
+                self.cut_offs = torch.tensor([int(x) for x in layermask_file.readline().strip().split()], device=torch.device("cuda")).unsqueeze(0)
             bins = self.cut_offs.shape[1] + 1
             bin_width = 2 * num_layers / bins
             self.combs_by_bin = defaultdict(list)
