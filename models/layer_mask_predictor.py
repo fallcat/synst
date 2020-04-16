@@ -157,7 +157,9 @@ class LayerMaskPredictor(nn.Module):
 
         # print("lmp_input_mask", lmp_input_mask)
         if self.lmp_type == "lengths":
-            cut_offs = ((self.cut_offs - (lmp_input_mask == 0).sum(1).unsqueeze(1)) >= 0)
+            cut_offs = lmp_input.new_zeros((batch_size, self.cut_offs.shape[1] + 1))
+            cut_offs[:, -1] = 1
+            cut_offs[:, :-1] += ((self.cut_offs - (lmp_input_mask == 0).sum(1).unsqueeze(1)) >= 0)
             try:
                 bins = [(cut_off == 1).nonzero()[0] for cut_off in cut_offs]
             except:
