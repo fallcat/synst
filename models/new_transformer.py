@@ -491,7 +491,7 @@ class NewTransformer(nn.Module):
         """
             step_progress = curr_step / max-step
         """
-
+        print("batch", batch)
         encoded, raw_layermask = self.encode(batch['inputs'])
         decoded = self.decode(
             encoded,
