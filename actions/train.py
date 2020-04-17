@@ -313,6 +313,7 @@ class Trainer(object):
         #pdb.set_trace()
         step_progress = float(curr_step) / self.config.max_steps if self.config.linear_tradeoff else 0.0
         self.model.train()
+        print("batch outside", batch)
         loss, nll, reward, sum_layermask = self.model(batch, step_progress=step_progress)
 
         # nn.DataParallel wants to gather rather than doing a reduce_add, so the output here
