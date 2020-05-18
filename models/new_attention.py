@@ -68,6 +68,8 @@ class NewAttention(nn.Module):
         self.attn_ofs_uniq = list(set(attn_config['attn_offset']))
         self.attn_std_uniq = list(set(attn_config['attn_std']))
 
+        self.impl = attn_config['attn_impl']
+
     _attn_indices = threading.local()
 
     def get_attn_indices(self, qlen, attn_offset, device):
