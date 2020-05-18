@@ -90,8 +90,8 @@ class NewAttention(nn.Module):
         attn_cache_store = NewAttention._attn_cache.__dict__
 
         if device not in attn_cache_store or attn_cache_store[device].shape[1] < qlen or attn_cache_store[device].shape[2] < vlen:
-            max_qlen = max(attn_cache_store[device].shape[1], qlen) if device not in attn_cache_store else qlen
-            max_vlen = max(attn_cache_store[device].shape[2], vlen) if device not in attn_cache_store else vlen
+            max_qlen = max(attn_cache_store[device].shape[1], qlen) if device in attn_cache_store else qlen
+            max_vlen = max(attn_cache_store[device].shape[2], vlen) if device in attn_cache_store else vlen
             max_offset, min_offset = max(self.attn_ofs_uniq), min(self.attn_ofs_uniq)
 
             attn_std_uniq = torch.tensor(self.attn_std_uniq).view(-1, 1, 1)
