@@ -112,7 +112,7 @@ class NewAttention(nn.Module):
 
         retrieved = attn_cache_store[device]  # nh x qlen x vlen
         retrieved = retrieved[
-            [[[a]] for a in std_idx], [[[b] for b in list(range(vlen))]], [[list(range(l, r))] for l, r in
+            [[[a]] for a in std_idx], [[[b] for b in list(range(qlen))]], [[list(range(l, r))] for l, r in
                                                                            zip(attn_ofs_l, attn_ofs_r)]]
         if decoder_position == -1:
             return retrieved[:, :qlen, :vlen]
