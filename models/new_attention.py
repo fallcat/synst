@@ -387,10 +387,11 @@ class NewAttention(nn.Module):
                 logits = self.get_attn_cache(attn_std, attn_offset, queries_shape[1], values_shape[1], values.device,
                                              decoder_position=decoder_position)
                 attn_weights = values.new_zeros(batch_size, self.num_heads, queries_shape[1], values_shape[1])
-
-                attn_weights[:, hc_indices] = logits.expand(batch_size, len(hc_indices), queries_shape[1],
+                try:
+                    attn_weights[:, hc_indices] = logits.expand(batch_size, len(hc_indices), queries_shape[1],
                                                             values_shape[1])
-
+                except:
+                    pdb.set_trace()
                 if 'learned' in attn_type:
                     attn_weights[:, learned_indices] = logits_  # bs x learned_indices x L x L
 
