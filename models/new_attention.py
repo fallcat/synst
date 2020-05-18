@@ -108,17 +108,17 @@ class NewAttention(nn.Module):
 
         std_idx = [self.attn_std_uniq.index(i) for i in attn_std]
         attn_ofs_l = np.array([- a for a in attn_offset])
-        attn_ofs_r = np.array([- a + qlen for a in attn_offset])
+        attn_ofs_r = np.array([- a + vlen for a in attn_offset])
 
         retrieved = attn_cache_store[device]  # nh x qlen x vlen
         retrieved = retrieved[
-            [[[a]] for a in std_idx], [[[b] for b in list(range(qlen))]], [[list(range(l, r))] for l, r in
+            [[[a]] for a in std_idx], [[[b] for b in list(range(vlen))]], [[list(range(l, r))] for l, r in
                                                                            zip(attn_ofs_l, attn_ofs_r)]]
         if decoder_position == -1:
             return retrieved[:qlen, :vlen]
 
         else:
-            return retrieved[decoder_position, :qlen].view(1, 1, 1, -1)
+            return retrieved[decoder_position, :vlen].view(1, 1, 1, -1)
 
     def reset_parameters(self):
         ''' Reset parameters using xavier initialization '''
