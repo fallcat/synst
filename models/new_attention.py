@@ -55,7 +55,6 @@ class NewAttention(nn.Module):
         self.attn_impl = attn_config['attn_impl']               # full, conv, index
 
         # Combine projections for multiple heads into a single linear layer for efficiency
-        self.attn_linear_transform = attn_config['attn_weights']
         self.input_weights = None
         if 'learned' in self.attn_type or 'learned' == self.attn_type:
             self.input_weights = nn.Parameter(torch.Tensor(3 * embed_dim, embed_dim))
