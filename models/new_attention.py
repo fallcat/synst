@@ -115,7 +115,7 @@ class NewAttention(nn.Module):
             [[[a]] for a in std_idx], [[[b] for b in list(range(qlen))]], [[list(range(l, r))] for l, r in
                                                                            zip(attn_ofs_l, attn_ofs_r)]]
         if decoder_position == -1:
-            return retrieved[:qlen, :qlen]
+            return retrieved[:qlen, :vlen]
 
         else:
             return retrieved[decoder_position, :qlen].view(1, 1, 1, -1)
