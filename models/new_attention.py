@@ -64,9 +64,9 @@ class NewAttention(nn.Module):
         self.reset_parameters()
         self.attn_configs = list(self.load_attn_configs())
 
-        self.max_absolute_offset = max([abs(a) for a in attn_config.attn_offset])
-        self.attn_ofs_uniq = list(set(attn_config.attn_offset))
-        self.attn_std_uniq = list(set(attn_config.attn_std))
+        self.max_absolute_offset = max([abs(a) for a in attn_config['attn_offset']])
+        self.attn_ofs_uniq = list(set(attn_config['attn_offset']))
+        self.attn_std_uniq = list(set(attn_config['attn_std']))
 
     _attn_indices = threading.local()
 
