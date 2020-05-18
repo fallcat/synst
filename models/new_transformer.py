@@ -321,7 +321,7 @@ class NewTransformer(nn.Module):
         assert len(config.ffn_layer) == config.num_layers
 
         dec_attn_config = {'attn_type': config.dec_attn_type,
-                           'attn_std': config.dec_std,
+                           'attn_std': config.dec_attn_std,
                            'attn_offset': config.dec_attn_offset,
                            'num_layers': config.num_layers,
                            'num_heads': config.num_heads,
