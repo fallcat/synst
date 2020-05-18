@@ -114,6 +114,7 @@ class NewAttention(nn.Module):
         retrieved = retrieved[
             [[[a]] for a in std_idx], [[[b] for b in list(range(vlen))]], [[list(range(l, r))] for l, r in
                                                                            zip(attn_ofs_l, attn_ofs_r)]]
+        pdb.set_trace()
         if decoder_position == -1:
             return retrieved[:qlen, :vlen]
 
