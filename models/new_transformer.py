@@ -303,37 +303,21 @@ class NewTransformer(nn.Module):
             config.ffn_layer = [1] * config.num_layers
         assert len(config.ffn_layer) == config.num_layers
 
-        attn_config = {'attn_type': config.attn_type,
-                       'attn_position': config.attn_position,
-                       'attn_param': config.attn_param,
-                       'attn_displacement': config.attn_displacement,
+        attn_config = {'attn_type': config.enc_attn_type,
+                       'attn_std': config.enc_attn_std,
+                       'attn_offset': config.enc_attn_offset,
                        'num_layers': config.num_layers,
                        'num_heads': config.num_heads,
-                       'attn_concat': config.attn_concat,
                        'which_attn': 'encoder',
-                       'attn_weights': config.attn_weights,
-                       'attn_score': config.attn_score,
-                       'attn_bins': config.attn_bins,
-                       'attn_threshold': config.attn_threshold,
-                       'attn_window': config.attn_window,
-                       'attn_indexing': config.enc_attn_indexing,
-                       'no_attn': config.enc_no_attn,
-                       'indexing_type': config.indexing_type,
+                       'attn_threshold': config.enc_attn_threshold,
+                       'attn_window': config.enc_attn_window,
+                       'attn_impl': config.enc_attn_impl,
                        'ffn_layer': config.ffn_layer}
         args = [attn_config, config.num_heads, config.embedding_size, config.hidden_dim]
         encoders = nn.ModuleList([
             TransformerEncoderLayer(*args, layer_i, **kwargs)
             for layer_i in range(config.num_layers)
         ])
-
-        if config.tie_ffn_weights:
-            for enc in encoders[1:]:
-                if hasattr(enc, 'ffn') and hasattr(encoders[0], 'ffn'):
-                    enc.ffn.sublayer.hidden.weight = encoders[0].ffn.sublayer.hidden.weight
-                    enc.ffn.sublayer.output.weight = encoders[0].ffn.sublayer.output.weight
-                elif hasattr(enc, 'ffn') and hasattr(encoders[1], 'ffn'):
-                    enc.ffn.sublayer.hidden.weight = encoders[1].ffn.sublayer.hidden.weight
-                    enc.ffn.sublayer.output.weight = encoders[1].ffn.sublayer.output.weight
 
         return encoders
 
@@ -347,40 +331,27 @@ class NewTransformer(nn.Module):
         assert len(config.ffn_layer) == config.num_layers
 
         dec_attn_config = {'attn_type': config.dec_attn_type,
-                           'attn_position': config.dec_attn_position,
-                           'attn_param': config.dec_attn_param,
-                           'attn_displacement': config.dec_attn_displacement,
+                           'attn_std': config.dec_std,
+                           'attn_offset': config.dec_attn_offset,
                            'num_layers': config.num_layers,
                            'num_heads': config.num_heads,
-                           'attn_concat': config.dec_attn_concat,
                            'which_attn': 'decoder',
-                           'attn_weights': config.dec_attn_weights,
-                           'attn_score': config.dec_attn_score,
-                           'attn_bins': config.dec_attn_bins,
                            'attn_threshold': config.dec_attn_threshold,
                            'attn_window': config.dec_attn_window,
-                           'attn_indexing': config.dec_attn_indexing,
-                           'no_attn': config.dec_no_attn,
-                           'indexing_type': config.indexing_type,
+                           'attn_impl': config.dec_attn_impl,
                            'ffn_layer': config.ffn_layer}
         enc_dec_attn_config = {'attn_type': config.enc_dec_attn_type,
-                               'attn_position': config.enc_dec_attn_position,
-                               'attn_param': config.enc_dec_attn_param,
-                               'attn_displacement': config.enc_dec_attn_displacement,
+                               'attn_std': config.enc_dec_attn_std,
+                               'attn_offset': config.enc_dec_attn_offset,
                                'num_layers': config.num_layers,
                                'num_heads': config.num_heads,
                                'word_count_ratio': self.dataset.word_count_ratio,
-                               'attn_concat': config.enc_dec_attn_concat,
                                'which_attn': 'source',
-                               'attn_weights': config.enc_dec_attn_weights,
-                               'attn_score': config.enc_dec_attn_score,
-                               'attn_bins': config.enc_dec_attn_bins,
                                'enc_dec_attn_layer': config.enc_dec_attn_layer,
                                'enc_dec_attn_num_heads': config.enc_dec_attn_num_heads,
                                'attn_threshold': config.enc_dec_attn_threshold,
                                'attn_window': config.enc_dec_attn_window,
-                               'attn_indexing': config.enc_dec_attn_indexing,
-                               'indexing_type': config.indexing_type,
+                               'attn_impl': config.enc_dec_attn_impl,
                                'ffn_layer': config.ffn_layer
                                }
         args = [dec_attn_config, enc_dec_attn_config, config.num_heads, config.embedding_size, config.hidden_dim]
@@ -388,15 +359,6 @@ class NewTransformer(nn.Module):
             TransformerDecoderLayer(*args, layer_i, **kwargs)
             for layer_i in range(config.num_layers)
         ])
-
-        if config.tie_ffn_weights:
-            for dec in decoders[1:]:
-                if hasattr(dec, 'ffn') and hasattr(decoders[0], 'ffn'):
-                    dec.ffn.sublayer.hidden.weight = decoders[0].ffn.sublayer.hidden.weight
-                    dec.ffn.sublayer.output.weight = decoders[0].ffn.sublayer.output.weight
-                elif hasattr(dec, 'ffn') and hasattr(decoders[1], 'ffn'):
-                    dec.ffn.sublayer.hidden.weight = decoders[1].ffn.sublayer.hidden.weight
-                    dec.ffn.sublayer.output.weight = decoders[1].ffn.sublayer.output.weight
 
         return decoders
 

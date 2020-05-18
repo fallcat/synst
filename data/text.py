@@ -118,10 +118,6 @@ class TextDataset(Dataset):
 
         def sorter(examples, key='input'):
             ''' Sort the list of examples based on the length of the sequence for the given key '''
-            #print(examples)
-            #print(examples[0])
-            #print(examples[1])
-            #pdb.set_trace()
             ret = sorted(examples, key=lambda x: len(x[1][key]), reverse=True)
             return ret
 

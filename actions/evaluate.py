@@ -1,8 +1,8 @@
 '''
-SynST
+StupidNMT
 
 --
-Main entry point for evaluating SynST
+Main entry point for evaluating StupidNMT
 '''
 
 from __future__ import print_function

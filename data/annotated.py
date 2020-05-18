@@ -23,7 +23,6 @@ from data import preprocess
 from data.text import TextDataset
 from data.utils import maybe_download
 from utils.file import Open, extract_all
-from utils.tree import ParseTree
 
 
 MASKED = '<MASKED>'
@@ -32,8 +31,6 @@ MASKED = '<MASKED>'
 class TextAnnotation(enum.Enum):
     ''' An enumeration of text annotation types '''
     NONE = ('', 'bpe.32000.bin', 'bpe.32000')
-    CONSTITUENCY_PARSE = ('parsed', '{lang}.parse', 'parse.fully.upto.span{span}')
-    PARSE_SPANS = ('spans', '{lang}.parse', 'bpe.32000')
 
     def __init__(self, identifier, ext, vocab_ext):
         ''' Initialize the text annotation '''
@@ -150,7 +147,7 @@ class AnnotatedTextDataset(TextDataset):
     @property
     def base_vocab_path(self):
         ''' Get the path of the vocab file '''
-        return TextAnnotation.NONE.vocab_path(
+        return Text.NONE.vocab_path(
             self.preprocess_directory,
             span=self.config.span
         )
@@ -159,14 +156,6 @@ class AnnotatedTextDataset(TextDataset):
     def annotation_vocab_path(self):
         ''' Get the path of the annotation specific vocab file '''
         return self.annotation.vocab_path(
-            self.preprocess_directory,
-            span=self.config.span
-        )
-
-    @property
-    def constituent_vocab_path(self):
-        ''' Get the path of the constituent vocab file '''
-        return TextAnnotation.CONSTITUENCY_PARSE.vocab_path(
             self.preprocess_directory,
             span=self.config.span
         )
@@ -212,16 +201,6 @@ class AnnotatedTextDataset(TextDataset):
         else:
             super(AnnotatedTextDataset, self).collate_field(batch, field_name, values)
 
-    def annotation_spans(self, annotation):
-        ''' Calculate the spans from the annotation '''
-        spans = []
-        for constituent_id in annotation:
-            constituent = self.id2token[int(constituent_id)]
-            match = ParseTree.CONSTITUENT_REGEX.match(constituent)
-            spans.append(int(match[2]) if match else 1)
-
-        return spans
-
     def annotated_sequence(self, target, annotation, spans):
         ''' Create the masked target from the annotation and spans '''
         annotation_target = []
@@ -255,18 +234,15 @@ class AnnotatedTextDataset(TextDataset):
             if self.annotation is TextAnnotation.CONSTITUENCY_PARSE
             else [self.span_idx(span) for span in target_spans]
         )
-        masked_target = self.masked_target(target_annotation, target_spans)
         annotated_target = self.annotated_sequence(
             datum['target'], target_annotation, target_spans
         )
+        print("datum['target']", datum['target'])
+        print("annotated_target", annotated_target)
 
         example = {}
         example['input'] = torch.LongTensor(datum['input'])
         example['target'] = torch.LongTensor(annotated_target)
-        example['masked_target'] = torch.LongTensor(masked_target)
-        example['target_annotation'] = torch.LongTensor(
-            [self.sos_idx] + list(target_annotation) + [self.eos_idx]
-        ) - self.reserved_range
 
         return example
 
@@ -416,67 +392,6 @@ class AnnotatedTextDataset(TextDataset):
         split_filename = type(self).SPLITS[self.split]
         self.preprocess_bpe(split_filename)
 
-        if self.annotation in (
-                TextAnnotation.PARSE_SPANS,
-                TextAnnotation.CONSTITUENCY_PARSE
-        ):
-            base_annotation_id = len(self.id2token)
-            for filename in type(self).SPLITS.values():
-                self.preprocess_parse(filename)
-
-            if not os.path.exists(self.constituent_vocab_path):
-                with Open(self.constituent_vocab_path, 'wt') as file:
-                    file.write('\n'.join([
-                        self.id2token[annotation_id]
-                        for annotation_id in range(base_annotation_id, len(self.id2token))
-                    ]))
-
-    def preprocess_parse(self, filename):
-        ''' Preprocess the parse data '''
-        base_path = os.path.join(self.preprocess_directory, f'{filename}')
-        tokenized_bpe_path = f'{base_path}.bpe.32000'
-
-        source_path = f'{base_path}.{self.source_language}.parse'
-        if not os.path.exists(source_path):
-            preprocess.parse(
-                f'{tokenized_bpe_path}.{self.source_language}',
-                source_path,
-                self.preprocess_buffer_size
-            )
-
-        target_path = f'{base_path}.{self.target_language}.parse'
-        if not os.path.exists(target_path):
-            preprocess.parse(
-                f'{tokenized_bpe_path}.{self.target_language}',
-                target_path,
-                self.preprocess_buffer_size
-            )
-
-        if os.path.exists(self.constituent_vocab_path):
-            return
-
-        bpe_path = os.path.join(self.preprocess_directory, 'bpe.32000')
-        self.segmenters = [
-            preprocess.ParseSegmenter(
-                bpe_path, span, self.config.max_span, self.config.randomize_chunks
-            )
-            for span in range(1, self.config.span + 1)
-        ]
-
-        vocab = preprocess.get_parse_vocab(
-            f'{base_path}.{self.source_language}.parse',
-            self.segmenters, self.preprocess_buffer_size
-        )
-        vocab.update(preprocess.get_parse_vocab(
-            f'{base_path}.{self.target_language}.parse',
-            self.segmenters, self.preprocess_buffer_size
-        ))
-
-        for token in vocab:
-            if token not in self.token2id:
-                self.token2id[token] = len(self.id2token)
-                self.id2token.append(token)
-
     def preprocess_bpe(self, filename):
         ''' Preprocess the BPE data '''
         tokenized_bpe_path = os.path.join(self.preprocess_directory, f'{filename}.bpe.32000')
@@ -530,37 +445,6 @@ class AnnotatedTextDataset(TextDataset):
                 self.id2token.append(token)
 
         super(AnnotatedTextDataset, self).load_vocab(preprocessing)
-        if preprocessing or self.annotation is TextAnnotation.NONE:
-            return
-
-        if self.annotation is TextAnnotation.CONSTITUENCY_PARSE:
-            if not os.path.exists(self.annotation_vocab_path):
-                print('Cannot find the annotation vocab file!')
-                exit(1)
-
-            with Open(self.annotation_vocab_path, 'rt') as vocab_file:
-                for token in vocab_file.read().split('\n'):
-                    self.token2id[token] = len(self.id2token)
-                    self.id2token.append(token)
-        elif self.annotation is TextAnnotation.PARSE_SPANS:
-            for i in range(self.config.span):
-                token = f'<SPAN{i + 1}>'
-                self.token2id[token] = len(self.id2token)
-                self.id2token.append(token)
-
-
-        self.token2id[MASKED] = len(self.id2token)
-        self.id2token.append(MASKED)
-
-        # Need to cache off the segmenters as the BPE loading is slow. We do
-        # not want that overhead for each subprocess we create in the dataloaders.
-        bpe_path = os.path.join(self.preprocess_directory, 'bpe.32000')
-        self.segmenters = [
-            preprocess.ParseSegmenter(
-                bpe_path, span, self.config.max_span, self.config.randomize_chunks
-            )
-            for span in range(1, self.config.span + 1)
-        ]
 
     def load_text(self):
         ''' Load the translations '''
@@ -570,13 +454,6 @@ class AnnotatedTextDataset(TextDataset):
 
         with ExitStack() as stack:
             base_data_file = stack.enter_context(Open(self.base_data_path, 'rb'))
-            if self.annotation is not TextAnnotation.NONE:
-                source_annotation_data_file = stack.enter_context(
-                    Open(self.source_annotation_data_path, 'rt')
-                )
-                target_annotation_data_file = stack.enter_context(
-                    Open(self.target_annotation_data_path, 'rt')
-                )
 
             while True:
                 if self.swap:
@@ -591,8 +468,7 @@ class AnnotatedTextDataset(TextDataset):
                 example['target'] = array.array('H')
 
                 # prepend the start of sentence token to the target
-                if self.annotation is TextAnnotation.NONE:
-                    example['target'].append(self.sos_idx)
+                example['target'].append(self.sos_idx)
 
                 source_sentence_len = base_data_file.read(8)
                 if not source_sentence_len:
@@ -610,16 +486,8 @@ class AnnotatedTextDataset(TextDataset):
                 example[target_key].frombytes(base_data_file.read(target_sentence_len))
 
                 # append the end of sentence token to the target
-                if self.annotation is TextAnnotation.NONE:
-                    example['target'].append(self.eos_idx)
+                example['target'].append(self.eos_idx)
 
-                if self.annotation in (
-                        TextAnnotation.PARSE_SPANS,
-                        TextAnnotation.CONSTITUENCY_PARSE
-                ):
-                    example['source_annotation'] = source_annotation_data_file.readline()
-                    example['target_annotation'] = target_annotation_data_file.readline()
-                
                 if example == {}:
                     return
                 self.add_datum(example)

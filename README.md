@@ -9,7 +9,7 @@ Transformer](https://aclweb.org/anthology/D18-1044).
 The full model architecture is displayed below:
 
 <p>
-<img src="resources/model.png">
+<img src="resources/model.pdf">
 </p>
 
 Our approach uses syntactic supervision to speed up

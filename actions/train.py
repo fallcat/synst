@@ -1,8 +1,8 @@
 '''
-SynST
+StupidNMT
 
 --
-Main entry point for training SynST
+Main entry point for training StupidNMT
 '''
 
 from __future__ import print_function
@@ -23,7 +23,7 @@ import args
 import metrics
 from actions.evaluate import Evaluator
 from data.parallel import chunked_scattering
-from models.utils import LinearLRSchedule, WarmupLRSchedule, WarmupLRSchedule2, DummyLRSchedule, checkpoint
+from models.utils import LinearLRSchedule, WarmupLRSchedule, DummyLRSchedule, checkpoint
 from utils import profile, tqdm_wrap_stdout, tqdm_unwrap_stdout
 import pdb
 
@@ -51,15 +51,6 @@ class Trainer(object):
                         config.warmup_steps
                     )
                 )
-
-            elif config.lr_scheduler == 'warmup2':
-                self.lr_scheduler = LambdaLR(
-                    self.optimizer,
-                    WarmupLRSchedule2(
-                        config.warmup_steps
-                    )
-                )
-
             elif config.lr_scheduler == 'linear':
                 self.lr_scheduler = LambdaLR(
                     self.optimizer,
@@ -80,16 +71,6 @@ class Trainer(object):
         elif self.config.optimizer == "sgd":
             print("using optimizer: SGD")
             self.optimizer = optim.SGD(model.parameters(), lr=config.base_lr, momentum=0.9)
-            self.lr_scheduler = LambdaLR(
-                self.optimizer,
-                DummyLRSchedule(
-                    config.base_lr
-                )
-            )
-
-        elif self.config.optimizer == "adam-fixed":
-            print("using optimizer: adam with fixed learning rate")
-            self.optimizer = optim.Adam(model.parameters(), config.base_lr, betas=(0.9, 0.98), eps=1e-9)
             self.lr_scheduler = LambdaLR(
                 self.optimizer,
                 DummyLRSchedule(
