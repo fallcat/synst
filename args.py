@@ -153,7 +153,7 @@ def add_new_transformer_args(parser):
         '--enc-attn-std',
         type=float,
         nargs='+',
-        default=1,
+        default=[1],
         help='The standard deviation for normal attention.'
     )
     group.add_argument(
@@ -173,7 +173,7 @@ def add_new_transformer_args(parser):
         '--enc-attn-offset',
         type=int,
         nargs='+',
-        default=1,
+        default=[1],
         help='Offset from current position when generation the next word. '
              'Negative number -> left, Positive number -> right'
     )
@@ -198,7 +198,7 @@ def add_new_transformer_args(parser):
         '--dec-attn-std',
         type=float,
         nargs='+',
-        default=1,
+        default=[1],
         help='The standard deviation for normal attention.'
     )
     group.add_argument(
@@ -218,7 +218,7 @@ def add_new_transformer_args(parser):
         '--dec-attn-offset',
         type=int,
         nargs='+',
-        default=1,
+        default=[1],
         help='Offset from current position when generation the next word. '
              'Negative number -> left, Positive number -> right'
     )
@@ -243,7 +243,7 @@ def add_new_transformer_args(parser):
         '--enc-dec-attn-std',
         type=float,
         nargs='+',
-        default=1,
+        default=[1],
         help='when attention type is normal. The standard deviation.'
              'when attention type is uniform. The number of tokens to focus on to each direction.'
              'If window size is 2, then we have uniform distribution on 5 words.'
@@ -265,7 +265,7 @@ def add_new_transformer_args(parser):
         '--enc-dec-attn-offset',
         type=int,
         nargs='+',
-        default=1,
+        default=[1],
         help='Offset from current position when generation the next word. '
              'Negative number -> left, Positive number -> right'
     )
