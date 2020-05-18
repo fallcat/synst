@@ -4,12 +4,6 @@ Initialize the actions module
 from actions.train import Trainer
 from actions.evaluate import Evaluator
 from actions.translate import Translator
-from actions.probe import Prober
-from actions.probe_train import ProbeTrainer
-from actions.probe_evaluate import ProbeEvaluator
-from actions.probe_new_translate import ProbeNewTranslator
-from actions.probe_attn_stats import ProbeStatsGetter
-from actions.probe_off_diagonal import ProbeOffDiagonal
 
 class Pass(object):
     ''' Action that does nothing... '''
