@@ -147,7 +147,7 @@ class AnnotatedTextDataset(TextDataset):
     @property
     def base_vocab_path(self):
         ''' Get the path of the vocab file '''
-        return Text.NONE.vocab_path(
+        return TextAnnotation.NONE.vocab_path(
             self.preprocess_directory,
             span=self.config.span
         )
