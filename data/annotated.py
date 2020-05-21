@@ -105,10 +105,6 @@ class AnnotatedTextDataset(TextDataset):
         ''' Return the start of summary value '''
         return self.token2id[MASKED]
 
-    def span_idx(self, span):
-        ''' Return the span index value '''
-        return self.token2id[f'<SPAN{span}>']
-
     @property
     def base_data_path(self):
         ''' Get the path of the processed data file '''
@@ -148,16 +144,14 @@ class AnnotatedTextDataset(TextDataset):
     def base_vocab_path(self):
         ''' Get the path of the vocab file '''
         return TextAnnotation.NONE.vocab_path(
-            self.preprocess_directory,
-            span=self.config.span
+            self.preprocess_directory
         )
 
     @property
     def annotation_vocab_path(self):
         ''' Get the path of the annotation specific vocab file '''
         return self.annotation.vocab_path(
-            self.preprocess_directory,
-            span=self.config.span
+            self.preprocess_directory
         )
 
     @property
@@ -175,23 +169,6 @@ class AnnotatedTextDataset(TextDataset):
         ''' Get the preprocess buffer size '''
         return self.config.preprocess_buffer_size
 
-    @property
-    def stats(self):
-        ''' Return the dataset stats '''
-        metric_store = super(AnnotatedTextDataset, self).stats
-
-        if self.annotation is TextAnnotation.NONE or self.split == 'train':
-            return metric_store
-
-        spans = metrics.Metric('Constituent Spans', metrics.format_float, 'l(max)')
-        for datum in self.data:
-            _, target_spans = self.segmenters[-1](datum['target_annotation'])
-            if target_spans:
-                spans.updates(target_spans)
-        metric_store.add(spans)
-
-        return metric_store
-
     def collate_field(self, batch, field_name, values):
         ''' Collate a specific field '''
         if 'annotation' in field_name:
@@ -200,51 +177,6 @@ class AnnotatedTextDataset(TextDataset):
             batch[field_name + '_lens'] = torch.LongTensor([len(sequence) for sequence in values])
         else:
             super(AnnotatedTextDataset, self).collate_field(batch, field_name, values)
-
-    def annotated_sequence(self, target, annotation, spans):
-        ''' Create the masked target from the annotation and spans '''
-        annotation_target = []
-        original_target = list(target)
-        for span_idx, span in enumerate(spans):
-            annotation_target.append(annotation[span_idx])
-            annotation_target.extend(original_target[:span])
-            original_target = original_target[span:]
-
-        assert not original_target
-        return annotation_target
-
-    def masked_target(self, annotation, spans):
-        ''' Create the masked target from the annotation and spans '''
-        return self.annotated_sequence([self.mask_idx] * int(sum(spans)), annotation, spans)
-
-    def tensorize(self, index):
-        ''' Tensorize the specified example index '''
-        if self.annotation is TextAnnotation.NONE:
-            return super(AnnotatedTextDataset, self).tensorize(index)
-
-        datum = self.data[index]
-        segmenter = (
-            self.segmenters[random.randrange(self.config.span)]
-            if self.config.randomize_chunks else
-            self.segmenters[-1]
-        )
-        target_annotation, target_spans = segmenter(datum['target_annotation'])
-        target_annotation = (
-            [self.token2id[annotation] for annotation in target_annotation]
-            if self.annotation is TextAnnotation.CONSTITUENCY_PARSE
-            else [self.span_idx(span) for span in target_spans]
-        )
-        annotated_target = self.annotated_sequence(
-            datum['target'], target_annotation, target_spans
-        )
-        print("datum['target']", datum['target'])
-        print("annotated_target", annotated_target)
-
-        example = {}
-        example['input'] = torch.LongTensor(datum['input'])
-        example['target'] = torch.LongTensor(annotated_target)
-
-        return example
 
     def preprocess_raw_line(self, line, xml=False):
         ''' Preprocess the raw text '''

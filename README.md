@@ -35,43 +35,62 @@ pass}`.
 
 ### Preprocessing
 
+Preprocessing for wmt_en_de, wmt_en_fr and iwslt_en_de are the same as in synst:
+
 ```sh
 CLASSPATH=stanford-corenlp-full-2018-10-05/* python main.py \
-  --dataset wmt_en_de_parsed --span 6 -d raw/wmt -p preprocessed/wmt -v pass
+  --dataset wmt_en_de --span 6 -d raw/wmt -p preprocessed/wmt -v pass
 ```
+
+We also added IWSLT En-Ja and WMT En-Ro datasets and you can process them by the following commands.
+
+We need subword-nmt to process subwords for both En-Ja and En-Ro. WMT16-scripts is also needed for standard processing. Mosesdecoder is needed for tokenization. We download them with the following commands to directory of our choices and set the environment variables to those directories:
+
+```sh
+git clone https://github.com/rsennrich/subword-nmt.git
+git clone https://github.com/rsennrich/wmt16-scripts.git
+git clone https://github.com/moses-smt/mosesdecoder.git
+SUBWORD=tools/subword-nmt
+WMT16_SCRIPT=tools/wmt16-scripts
+MOSES=tools/mosesdecoder
+```
+
+Then, we can download data for each dataset and process them by the following commands.
+
+En-Ja:
+
+```sh
+bash process_new_data/process_enja.sh
+```
+
+En-Ro:
+```sh
+bash process_new_data/process_enro.sh
+```
+
+Please note that our preprocessing of En-Ja is not the standard way for IWSLT En-Ja dataset, so the results might be different from other works.
 
 ### Training
 
-Assuming you have access to 8 1080Ti GPUs you can recreate the results for stupidNMT
-on the WMT'14 En-De dataset with:
-
-```sh
-python main.py -b 3175 --dataset wmt_en_de_parsed --span 6 \
-  --model new_transformer -d raw/wmt -p preprocessed/wmt -v train \
-  --checkpoint-interval 1200 --accumulate 2 --label-smoothing 0
-```
-
-The above commandline will train 8 GPUs with approximately 3175 source/target
-tokens combined per GPU, and accumulate the gradients over two batches before
-updating model parameters (leading to ~50.8k tokens per model update).
-
-The default model is the Transformer model. For example the below
-line will train a vanilla Transformer on the WMT'14 De-En
-dataset:
-
-```sh
-python main.py -b 3175 --dataset wmt_de_en \
-  -d raw/wmt -p preprocessed/wmt -v train \
-  --checkpoint-interval 1200 --accumulate 2
-```
-
-To train a hard-coded self-attention model, you can run this:
+Assuming you have access to 8 1080Ti GPUs you can recreate the results for hard-coded self-attention model on the WMT'14 En-De dataset with:
 
 ```sh
 python main.py -b 3175 --dataset wmt_de_en \
   --model new_transformer \
   --enc-attn-type normal --enc-attn-offset -1 1 \
   --dec-attn-type normal --dec-attn-offset -1 0 \
+  -d raw/wmt -p preprocessed/wmt -v train \
+  --checkpoint-interval 1200 --accumulate 2
+```
+
+The above commandline will train 8 GPUs with approximately 3175 source/target
+tokens combined per GPU, and accumulate the gradients over two batches before
+updating model parameters (leading to ~50.8k tokens per model update).
+
+The default model is the Transformer model. If you want to train a vanilla Tranformer model on the WMT'14 De-En dataset, you can run this:
+
+```sh
+python main.py -b 3175 --dataset wmt_de_en \
   -d raw/wmt -p preprocessed/wmt -v train \
   --checkpoint-interval 1200 --accumulate 2
 ```
@@ -124,7 +143,7 @@ experiments on the service. By default, this will track experiments in a
 workspace named `umass-nlp` with project name `probe-transformer`. See `args.py` in order to
 configure the experiment tracking to suit your needs.
 
-## Cite (Will be updated once the ACL Anthology version comes out)
+## Cite
 
 ```bibtex
 @misc{you2020hardcoded,
@@ -136,3 +155,5 @@ configure the experiment tracking to suit your needs.
     primaryClass={cs.CL}
 }
 ```
+
+(Will be updated once the ACL Anthology version comes out)

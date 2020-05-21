@@ -96,12 +96,6 @@ def add_transformer_args(parser):
         default=2048,
         help='The size of the Transformer feed-forward hidden layer'
     )
-    group.add_argument(
-        '--span',
-        type=int,
-        default=1,
-        help='How many tokens to decode at once'
-    )
 
     return group
 
@@ -132,12 +126,6 @@ def add_new_transformer_args(parser):
         type=int,
         default=2048,
         help='The size of the Transformer feed-forward hidden layer'
-    )
-    group.add_argument(
-        '--span',
-        type=int,
-        default=1,
-        help='How many tokens to decode at once'
     )
 
     # encoder self-attention params
@@ -374,12 +362,6 @@ def add_data_args(parser):
         type=int,
         default=0,
         help='Maximum number of training examples. Defaults to all of them'
-    )
-    group.add_argument(
-        '--max-span',
-        type=int,
-        default=0,
-        help='Any training example with span larger than the max span is skipped.'
     )
     group.add_argument(
         '--preprocess-buffer-size',
@@ -869,7 +851,6 @@ Commit your changes first, then try again.''')
 
     args.model = MODELS[args.model]
     args.config.data.dataset = DATASETS[args.dataset]
-    args.config.data.span = args.config.model.span
 
     if args.seed is not None:
         args.seed_fn = get_random_seed_fn(args.seed)
