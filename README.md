@@ -1,10 +1,8 @@
-# SynST: Syntactically Supervised Transformers
+# StupidNMT: Hard-Coded Gaussian Attention for Neural Machine Translation
 
 This is the official repository which contains all the code necessary to
-replicate the results from the ACL 2019 long paper *[Syntactically Supervised
-Transformers for Faster Neural Machine Translation](https://arxiv.org/abs/1906.02780)*. It can also be used to
-train a vanilla Transformer or a [Semi-Autoregressive
-Transformer](https://aclweb.org/anthology/D18-1044).
+replicate the results from the ACL 2020 long paper *[Hard-Coded Gaussian Attention for Neural Machine Translation](https://arxiv.org/abs/2005.00742)*. It can also be used to
+train a vanilla Transformer.
 
 The full model architecture is displayed below:
 
@@ -12,43 +10,22 @@ The full model architecture is displayed below:
 <img src="resources/model.pdf">
 </p>
 
-Our approach uses syntactic supervision to speed up
-neural machine translation (NMT) for the Transformer architecture. We modify
-the Transformer architecture by adding a single layer parse decoder that
-autoregressively predicts a shallow chunking of the target parse. Then, conditioned on this
-parse, a separate token decoder generates the final target translation in one shot (non-autoregressively). The figure above demonstrates the inputs and outputs for each module
-in the architecture.
+![image](resources/model.png)
+
+Our approach uses hard-coded Gaussian distribution instead of learned attention to simplify the Transformer architecture in neural machine translation (NMT). We replace the multi-headed attention, computed by query and key, by a fixed Gaussian distribution that focuses on the current word or somewhere near it. The figure above demonstrates how our attention differs from the vanilla Tranformer.
+
+This code base is adapted from [synst](https://github.com/dojoteef/synst).
 
 ## Requirements
 
-The code requires Python 3.6+. The python dependencies can be installed with the
+The code requires Python 3.7+. The python dependencies can be installed with the
 command (using a virtual environment is highly recommended):
 
 ```sh
 pip install -r requirements.txt
 ```
 
-In order to parse the datasets, the code also depends upon the shift-reduce
-parsers from [CoreNLP](https://stanfordnlp.github.io/CoreNLP/). First, make sure
-you have an appropriate Java runtime installed.
-
-Then download and unzip the main CoreNLP package to the directory of your
-choice:
-
-```sh
-curl -O https://nlp.stanford.edu/software/stanford-corenlp-full-2018-10-05.zip
-unzip stanford-corenlp-full-2018-10-05.zip
-```
-
-You'll also need download the shift reduce parsers for each of the languages:
-```sh
-cd stanford-corenlp-full-2018-10-05
-curl -O https://nlp.stanford.edu/software/stanford-srparser-2014-10-23-models.jar
-curl -O https://nlp.stanford.edu/software/stanford-french-corenlp-2018-10-05-models.jar
-curl -O https://nlp.stanford.edu/software/stanford-german-corenlp-2018-10-05-models.jar
-```
-
-Additionally, if you want to use the scripts that wrap `multi-bleu.perl` and
+If you want to use the scripts that wrap `multi-bleu.perl` and
 `sacrebleu`, then you'll need to have
 [Moses-SMT](https://github.com/moses-smt/mosesdecoder) available as well.
 
@@ -69,12 +46,12 @@ CLASSPATH=stanford-corenlp-full-2018-10-05/* python main.py \
 
 ### Training
 
-Assuming you have access to 8 1080Ti GPUs you can recreate the results for SynST
+Assuming you have access to 8 1080Ti GPUs you can recreate the results for stupidNMT
 on the WMT'14 En-De dataset with:
 
 ```sh
 python main.py -b 3175 --dataset wmt_en_de_parsed --span 6 \
-  --model parse_transformer -d raw/wmt -p preprocessed/wmt -v train \
+  --model new_transformer -d raw/wmt -p preprocessed/wmt -v train \
   --checkpoint-interval 1200 --accumulate 2 --label-smoothing 0
 ```
 
@@ -82,14 +59,23 @@ The above commandline will train 8 GPUs with approximately 3175 source/target
 tokens combined per GPU, and accumulate the gradients over two batches before
 updating model parameters (leading to ~50.8k tokens per model update).
 
-The default model is the Transformer model, which can take the additional
-commandline argument `--span <k>` to produce a semi-autoregressive variant
-(where the default `--span 1` is the basic Transformer). For example the below
-line will train a semi-autoregressive Transformer with `k=2` on the WMT'14 De-En
+The default model is the Transformer model. For example the below
+line will train a vanilla Transformer on the WMT'14 De-En
 dataset:
 
 ```sh
-python main.py -b 3175 --dataset wmt_de_en --span 2 \
+python main.py -b 3175 --dataset wmt_de_en \
+  -d raw/wmt -p preprocessed/wmt -v train \
+  --checkpoint-interval 1200 --accumulate 2
+```
+
+To train a hard-coded self-attention model, you can run this:
+
+```sh
+python main.py -b 3175 --dataset wmt_de_en \
+  --model new_transformer \
+  --enc-attn-type normal --enc-attn-offset -1 1 \
+  --dec-attn-type normal --dec-attn-offset -1 0 \
   -d raw/wmt -p preprocessed/wmt -v train \
   --checkpoint-interval 1200 --accumulate 2
 ```
@@ -101,10 +87,12 @@ training (you may either want to do it on a GPU not used for training or disable
 cuda as done below):
 
 ```sh
-python main.py -b 5000 --dataset wmt_en_de_parsed --span 6 \
-  --model parse_transformer -d raw/wmt -p preprocessed/wmt \
+python main.py -b 5000 --dataset wmt_en_de \
+  --model new_transformer -d raw/wmt -p preprocessed/wmt \
+  --enc-attn-type normal --enc-attn-offset -1 1 \
+  --dec-attn-type normal --dec-attn-offset -1 0 \
   --split valid --disable-cuda -v evaluate \
-  --watch-directory /tmp/synst/checkpoints
+  --watch-directory /tmp/stupidnmt/checkpoints
 ```
 
 ### Translating
@@ -113,15 +101,18 @@ After training a model, you can generate translations with the following
 command (currently only translation on a single GPU is supported):
 
 ```sh
-CUDA_VISIBLE_DEVICES=0 python main.py --dataset wmt_en_de_parsed --span 6 \
-  --model parse_transformer -d raw/wmt -p preprocessed/wmt \
+CUDA_VISIBLE_DEVICES=0 python main.py --dataset wmt_en_de \
+  --model new_transformer \
+  --enc-attn-type normal --enc-attn-offset -1 1 \
+  --dec-attn-type normal --dec-attn-offset -1 0 \
+  -d raw/wmt -p preprocessed/wmt \
   --batch-size 1 --batch-method example --split test -v \
-  --restore /tmp/synst/checkpoints/checkpoint.pt \
+  --restore /tmp/stupidnmt/checkpoints/checkpoint.pt \
   --average-checkpoints 5 translate \
   --max-decode-length 50 --length-basis input_lens --order-output
 ```
 
-Which by default, will output translations to `/tmp/synst/output`.
+Which by default, will output translations to `/tmp/stupidnmt/output`.
 
 ### Experiment tracking
 
@@ -134,16 +125,18 @@ env $(cat ~/.comet.ml | xargs) python main.py --track ...
 
 Where `~/.comet.ml` is the file which contains your API key for logging
 experiments on the service. By default, this will track experiments in a
-workspace named `umass-nlp` with project name `synst`. See `args.py` in order to
+workspace named `umass-nlp` with project name `probe-transformer`. See `args.py` in order to
 configure the experiment tracking to suit your needs.
 
-## Cite
+## Cite (Will be updated once the ACL Anthology version comes out)
 
 ```bibtex
-@inproceedings{akoury2019synst,
-  title={Syntactically Supervised Transformers for Faster Neural Machine Translation},
-  author={Akoury, Nader and Krishna, Kalpesh and Iyyer, Mohit},
-  booktitle={Proceedings of the 57th Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers)},
-  year={2019}
+@misc{you2020hardcoded,
+    title={Hard-Coded Gaussian Attention for Neural Machine Translation},
+    author={Weiqiu You and Simeng Sun and Mohit Iyyer},
+    year={2020},
+    eprint={2005.00742},
+    archivePrefix={arXiv},
+    primaryClass={cs.CL}
 }
 ```
