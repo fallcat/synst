@@ -6,10 +6,6 @@ train a vanilla Transformer.
 
 The full model architecture is displayed below:
 
-<p>
-<img src="resources/model.pdf">
-</p>
-
 ![image](resources/model.png)
 
 Our approach uses hard-coded Gaussian distribution instead of learned attention to simplify the Transformer architecture in neural machine translation (NMT). We replace the multi-headed attention, computed by query and key, by a fixed Gaussian distribution that focuses on the current word or somewhere near it. The figure above demonstrates how our attention differs from the vanilla Tranformer.
