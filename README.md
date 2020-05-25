@@ -49,9 +49,9 @@ We need subword-nmt to process subwords for both En-Ja and En-Ro. WMT16-scripts 
 git clone https://github.com/rsennrich/subword-nmt.git
 git clone https://github.com/rsennrich/wmt16-scripts.git
 git clone https://github.com/moses-smt/mosesdecoder.git
-export SUBWORD=tools/subword-nmt
-export WMT16_SCRIPT=tools/wmt16-scripts
-export MOSES=tools/mosesdecoder
+export SUBWORD=subword-nmt
+export WMT16_SCRIPT=wmt16-scripts
+export MOSES=mosesdecoder
 ```
 
 Then, we can download data for each dataset and process them by the following commands.
@@ -59,12 +59,16 @@ Then, we can download data for each dataset and process them by the following co
 En-Ja:
 
 ```sh
-RAW_PATH=/tmp PROCESS_PATH=/data/en_ja bash process_new_data/process_enja.sh
+mkdir /data/en_ja_tmp
+mkdir /data/en_ja
+RAW_PATH=/data/en_ja_tmp PROCESS_PATH=/data/en_ja bash process_new_data/process_enja.sh
 ```
 
 En-Ro:
 ```sh
-RAW_PATH=/tmp PROCESS_PATH=/data/en_ro bash process_new_data/process_enro.sh
+mkdir /data/en_ro_tmp
+mkdir /data/en_ro
+RAW_PATH=/data/en_ja_tmp PROCESS_PATH=/data/en_ro bash process_new_data/process_enro.sh
 ```
 
 Please note that our preprocessing of En-Ja is not the standard way for IWSLT En-Ja dataset, so the results might be different from other works.
