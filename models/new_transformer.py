@@ -113,12 +113,11 @@ class TransformerEncoderLayer(nn.Module):
 
 class TransformerDecoderLayer(nn.Module):
     ''' Implements a single decoder layer in a transformer decoder stack '''
-    def __init__(self, dec_attn_config, enc_dec_attn_config, num_heads, dim, hidden_dim, layer_i, causal=True, span=1,
+    def __init__(self, dec_attn_config, enc_dec_attn_config, num_heads, dim, hidden_dim, layer_i, causal=True,
                  dropout_p=0.1):
         ''' Initialize the transformer layer '''
         super(TransformerDecoderLayer, self).__init__()
 
-        self.span = span
         self.causal = causal
         self.uuid = uuid.uuid4()
 
@@ -172,11 +171,10 @@ class TransformerDecoderLayer(nn.Module):
 
         kwargs = {'layer_i': layer_i}
         if self.causal and cache is not None:
-            # If caching, only want the last k=span sequence values. Requires no causal masking.
-            residual = state[:, -self.span:]
-            kwargs['num_queries'] = self.span
+            # If caching, only want the last one sequence values. Requires no causal masking.
+            residual = state[:, -1:]
             kwargs['decoder_position'] = decoder_position
-            kwargs['word_embedding'] = word_embedding[:, -self.span:]
+            kwargs['word_embedding'] = word_embedding[:, -1:]
         else:
             # If not caching, use the full sequence and ensure an appropriate causal mask
             residual = state
@@ -195,9 +193,8 @@ class TransformerDecoderLayer(nn.Module):
         # print("source", source)
         kwargs = {'key_mask': sources['mask'], 'layer_i': layer_i, 'input_lens': input_lens}
         if self.causal and cache is not None:
-            kwargs['num_queries'] = self.span
             kwargs['decoder_position'] = decoder_position
-            kwargs['word_embedding'] = word_embedding[:, -self.span:]
+            kwargs['word_embedding'] = word_embedding[:, -1:]
         else:
             kwargs['word_embedding'] = word_embedding
 
@@ -243,12 +240,12 @@ class TransformerDecoderLayer(nn.Module):
         mask_store = TransformerDecoderLayer._masks.__dict__
         if device not in mask_store:
             mask = inputs.new_full((dim, dim), float('-inf'))
-            mask_store[device] = triu(mask, 1, self.span, self.span)
+            mask_store[device] = triu(mask, 1, 1, 1)
 
         mask = mask_store[device]
         if mask.shape[0] < dim:
             mask = mask.resize_(dim, dim).fill_(float('-inf'))
-            mask_store[device] = triu(mask, 1, self.span, self.span)
+            mask_store[device] = triu(mask, 1, 1, 1)
             mask = mask_store[device]
 
         return mask[None, :dim, :dim]
@@ -261,7 +258,6 @@ class NewTransformer(nn.Module):
         super(NewTransformer, self).__init__()
 
         self.dataset = dataset
-        self.span = config.span
         self.embedding = TokenEmbedding(
             dataset.vocab_size,
             config.embedding_size,
@@ -314,7 +310,7 @@ class NewTransformer(nn.Module):
     # @classmethod
     def create_decoders(self, config):
         ''' Create the transformer decoders '''
-        kwargs = {'dropout_p': config.dropout_p, 'span': config.span}
+        kwargs = {'dropout_p': config.dropout_p}
 
         if config.ffn_layer == -1:
             config.ffn_layer = [1] * config.num_layers
@@ -382,7 +378,7 @@ class NewTransformer(nn.Module):
         ''' A batch of inputs and targets '''
         decoded = self.decode(
             self.encode(batch['inputs']),
-            right_shift(right_shift(batch['targets']), shift=self.span - 1, fill=self.sos_idx),
+            right_shift(batch['targets']),
             input_lens=batch['input_lens']
         )
 
@@ -428,7 +424,7 @@ class NewTransformer(nn.Module):
         # compute projection to the vocabulary
         state = decoded['state']
         if cache is not None:
-            state = state[:, -self.span:]
+            state = state[:, -1:]
 
         return {
             'cache': decoded.get('cache'),
