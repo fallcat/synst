@@ -74,12 +74,28 @@ Please note that our preprocessing of En-Ja is not the standard way for IWSLT En
 Assuming you have access to 8 1080Ti GPUs you can recreate the results for hard-coded self-attention model on the WMT'14 En-De dataset with:
 
 ```sh
-python main.py -b 3175 --dataset wmt_de_en \
+python main.py -b 3175 --dataset wmt_en_de \
   --model new_transformer \
   --enc-attn-type normal --enc-attn-offset -1 1 \
   --dec-attn-type normal --dec-attn-offset -1 0 \
   -d raw/wmt -p preprocessed/wmt -v train \
-  --checkpoint-interval 1200 --accumulate 2
+  --checkpoint-interval 1200 --accumulate 2 \
+  --checkpoint-directory experiments/wmt_en_de_01
+```
+
+You can also recreate results on IWSLT'16 En-De dataset for hard-coded all attention model on 1 1080Ti GPU with:
+
+```sh
+python main.py -b 6000 --dataset iwslt_en_de \
+  --model new_transformer \
+  --enc-attn-type normal --enc-attn-offset -1 1 \
+  --dec-attn-type normal --dec-attn-offset -1 0 \
+  --enc-dec-attn-type normal --enc-dec-attn-offset -1 1 \
+  --embedding-size 288 --hidden-dim 507 --num-heads 4 --num-layers 5 \
+  -d raw/wmt -p preprocessed/wmt -v train \
+  --checkpoint-interval 600 --accumulate 1 \
+  --checkpoint-directory experiments/iwslt_en_de_01 \
+  --label-smoothing 0.0 --learning-rate-scheduler linear --learning-rate 3e-4
 ```
 
 The above commandline will train 8 GPUs with approximately 3175 source/target
