@@ -11,21 +11,24 @@
 
 # binarize data
 
+# download data
+python process_new_data/download_data.py en_ja $RAW_PATH
 
 # data path
 #BASE_PATH=/mnt/nfs/work1/miyyer/simengsun/data/small_enjp/
-EN_TRAIN_RAW=$BASE_PATH/train.raw.en
-JA_TRAIN_RAW=$BASE_PATH/train.raw.ja
-EN_TRAIN_TOK=$BASE_PATH/train.tok.en
-JA_TRAIN_TOK=$BASE_PATH/train.tok.ja
-EN_DEV_RAW=$BASE_PATH/dev.raw.en
-JA_DEV_RAW=$BASE_PATH/dev.raw.ja
-EN_TEST_RAW=$BASE_PATH/test.raw.en
-JA_TEST_RAW=$BASE_PATH/test.raw.ja
-EN_DEV_TOK=$BASE_PATH/valid.tok.en
-JA_DEV_TOK=$BASE_PATH/valid.tok.ja
-EN_TEST_TOK=$BASE_PATH/test.tok.en
-JA_TEST_TOK=$BASE_PATH/test.tok.ja
+EN_TRAIN_RAW=$RAW_PATH/train.raw.en
+JA_TRAIN_RAW=$RAW_PATH/train.raw.ja
+EN_TRAIN_TOK=$PROCESS_PATH/train.tok.en
+JA_TRAIN_TOK=$PROCESS_PATH/train.tok.ja
+JOINT_TRAIN_TOK=$PROCESS_PATH/train.tok.joint
+EN_DEV_RAW=$RAW_PATH/dev.raw.en
+JA_DEV_RAW=$RAW_PATH/dev.raw.ja
+EN_TEST_RAW=$RAW_PATH/test.raw.en
+JA_TEST_RAW=$RAW_PATH/test.raw.ja
+EN_DEV_TOK=$PROCESS_PATH/valid.tok.en
+JA_DEV_TOK=$PROCESS_PATH/valid.tok.ja
+EN_TEST_TOK=$PROCESS_PATH/test.tok.en
+JA_TEST_TOK=$PROCESS_PATH/test.tok.ja
 
 # sennrich's script for prepjpcess jpmanian
 #WMT16_SCRIPTS=/mnt/nfs/work1/miyyer/simengsun/other/wmt16-scripts
@@ -51,6 +54,8 @@ cat $JA_TEST_RAW | $JA_PREPROCESSING > $JA_TEST_TOK
 
 # process and binarize data
 
-python process_enja.py process_spm_vocab
-python process_enja.py spm_bpe_encode
-python process_enja.py binarize
+cat $EN_TRAIN_TOK $EN_DEV_TOK $EN_TEST_TOK $JA_TRAIN_TOK $JA_DEV_TOK $JA_TEST_TOK > $JOINT_TRAIN_TOK
+
+python process_new_data/process_enja.py process_spm_vocab $PROCESS_PATH
+python process_new_data/process_enja.py spm_bpe_encode $PROCESS_PATH
+python process_new_data/process_enja.py binarize $PROCESS_PATH

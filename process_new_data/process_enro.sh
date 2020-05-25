@@ -1,38 +1,40 @@
 #!/bin/bash
 
-#BASE_PATH=/mnt/nfs/work1/miyyer/simengsun/data/small_enro/
+# required environmental variables" SUBWORD, WMT16_SCRIPTS, MOSES, RAW_PATH, DOWNLOAD_PATH
 
-# BPE related 
-#SUBWORD=/mnt/nfs/work1/miyyer/simengsun/other/subword-nmt/subword_nmt/
-BPE_VOCAB=$BASE_PATH/vocab.bpe.freq.32000
-BPE_CODES=$BASE_PATH/bpe.32000
+# BPE related
+BPE_VOCAB=$PROCESS_PATH/vocab.bpe.freq.32000
+BPE_CODES=$PROCESS_PATH/bpe.32000
 MERGE_OPS=32000
 
-# data path
-EN_TRAIN_RAW=$BASE_PATH/raw.en
-RO_TRAIN_RAW=$BASE_PATH/raw.ro
-EN_TRAIN_TOK=$BASE_PATH/train.tok.en
-RO_TRAIN_TOK=$BASE_PATH/train.tok.ro
-EN_TRAIN_BPE=$BASE_PATH/train.tok.bpe.32000.en
-RO_TRAIN_BPE=$BASE_PATH/train.tok.bpe.32000.ro
-EN_DEV_SGM=$BASE_PATH/dev/newsdev2016-roen-ref.en.sgm
-RO_DEV_SGM=$BASE_PATH/dev/newsdev2016-enro-ref.ro.sgm
-EN_TEST_SGM=$BASE_PATH/test/newstest2016-roen-ref.en.sgm
-RO_TEST_SGM=$BASE_PATH/test/newstest2016-enro-ref.ro.sgm
-EN_DEV_TOK=$BASE_PATH/valid.tok.en
-RO_DEV_TOK=$BASE_PATH/valid.tok.ro
-EN_TEST_TOK=$BASE_PATH/test.tok.en
-RO_TEST_TOK=$BASE_PATH/test.tok.ro
-EN_DEV_BPE=$BASE_PATH/valid.tok.bpe.32000.en
-RO_DEV_BPE=$BASE_PATH/valid.tok.bpe.32000.ro
-EN_TEST_BPE=$BASE_PATH/test.tok.bpe.32000.en
-RO_TEST_BPE=$BASE_PATH/test.tok.bpe.32000.ro
+# download files
+python process_new_data/download_data.py en_ro $RAW_PATH
+
+# data pathEN
+cat $RAW_PATH/training-parallel-ep-v8/europarl-v8.ro-en.en $RAW_PATH/SETIMES.en-ro.en > $RAW_PATH/raw.en
+cat $RAW_PATH/training-parallel-ep-v8/europarl-v8.ro-en.ro $RAW_PATH/SETIMES.en-ro.ro > $RAW_PATH/raw.ro
+EN_TRAIN_RAW=$RAW_PATH/raw.en
+RO_TRAIN_RAW=$RAW_PATH/raw.ro
+EN_TRAIN_TOK=$PROCESS_PATH/train.tok.en
+RO_TRAIN_TOK=$PROCESS_PATH/train.tok.ro
+EN_TRAIN_BPE=$PROCESS_PATH/train.tok.bpe.32000.en
+RO_TRAIN_BPE=$PROCESS_PATH/train.tok.bpe.32000.ro
+EN_DEV_SGM=$RAW_PATH/dev/newsdev2016-roen-ref.en.sgm
+RO_DEV_SGM=$RAW_PATH/dev/newsdev2016-enro-ref.ro.sgm
+EN_TEST_SGM=$RAW_PATH/test/newstest2016-roen-ref.en.sgm
+RO_TEST_SGM=$RAW_PATH/test/newstest2016-enro-ref.ro.sgm
+EN_DEV_TOK=$PROCESS_PATH/valid.tok.en
+RO_DEV_TOK=$PROCESS_PATH/valid.tok.ro
+EN_TEST_TOK=$PROCESS_PATH/test.tok.en
+RO_TEST_TOK=$PROCESS_PATH/test.tok.ro
+EN_DEV_BPE=$PROCESS_PATH/valid.tok.bpe.32000.en
+RO_DEV_BPE=$PROCESS_PATH/valid.tok.bpe.32000.ro
+EN_TEST_BPE=$PROCESS_PATH/test.tok.bpe.32000.en
+RO_TEST_BPE=$PROCESS_PATH/test.tok.bpe.32000.ro
 
 # sennrich's script for preprocess romanian
-#WMT16_SCRIPTS=/mnt/nfs/work1/miyyer/simengsun/other/wmt16-scripts
 NORMALIZE_ROMANIAN=$WMT16_SCRIPTS/preprocess/normalise-romanian.py
 REMOVE_DIACRITICS=$WMT16_SCRIPTS/preprocess/remove-diacritics.py
-#MOSES=/mnt/nfs/work1/miyyer/simengsun/other/mosesdecoder
 REPLACE_UNICODE_PUNCT=$MOSES/scripts/tokenizer/replace-unicode-punctuation.perl
 NORM_PUNC=$MOSES/scripts/tokenizer/normalize-punctuation.perl
 REM_NON_PRINT_CHAR=$MOSES/scripts/tokenizer/remove-non-printing-char.perl
@@ -67,13 +69,13 @@ $SUBWORD/apply_bpe.py -c $BPE_CODES < $EN_TRAIN_TOK > $EN_TRAIN_BPE
 $SUBWORD/apply_bpe.py -c $BPE_CODES < $RO_TRAIN_TOK > $RO_TRAIN_BPE
 
 echo "get vocab"
-cat $EN_TRAIN_BPE $RO_TRAIN_BPE > $BASE_PATH/joint.tok.bpe.$MERGE_OPS
-$SUBWORD/get_vocab.py --input $BASE_PATH/joint.tok.bpe.$MERGE_OPS --output $BPE_VOCAB
+cat $EN_TRAIN_BPE $RO_TRAIN_BPE > $PROCESS_PATH/joint.tok.bpe.$MERGE_OPS
+$SUBWORD/get_vocab.py --input $PROCESS_PATH/joint.tok.bpe.$MERGE_OPS --output $BPE_VOCAB
 
 # encode text using the bpe codes, add vocab for reverse encoding
 echo "encode using bpe codes"
 for lang in en ro; do
-	for f in $BASE_PATH/*.tok.$lang; do
+	for f in $PROCESS_PATH/*.tok.$lang; do
 		outfile=${f%.*}.bpe.$MERGE_OPS.$lang
 		$SUBWORD/apply_bpe.py -c $BPE_CODES --vocabulary $BPE_VOCAB < $f > $outfile
 		echo $outfile
@@ -81,9 +83,10 @@ for lang in en ro; do
 done
 
 echo "get vocab"
-cat $EN_TRAIN_BPE $RO_TRAIN_BPE $EN_DEV_BPE $RO_DEV_BPE $EN_TEST_BPE $RO_TEST_BPE > $BASE_PATH/joint.tok.bpe.$MERGE_OPS
-$SUBWORD/get_vocab.py --input $BASE_PATH/joint.tok.bpe.$MERGE_OPS --output $BPE_VOCAB
-cat $BPE_VOCAB | cut -f 1 -d ' ' > $BASE_PATH/vocab.bpe.$MERGE_OPS
+cat $EN_TRAIN_BPE $RO_TRAIN_BPE $EN_DEV_BPE $RO_DEV_BPE $EN_TEST_BPE $RO_TEST_BPE > $PROCESS_PATH/joint.tok.bpe.$MERGE_OPS
+$SUBWORD/get_vocab.py --input $PROCESS_PATH/joint.tok.bpe.$MERGE_OPS --output $BPE_VOCAB
+cat $BPE_VOCAB | cut -f 1 -d ' ' > $PROCESS_PATH/vocab.bpe.$MERGE_OPS
 
 # binarize bpe encoded data
-python process_enro.py binarize
+echo $PROCESS_PATH
+python process_new_data/process_enro.py binarize $PROCESS_PATH

@@ -11,7 +11,7 @@ import struct
 import numpy as np
 
 # SAVE PATH
-SAVE_PATH = "/mnt/nfs/work1/miyyer/simengsun/data/small_enro/"
+SAVE_PATH = ""
 
 np.random.seed(42)
 
@@ -19,6 +19,7 @@ np.random.seed(42)
 def save_data(fold, lang, data):
 	with open(os.path.join(SAVE_PATH, "{}.tok.{}".format(fold, lang)), "w") as f:
 		f.writelines(data)
+
 
 def load_vocab():
 	"""vocab, basically token2id"""
@@ -31,6 +32,7 @@ def load_vocab():
 		vocab[''] = len(vocab)
 	return vocab
 
+
 def tensorize(sent, vocab):
 
 	sent_enc = array.array('H')
@@ -38,6 +40,7 @@ def tensorize(sent, vocab):
 	byte_rep = sent_enc.tobytes()
 	byte_len = len(byte_rep)
 	return struct.pack('Q{}s'.format(byte_len), byte_len, byte_rep)
+
 
 def binarize(fold, vocab):
 	"""
@@ -49,7 +52,6 @@ def binarize(fold, vocab):
 	tgt_path = os.path.join(SAVE_PATH, f'{fold}.tok.bpe.32000.ro')
 	src_path = os.path.join(SAVE_PATH, f'{fold}.tok.bpe.32000.en')
 	out_path = os.path.join(SAVE_PATH, f'{fold}.tok.bpe.32000.bin')
-	pdb.set_trace()
 	with open(src_path, 'r') as f_src, \
 			open(tgt_path, 'r') as f_tgt, \
 			open(out_path, 'wb') as f_out:
@@ -66,6 +68,8 @@ def binarize(fold, vocab):
 			f_out.write(sent_t)
 
 if __name__ == "__main__":
+
+	SAVE_PATH = sys.argv[2]
 
 	if sys.argv[1] == "binarize":
 		vocab = load_vocab()
