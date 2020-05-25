@@ -62,8 +62,8 @@ class PETITEEnJpDataset(AnnotatedTextDataset):
             ('en-ja/IWSLT17.TED.tst2015.en-ja.en.xml', 'en-ja/IWSLT17.TED.tst2015.en-ja.ja.xml')
         ],
         'test': [
-            ('en-de/IWSLT17.TED.tst2016.en-ja.en.xml', 'ja-en/IWSLT17.TED.tst2016.ja-en.ja.xml'),
-            ('en-de/IWSLT17.TED.tst2017.en-ja.en.xml', 'ja-en/IWSLT17.TED.tst2017.ja-en.ja.xml')
+            ('en-ja/IWSLT17.TED.tst2016.en-ja.en.xml', 'ja-en/IWSLT17.TED.tst2016.ja-en.ja.xml'),
+            ('en-ja/IWSLT17.TED.tst2017.en-ja.en.xml', 'ja-en/IWSLT17.TED.tst2017.ja-en.ja.xml')
         ]
     }
     SPLITS = {
