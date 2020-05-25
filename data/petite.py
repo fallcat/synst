@@ -7,7 +7,7 @@ from data.annotated import AnnotatedTextDataset
 
 
 class PETITEEnRoDataset(AnnotatedTextDataset):
-    NAME = "petite"
+    NAME = "wmt"
     LANGUAGE_PAIR = ('en', 'ro')
 
     URLS = [
@@ -38,7 +38,7 @@ class PETITEEnRoDataset(AnnotatedTextDataset):
 
 
 class PETITEEnJpDataset(AnnotatedTextDataset):
-    NAME = "petite"
+    NAME = "iwslt"
     LANGUAGE_PAIR = ('en', 'ja')
     WORD_COUNT = (5114050, 3576290)
 
