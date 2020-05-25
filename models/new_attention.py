@@ -207,7 +207,9 @@ class NewAttention(nn.Module):
                         c *= self.num_heads // len(c)
 
                     else:
+
                         print('wrong head attn_configs', c)
+                        pdb.set_trace()
                         raise ValueError('wrong head attn_configs')
 
                 attn_configs[attr] = c
