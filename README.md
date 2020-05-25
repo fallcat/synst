@@ -83,6 +83,10 @@ python main.py -b 3175 --dataset wmt_en_de \
   --checkpoint-directory experiments/wmt_en_de_01
 ```
 
+The above commandline will train 8 GPUs with approximately 3175 source/target
+tokens combined per GPU, and accumulate the gradients over two batches before
+updating model parameters (leading to ~50.8k tokens per model update).
+
 You can also recreate results on IWSLT'16 En-De dataset for hard-coded all attention model on 1 1080Ti GPU with:
 
 ```sh
@@ -98,9 +102,21 @@ python main.py -b 6000 --dataset iwslt_en_de \
   --label-smoothing 0.0 --learning-rate-scheduler linear --learning-rate 3e-4
 ```
 
-The above commandline will train 8 GPUs with approximately 3175 source/target
-tokens combined per GPU, and accumulate the gradients over two batches before
-updating model parameters (leading to ~50.8k tokens per model update).
+To recreate results for single head cross-attention, you can run:
+
+```sh
+python main.py -b 6000 --dataset iwslt_en_de \
+  --model new_transformer \
+  --enc-attn-type normal --enc-attn-offset -1 1 \
+  --dec-attn-type normal --dec-attn-offset -1 0 \
+  --enc-dec-attn-type learned \
+  --enc-dec-attn-layer 0 0 0 0 1 --enc-dec-attn-num-heads 0 0 0 0 1 \
+  --embedding-size 288 --hidden-dim 507 --num-heads 4 --num-layers 5 \
+  -d raw/wmt -p preprocessed/wmt -v train \
+  --checkpoint-interval 600 --accumulate 1 \
+  --checkpoint-directory experiments/iwslt_en_de_01 \
+  --label-smoothing 0.0 --learning-rate-scheduler linear --learning-rate 3e-4
+```
 
 The default model is the Transformer model. If you want to train a vanilla Tranformer model on the WMT'14 De-En dataset, you can run this:
 

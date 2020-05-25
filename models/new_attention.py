@@ -207,6 +207,7 @@ class NewAttention(nn.Module):
                         c *= self.num_heads // len(c)
 
                     else:
+                        print('wrong head attn_configs', c)
                         raise ValueError('wrong head attn_configs')
 
                 attn_configs[attr] = c
