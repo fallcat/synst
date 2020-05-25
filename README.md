@@ -38,8 +38,7 @@ pass}`.
 Preprocessing for wmt_en_de, wmt_en_fr and iwslt_en_de are the same as in synst:
 
 ```sh
-CLASSPATH=stanford-corenlp-full-2018-10-05/* python main.py \
-  --dataset wmt_en_de --span 6 -d raw/wmt -p preprocessed/wmt -v pass
+python main.py --dataset wmt_en_de --span 6 -d raw/wmt -p preprocessed/wmt -v pass
 ```
 
 We also added IWSLT En-Ja and WMT En-Ro datasets and you can process them by the following commands.
