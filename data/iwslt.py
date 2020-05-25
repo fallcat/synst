@@ -54,3 +54,40 @@ class IWSLTDataset(AnnotatedTextDataset):
             'title', 'description', 'reviewer', 'translator'
         )
     ]
+
+
+class IWSLTEnJpDataset(AnnotatedTextDataset):
+    NAME = "iwslt"
+    LANGUAGE_PAIR = ('en', 'ja')
+    WORD_COUNT = (5114050, 3576290)
+
+    URLS = [
+        ('iwslt_en_ja.tgz', 'https://wit3.fbk.eu/archive/2017-01-trnted/texts/en/ja/en-ja.tgz'),
+        ('iwslt_en_ja_test.tgz',
+         'https://wit3.fbk.eu/archive/2017-01-ted-test/texts/en/ja/en-ja.tgz'),
+        ('iwslt_en_ja_test_ja_en.tgz', 'https://wit3.fbk.eu/archive/2017-01-ted-test/texts/ja/en/ja-en.tgz')
+    ]
+
+    RAW_SPLITS = {
+        'train': [
+                ('en-ja/train.tags.en-ja.en', 'en-ja/train.tags.en-ja.ja')
+        ],
+        'dev': [
+            ('en-ja/IWSLT17.TED.dev2010.en-ja.en.xml', 'en-ja/IWSLT17.TED.dev2010.en-ja.ja.xml'),
+            ('en-ja/IWSLT17.TED.tst2010.en-ja.en.xml', 'en-ja/IWSLT17.TED.tst2010.en-ja.ja.xml'),
+            ('en-ja/IWSLT17.TED.tst2011.en-ja.en.xml', 'en-ja/IWSLT17.TED.tst2011.en-ja.ja.xml'),
+            ('en-ja/IWSLT17.TED.tst2012.en-ja.en.xml', 'en-ja/IWSLT17.TED.tst2012.en-ja.ja.xml'),
+            ('en-ja/IWSLT17.TED.tst2013.en-ja.en.xml', 'en-ja/IWSLT17.TED.tst2013.en-ja.ja.xml'),
+            ('en-ja/IWSLT17.TED.tst2014.en-ja.en.xml', 'en-ja/IWSLT17.TED.tst2014.en-ja.ja.xml'),
+            ('en-ja/IWSLT17.TED.tst2015.en-ja.en.xml', 'en-ja/IWSLT17.TED.tst2015.en-ja.ja.xml')
+        ],
+        'test': [
+            ('en-ja/IWSLT17.TED.tst2016.en-ja.en.xml', 'ja-en/IWSLT17.TED.tst2016.ja-en.ja.xml'),
+            ('en-ja/IWSLT17.TED.tst2017.en-ja.en.xml', 'ja-en/IWSLT17.TED.tst2017.ja-en.ja.xml')
+        ]
+    }
+    SPLITS = {
+        'train': 'train.tok',
+        'dev': 'dev.tok',
+        'test': 'test.tok'
+    }

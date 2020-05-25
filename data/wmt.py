@@ -69,3 +69,36 @@ class WMTEnFrFullDataset(WMTEnFrDataset):
         ('giga-fren.release2.fixed.en.gz', 'giga-fren.release2.fixed.fr.gz'),
         ('un/undoc.2000.fr-en.en', 'un/undoc.2000.fr-en.fr')
     ])
+
+
+class WMTEnRoDataset(AnnotatedTextDataset):
+    NAME = "wmt"
+    LANGUAGE_PAIR = ('en', 'ro')
+
+    URLS = [
+        ('europarl.tgz', 'http://data.statmt.org/wmt16/translation-task/training-parallel-ep-v8.tgz'),
+        ('setimes2.zip', 'http://opus.nlpl.eu/download.php?f=SETIMES/v2/moses/en-ro.txt.zip'),
+        ('dev.tgz', 'http://data.statmt.org/wmt16/translation-task/dev.tgz'),
+        ('test.tgz', 'http://data.statmt.org/wmt16/translation-task/test.tgz')
+    ]
+
+    RAW_SPLITS = {
+        'train': [
+            ('training-parallel-ep-v8/europarl-v8.ro-en.en', 'training-parallel-ep-v8/europarl-v8.ro-en.ro'),
+            ('en-ro/SETIMES.en-ro.en', 'en-ro/SETIMES.en-ro.ro')
+        ],
+        'dev': [
+            ('dev/newsdev2016-roen-ref.en.sgm', 'dev/newsdev2016-enro-ref.ro.sgm')
+        ],
+        'test': [
+            ('test/newstest2016-roen-ref.en.sgm', 'test/newstest2016-enro-ref.ro.sgm')
+        ]
+    }
+
+    SPLITS = {
+        'train': 'train.tok',
+        'dev': 'dev.tok',
+        'test': 'test.tok'
+    }
+
+
