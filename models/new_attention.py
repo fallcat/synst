@@ -118,10 +118,9 @@ class NewAttention(nn.Module):
             return retrieved[:, :qlen, :vlen]
 
         else:
-            try:
-                return retrieved[:, decoder_position:decoder_position+1, :vlen].view(1, -1, 1, 1)
-            except:
-                pdb.set_trace()
+            print("retrieved", retrieved.shape)
+            print("retrieved[:, decoder_position:decoder_position+1, :vlen]", retrieved[:, decoder_position:decoder_position+1, :vlen].shape)
+            return retrieved[:, decoder_position:decoder_position+1, :vlen]
 
     def reset_parameters(self):
         ''' Reset parameters using xavier initialization '''
