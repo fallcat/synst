@@ -119,7 +119,7 @@ class NewAttention(nn.Module):
             return retrieved[:, :qlen, :vlen]
 
         else:
-            return retrieved[:, decoder_position:decoder_position+1, :vlen].view(1, 1, 1, -1)
+            return retrieved[:, decoder_position:decoder_position+1, :vlen].view(1, -1, 1, 1)
 
     def reset_parameters(self):
         ''' Reset parameters using xavier initialization '''
