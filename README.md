@@ -50,7 +50,7 @@ git clone https://github.com/rsennrich/subword-nmt.git
 git clone https://github.com/rsennrich/wmt16-scripts.git
 git clone https://github.com/moses-smt/mosesdecoder.git
 export SUBWORD=subword-nmt
-export WMT16_SCRIPT=wmt16-scripts
+export WMT16_SCRIPTS=wmt16-scripts
 export MOSES=mosesdecoder
 ```
 
