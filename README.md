@@ -156,7 +156,7 @@ CUDA_VISIBLE_DEVICES=0 python main.py --dataset wmt_en_de \
   --enc-attn-type normal --enc-attn-offset -1 1 \
   --dec-attn-type normal --dec-attn-offset -1 0 \
   -d raw/wmt -p preprocessed/wmt \
-  --batch-size 1 --batch-method example --split test -v \
+  --batch-size 1 --batch-method example --split test \
   --restore /tmp/stupidnmt/checkpoints/checkpoint.pt \
   --average-checkpoints 5 translate \
   --max-decode-length 50 --length-basis input_lens --order-output

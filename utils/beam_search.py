@@ -49,9 +49,8 @@ class Beam(object):
 
 class BeamSearchDecoder(object):
     ''' Class that encapsulates decoding using beam search '''
-    def __init__(self, model, eos_idx, config, span=1):
+    def __init__(self, model, eos_idx, config):
         ''' Initialize the beam search decoder '''
-        self.span = span
         self.model = model
         self.config = config
         self.eos_idx = eos_idx
@@ -130,13 +129,13 @@ class BeamSearchDecoder(object):
             if batch_idx >= 0:
                 beam_scores.append(scores[batch_idx])
                 beam_indices.append(indices[batch_idx])
-                lengths.append(len(hypothesis) + self.span)
+                lengths.append(len(hypothesis) + 1)
 
                 if cache:
                     cache_lines.append(cache[batch_idx])
             else:
-                beam_scores.append(scores.new_zeros((self.beam_width, self.span,)))
-                beam_indices.append(indices.new_full((self.beam_width, self.span,), self.eos_idx))
+                beam_scores.append(scores.new_zeros((self.beam_width, 1,)))
+                beam_indices.append(indices.new_full((self.beam_width, 1,), self.eos_idx))
                 lengths.append(len(hypothesis))
 
                 if cache:
@@ -147,7 +146,7 @@ class BeamSearchDecoder(object):
 
         hypotheses_scores = scores.new_tensor(hypotheses_scores)
         scores = torch.sum(scores, -1) + hypotheses_scores[:, None]
-        indices = indices.reshape(-1, self.span)
+        indices = indices.reshape(-1, 1)
         scores = scores.reshape(-1)
 
         # pylint:disable=unused-variable
@@ -224,7 +223,7 @@ class BeamSearchDecoder(object):
                             updated_cache.extend(utils.split_or_chunk(new_cache, len(batch)))
 
                         full_logits = result['logits']
-                        logits.append(full_logits[:, :, -self.span:])
+                        logits.append(full_logits[:, :, -1:])
                     except RuntimeError as rte:
                         if 'out of memory' in str(rte):
                             # This is the EAFP (easier to ask forgiveness than permission) approach
