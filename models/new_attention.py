@@ -118,8 +118,6 @@ class NewAttention(nn.Module):
             return retrieved[:, :qlen, :vlen]
 
         else:
-            print("retrieved", retrieved.shape)
-            print("retrieved[:, decoder_position:decoder_position+1, :vlen]", retrieved[:, decoder_position:decoder_position+1, :vlen].shape)
             return retrieved[:, decoder_position:decoder_position+1, :vlen]
 
     def reset_parameters(self):

@@ -220,7 +220,10 @@ class TransformerDecoderLayer(nn.Module):
             else:
                 # print("cached", cached.shape)
                 # print("state", state.shape)
-                state = cache[self.uuid] = torch.cat((cached, state), 1)
+                try:
+                    state = cache[self.uuid] = torch.cat((cached, state), 1)
+                except:
+                    pdb.set_trace()
 
         return {'state': state, 'mask': mask, 'cache': cache}
 
