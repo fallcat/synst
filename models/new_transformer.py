@@ -183,7 +183,7 @@ class TransformerDecoderLayer(nn.Module):
             kwargs['word_embedding'] = word_embedding
 
         # print("decoder self attention")
-        # pdb.set_trace()
+        pdb.set_trace()
 
         state = self.self_attention(
             residual, # residual
