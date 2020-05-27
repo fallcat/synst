@@ -426,6 +426,7 @@ class NewTransformer(nn.Module):
             decoded = decoder(decoded, encoded, i, word_embedding)
 
         # compute projection to the vocabulary
+        pdb.set_trace()
         state = decoded['state']
         if cache is not None:
             state = state[:, -1:]

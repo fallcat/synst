@@ -227,6 +227,7 @@ class Translator(object):
         self.config = config
         self.dataset = dataset
 
+        self.span = 1
         self.encoder = ModuleWrapper(model, 'encode')
         self.decoder = ModuleWrapper(model, 'decode')
 
@@ -268,16 +269,17 @@ class Translator(object):
             decoder = BeamSearchDecoder(
                 self.decoder,
                 self.eos_idx,
-                self.config
+                self.config,
+                self.span
             )
 
             encoded = self.encoder(batch['inputs'])
             beams = decoder.initialize_search(
-                [[self.sos_idx] for _ in range(len(batch['inputs']))],
-                [l + self.config.max_decode_length + 2 for l in length_basis]
+                [[self.sos_idx] * self.span for _ in range(len(batch['inputs']))],
+                [l + self.config.max_decode_length + self.span + 1 for l in length_basis]
             )
             targets = [
-                beam.best_hypothesis.sequence
+                beam.best_hypothesis.sequence[self.span - 1:]
                 for beam in decoder.decode(encoded, beams)
             ]
 
