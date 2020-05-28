@@ -22,8 +22,7 @@ from torch.autograd import profiler, set_detect_anomaly
 
 from args import parse_args
 from data.utils import get_dataloader
-from models.utils import restore, init_indices_q, init_attended_indices, encoder_indices_matq, decoder_indices_matq, encoder_attended_indices, decoder_attended_indices
-from models.utils import init_indices
+from models.utils import restore
 from utils import profile
 
 # import comet_ml in the top of your file
@@ -37,8 +36,6 @@ def main(argv=None):
     args = parse_args(argv)
 
     # initialize indices_matq
-
-    init_indices(args)
 
     print(f'Running torch {torch.version.__version__}')
 

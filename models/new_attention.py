@@ -428,6 +428,9 @@ class NewAttention(nn.Module):
             queries, = self.project(queries, 2, project=False)
         # pylint:enable=unbalanced-tuple-unpacking
 
+        if decoder_position != -1:
+            queries = queries[:, -1:]
+
         if 'full' in self.impl:
             attended = self.attention(values, keys, queries,
                                   attention_mask, layer_i, decoder_position)
