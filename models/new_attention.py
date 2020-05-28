@@ -85,7 +85,7 @@ class NewAttention(nn.Module):
 
         attn_cache_store = NewAttention._attn_cache.__dict__
 
-        real_qlen = max(qlen, decoder_position)
+        real_qlen = max(qlen, decoder_position + 1)
 
         if device not in attn_cache_store or attn_cache_store[device].shape[1] < real_qlen or attn_cache_store[device].shape[2] < vlen:
             max_qlen = max(attn_cache_store[device].shape[1], real_qlen) if device in attn_cache_store else real_qlen
