@@ -84,8 +84,10 @@ class NewAttention(nn.Module):
 
         attn_cache_store = NewAttention._attn_cache.__dict__
 
-        if device not in attn_cache_store or attn_cache_store[device].shape[1] < qlen or attn_cache_store[device].shape[2] < vlen:
-            max_qlen = max(attn_cache_store[device].shape[1], qlen) if device in attn_cache_store else qlen
+        real_qlen = max(qlen, decoder_position)
+
+        if device not in attn_cache_store or attn_cache_store[device].shape[1] < real_qlen or attn_cache_store[device].shape[2] < vlen:
+            max_qlen = max(attn_cache_store[device].shape[1], real_qlen) if device in attn_cache_store else real_qlen
             max_vlen = max(attn_cache_store[device].shape[2], vlen) if device in attn_cache_store else vlen
             max_offset, min_offset = max(self.attn_ofs_uniq), min(self.attn_ofs_uniq)
 
@@ -107,7 +109,7 @@ class NewAttention(nn.Module):
 
         retrieved = attn_cache_store[device]  # nh x qlen x vlen
         retrieved = retrieved[
-            [[[a]] for a in std_idx], [[[b] for b in list(range(qlen))]], [[list(range(l, r))] for l, r in
+            [[[a]] for a in std_idx], [[[b] for b in list(range(real_qlen))]], [[list(range(l, r))] for l, r in
                                                                            zip(attn_ofs_l, attn_ofs_r)]]
         if decoder_position == -1:
             return retrieved[:, :qlen, :vlen]
