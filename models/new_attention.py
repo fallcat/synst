@@ -94,7 +94,7 @@ class NewAttention(nn.Module):
 
             attn_std_uniq = torch.tensor(self.attn_std_uniq).view(-1, 1, 1)
             indices_q = torch.arange(max_qlen).float().view(1, -1, 1) * self.word_count_ratio
-            indices_v = torch.arange(-max_offset, max_vlen - min_offset).float().view(1, 1, -1)  # -max_offset: focus on right most position, self.max_qlen - min_offset: leftmost
+            indices_v = torch.arange(-max_offset, max_vlen - min_offset + 1).float().view(1, 1, -1)  # -max_offset: focus on right most position, self.max_qlen - min_offset: leftmost
 
             distance_diff = indices_v - indices_q
             logits = (1 / (attn_std_uniq * math.sqrt(2 * math.pi)) * torch.exp(
