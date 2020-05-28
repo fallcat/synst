@@ -393,6 +393,8 @@ class NewAttention(nn.Module):
                 if 'learned' in attn_type:
                     attn_weights[:, learned_indices] = logits_  # bs x learned_indices x L x L
 
+                print("attn_weights", attn_weights)
+
                 attn_weights = attn_weights.contiguous().view(-1, queries_shape[1], values_shape[1])
 
         if mask is not None:
