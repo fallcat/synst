@@ -182,9 +182,6 @@ class TransformerDecoderLayer(nn.Module):
             kwargs['attention_mask'] = self.mask(state)
             kwargs['word_embedding'] = word_embedding
 
-        # print("decoder self attention")
-        pdb.set_trace()
-
         state = self.self_attention(
             residual, # residual
             state, state, state, **kwargs # passed to multiheaded attention
