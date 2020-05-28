@@ -94,7 +94,7 @@ class TransformerEncoderLayer(nn.Module):
         mask = inputs['mask']
         state = inputs['state']
 
-        print("encoder self attention")
+        # print("encoder self attention")
 
         state = self.self_attention(
             state,  # residual
@@ -182,7 +182,7 @@ class TransformerDecoderLayer(nn.Module):
             kwargs['attention_mask'] = self.mask(state)
             kwargs['word_embedding'] = word_embedding
 
-        print("decoder self attention")
+        # print("decoder self attention")
         state = self.self_attention(
             residual, # residual
             state, state, state, **kwargs # passed to multiheaded attention
@@ -197,7 +197,7 @@ class TransformerDecoderLayer(nn.Module):
         else:
             kwargs['word_embedding'] = word_embedding
 
-        print("decoder source attention")
+        # print("decoder source attention")
 
         if hasattr(self, 'source_attention'):
             # print("in source, state", state.shape)
