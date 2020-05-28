@@ -4,18 +4,13 @@ A module which implements various attention mechanisms
 import pdb
 import math
 import torch
-import time
 import threading
 import numpy as np
 from torch import nn
 from torch.nn import functional as F
-import torch.multiprocessing as mp
 from collections import defaultdict
 
 from utils import same_tensor
-import models.utils as utils
-from models.utils import init_indices_q, init_attended_indices, init_attended_indices_conv
-
 
 class NewAttention(nn.Module):
     ''' Implement a hard-coded attention module '''
