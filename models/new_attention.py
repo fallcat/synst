@@ -337,7 +337,7 @@ class NewAttention(nn.Module):
 
             attended = torch.bmm(attn_weights, values)
 
-            batch_size = queries_shape[0] // self.num_heads
+            print("attn_weights", attn_weights)
 
             return self.mha_reshape(attended, batch_size)
 
@@ -399,6 +399,8 @@ class NewAttention(nn.Module):
 
         if mask is not None:
             attn_weights = attn_weights * (mask == 0).to(dtype=torch.float32)
+
+        print("attn_weights", attn_weights)
 
         attended = torch.bmm(attn_weights, values)
 
