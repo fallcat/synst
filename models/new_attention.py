@@ -350,7 +350,7 @@ class NewAttention(nn.Module):
 
             attended = torch.bmm(attn_weights, values)
 
-            print("attn_weights", attn_weights)
+            # print("attn_weights", attn_weights)
 
             return self.mha_reshape(attended, batch_size)
 
