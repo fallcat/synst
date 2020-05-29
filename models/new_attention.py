@@ -263,7 +263,7 @@ class NewAttention(nn.Module):
                     bsz, self.num_heads, qlen, self.projection_dim)
                     ).transpose(2,1).contiguous().view(bsz, -1, self.num_heads * self.projection_dim)
 
-    def attention_index(self, values, keys, queries, mask=None, layer_i=0, decoder_position=-1):
+    def attention_index(self, values, keys, queries, key_mask=None, mask=None, layer_i=0, decoder_position=-1):
         queries_shape = queries.shape  # B*H x L x E
         values_shape = values.shape
         batch_size = queries_shape[0] // self.num_heads
@@ -275,13 +275,16 @@ class NewAttention(nn.Module):
         # bs x num_heads x vlen x proj_dim
         values = values.view(batch_size, self.num_heads, values_shape[1], values_shape[2])
 
+        if key_mask is not None:
+            values.masked_fill_(key_mask[:, None, :, None], float(0))
+
         values = F.pad(values, (0, 0, self.max_absolute_offset, self.max_absolute_offset), "constant", 0)
         # recompute attended indices
         attn_indices = self.get_attn_indices(max(queries_shape[1], decoder_position + 1), attn_offset, values.device)
 
         return self.gather_reshape(values, attn_indices, batch_size, queries_shape[1], decoder_position)
 
-    def attention_conv(self, values, keys, queries, mask=None, layer_i=0, decoder_position=-1):
+    def attention_conv(self, values, keys, queries, key_mask=None, mask=None, layer_i=0, decoder_position=-1):
 
         queries_shape = queries.shape  # B*H x L x proj_dim
         values_shape = values.shape
@@ -297,6 +300,9 @@ class NewAttention(nn.Module):
         curr_conv_filter = torch.cat(curr_conv_filter, dim=0)
 
         values = values.view(batch_size, self.num_heads, values_shape[1], values_shape[2])
+
+        if key_mask is not None:
+            values.masked_fill_(key_mask[:, None, :, None], float(0))
 
         values = values.transpose(3, 1).transpose(3, 2).contiguous().view(batch_size * self.projection_dim,
                                                                           self.num_heads, -1)
@@ -316,7 +322,7 @@ class NewAttention(nn.Module):
                len(set(attn_std)) == 1 and \
                len(set(attn_offset)) == 1
 
-    def attention(self, values, keys, queries, mask=None, layer_i=0, decoder_position=-1):
+    def attention(self, values, keys, queries, key_mask=None, mask=None, layer_i=0, decoder_position=-1):
 
         queries_shape = queries.shape  # B*H x L x proj_dim
         values_shape = values.shape
@@ -332,6 +338,13 @@ class NewAttention(nn.Module):
 
             if mask is not None:
                 logits += mask
+
+            if key_mask is not None:
+                logits_shape = logits.shape
+                batch_size = logits_shape[0] // self.num_heads
+                logits = logits.view(batch_size, self.num_heads, logits_shape[1], logits_shape[2])
+                logits.masked_fill_(key_mask[:, None, None], float('-inf'))
+                logits = logits.view(logits_shape)
 
             attn_weights = F.softmax(logits, dim=-1)
 
@@ -352,6 +365,12 @@ class NewAttention(nn.Module):
 
             if mask is not None:
                 logits_ += mask
+
+            if key_mask is not None:
+                batch_size = logits_shape_[0] // len(learned_indices)
+                logits_ = logits_.view(batch_size, len(learned_indices), logits_shape_[1], logits_shape_[2])
+                logits_.masked_fill_(key_mask[:, None, None], float('-inf'))
+                logits_ = logits_.view(logits_shape_)
 
             logits_ = F.softmax(logits_, dim=-1).view(batch_size,
                                                       len(learned_indices),
@@ -400,6 +419,12 @@ class NewAttention(nn.Module):
         if mask is not None:
             attn_weights = attn_weights * (mask == 0).to(dtype=torch.float32)
 
+        if key_mask is not None:
+            # bs x num_heads x vlen x proj_dim
+            values = values.view(batch_size, self.num_heads, values_shape[1], values_shape[2])
+            values.masked_fill_(key_mask[:, None, :, None], float(0))
+            values = values.view(values_shape)
+
         print("attn_weights", attn_weights)
 
         attended = torch.bmm(attn_weights, values)
@@ -435,14 +460,14 @@ class NewAttention(nn.Module):
 
         if 'full' in self.impl:
             attended = self.attention(values, keys, queries,
-                                  attention_mask, layer_i, decoder_position)
+                                  key_mask, attention_mask, layer_i, decoder_position)
 
         elif 'conv' in self.impl:
             attended = self.attention_conv(values, keys, queries,
-                                  attention_mask, layer_i, decoder_position)
+                                  key_mask, attention_mask, layer_i, decoder_position)
 
         elif 'index' in self.impl:
             attended = self.attention_index(values, keys, queries,
-                                  attention_mask, layer_i, decoder_position)
+                                  key_mask, attention_mask, layer_i, decoder_position)
 
         return self.output_projection(attended)
