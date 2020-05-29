@@ -425,7 +425,7 @@ class NewAttention(nn.Module):
             values.masked_fill_(key_mask[:, None, :, None], float(0))
             values = values.view(values_shape)
 
-        print("attn_weights", attn_weights)
+        # print("attn_weights", attn_weights)
 
         attended = torch.bmm(attn_weights, values)
 
