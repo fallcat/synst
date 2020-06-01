@@ -373,6 +373,7 @@ class NewTransformer(nn.Module):
     def forward(self, batch): # pylint:disable=arguments-differ
         ''' A batch of inputs and targets '''
         print("batch['inputs']", batch['inputs'])
+        print("batch['targets']", batch['targets'])
         decoded = self.decode(
             self.encode(batch['inputs']),
             right_shift(batch['targets']),
