@@ -24,7 +24,6 @@ class TextDataset(Dataset):
         self.skipped = 0
         self.token2id = {}
         self.id2token = []
-        self.word_align_stats = []
         self.split = split
         self.config = config
         self.reserved_range = len(self.id2token)

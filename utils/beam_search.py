@@ -235,7 +235,7 @@ class BeamSearchDecoder(object):
                             # current batch into two chunks and try again.
                             chunks.extend(zip(
                                 utils.split_or_chunk(encoded_batch, 2),
-                                utils.split_or_chunk(batch, 2),
+                                utils.split_or_chunk(batch, 2)
                             ))
 
                             # Additionally clear the cache in case the issue is related to allocator

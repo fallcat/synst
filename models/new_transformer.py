@@ -89,7 +89,7 @@ class TransformerEncoderLayer(nn.Module):
         self.ffn.reset_parameters()
         self.self_attention.reset_parameters()
 
-    def forward(self, inputs, layer_i, word_embedding):  # pylint:disable=arguments-differ
+    def forward(self, inputs, layer_i):  # pylint:disable=arguments-differ
         ''' The forward pass '''
         mask = inputs['mask']
         state = inputs['state']
@@ -99,7 +99,7 @@ class TransformerEncoderLayer(nn.Module):
         state = self.self_attention(
             state,  # residual
             state, state, state, mask,  # passed to multiheaded attention
-            layer_i=layer_i, word_embedding=word_embedding
+            layer_i=layer_i
         )
 
         if hasattr(self, 'ffn'):
@@ -160,7 +160,7 @@ class TransformerDecoderLayer(nn.Module):
         if hasattr(self, 'source_attention'):
             self.source_attention.reset_parameters()
 
-    def forward(self, inputs, sources, layer_i, word_embedding): # pylint:disable=arguments-differ
+    def forward(self, inputs, sources, layer_i): # pylint:disable=arguments-differ
         ''' The forward pass '''
         mask = inputs['mask']
         state = inputs['state']
@@ -174,13 +174,11 @@ class TransformerDecoderLayer(nn.Module):
             # If caching, only want the last one sequence values. Requires no causal masking.
             residual = state[:, -1:]
             kwargs['decoder_position'] = decoder_position
-            kwargs['word_embedding'] = word_embedding[:, -1:]
         else:
             # If not caching, use the full sequence and ensure an appropriate causal mask
             residual = state
             kwargs['key_mask'] = mask
             kwargs['attention_mask'] = self.mask(state)
-            kwargs['word_embedding'] = word_embedding
 
         print("decoder self attention")
         state = self.self_attention(
@@ -193,9 +191,6 @@ class TransformerDecoderLayer(nn.Module):
         kwargs = {'key_mask': sources['mask'], 'layer_i': layer_i, 'input_lens': input_lens}
         if self.causal and cache is not None:
             kwargs['decoder_position'] = decoder_position
-            kwargs['word_embedding'] = word_embedding[:, -1:]
-        else:
-            kwargs['word_embedding'] = word_embedding
 
         print("decoder source attention")
 
@@ -378,6 +373,7 @@ class NewTransformer(nn.Module):
 
     def forward(self, batch): # pylint:disable=arguments-differ
         ''' A batch of inputs and targets '''
+        print("batch['intputs']", batch['intputs'])
         decoded = self.decode(
             self.encode(batch['inputs']),
             right_shift(batch['targets']),
@@ -399,7 +395,7 @@ class NewTransformer(nn.Module):
             'mask': inputs.eq(self.padding_idx)
         }
         for i, encoder in enumerate(self.encoders):
-            encoded = encoder(encoded, i, word_embedding)
+            encoded = encoder(encoded, i)
 
         return encoded
 
@@ -421,7 +417,7 @@ class NewTransformer(nn.Module):
         }
         for i, decoder in enumerate(decoders):
             # print("i", i)
-            decoded = decoder(decoded, encoded, i, word_embedding)
+            decoded = decoder(decoded, encoded, i)
 
         # compute projection to the vocabulary
         state = decoded['state']

@@ -14,8 +14,6 @@ from utils import same_tensor
 
 class NewAttention(nn.Module):
     ''' Implement a hard-coded attention module '''
-    ATTN_TYPES = ['normal', 'uniform', 'no', 'learned']
-    ATTN_POSITIONS = ['center', 'left', 'right', 'first', 'last']
 
     def __init__(self, attn_config, embed_dim, num_heads=1):
         ''' Initialize the attention module '''
@@ -432,8 +430,7 @@ class NewAttention(nn.Module):
         return self.mha_reshape(attended, batch_size)
 
     def forward(self, values, keys, queries, # pylint:disable=arguments-differ
-                key_mask=None, attention_mask=None, layer_i=0, decoder_position=-1, input_lens=None,
-                original_targets=None, word_embedding=None):
+                key_mask=None, attention_mask=None, layer_i=0, decoder_position=-1):
         ''' Forward pass of the attention '''
         batch_size = values.shape[0]
         # print("key_mask", key_mask)
