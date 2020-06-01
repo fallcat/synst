@@ -165,7 +165,6 @@ class TransformerDecoderLayer(nn.Module):
         mask = inputs['mask']
         state = inputs['state']
         cache = inputs.get('cache')
-        input_lens = inputs.get('input_lens')
 
         decoder_position = state.shape[1] - 1
 
@@ -188,7 +187,7 @@ class TransformerDecoderLayer(nn.Module):
 
         source = sources['state']
         # print("source", source)
-        kwargs = {'key_mask': sources['mask'], 'layer_i': layer_i, 'input_lens': input_lens}
+        kwargs = {'key_mask': sources['mask'], 'layer_i': layer_i}
         if self.causal and cache is not None:
             kwargs['decoder_position'] = decoder_position
 
@@ -412,8 +411,7 @@ class NewTransformer(nn.Module):
         decoded = {
             'cache': cache,
             'state': word_embedding,
-            'mask': targets.eq(self.padding_idx) if mask is None else mask,
-            'input_lens': input_lens
+            'mask': targets.eq(self.padding_idx) if mask is None else mask
         }
         for i, decoder in enumerate(decoders):
             # print("i", i)
