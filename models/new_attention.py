@@ -79,7 +79,7 @@ class NewAttention(nn.Module):
     _attn_cache = threading.local()
 
     def get_attn_cache(self, attn_std, attn_offset, qlen, vlen, device, decoder_position=-1):
-        # pdb.set_trace()
+        pdb.set_trace()
 
         attn_cache_store = NewAttention._attn_cache.__dict__
 
