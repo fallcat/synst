@@ -79,7 +79,6 @@ class NewAttention(nn.Module):
     _attn_cache = threading.local()
 
     def get_attn_cache(self, attn_std, attn_offset, qlen, vlen, device, decoder_position=-1):
-        pdb.set_trace()
 
         attn_cache_store = NewAttention._attn_cache.__dict__
 
@@ -106,8 +105,6 @@ class NewAttention(nn.Module):
         std_idx = [self.attn_std_uniq.index(i) for i in attn_std]
         attn_ofs_l = np.array([max_offset - a for a in attn_offset])
         attn_ofs_r = np.array([max_offset - a + vlen for a in attn_offset])
-        print("attn_ofs_l", attn_ofs_l)
-        print("attn_ofs_r", attn_ofs_r)
 
         retrieved = attn_cache_store[device]  # nh x qlen x vlen
         retrieved = retrieved[
@@ -351,8 +348,6 @@ class NewAttention(nn.Module):
 
             attended = torch.bmm(attn_weights, values)
 
-            print("attn_weights", attn_weights)
-
             return self.mha_reshape(attended, batch_size)
 
         elif 'learned' in attn_type:
@@ -425,8 +420,6 @@ class NewAttention(nn.Module):
             values = values.view(batch_size, self.num_heads, values_shape[1], values_shape[2])
             values.masked_fill_(key_mask[:, None, :, None], float(0))
             values = values.view(values_shape)
-
-        print("attn_weights", attn_weights)
 
         attended = torch.bmm(attn_weights, values)
 
