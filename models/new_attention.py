@@ -85,14 +85,15 @@ class NewAttention(nn.Module):
 
         real_qlen = max(qlen, decoder_position + 1)
 
+        max_offset, min_offset = max(self.attn_ofs_uniq), min(self.attn_ofs_uniq)
+
         if device not in attn_cache_store or attn_cache_store[device].shape[1] < real_qlen or attn_cache_store[device].shape[2] < vlen:
             max_qlen = max(attn_cache_store[device].shape[1], real_qlen) if device in attn_cache_store else real_qlen
             max_vlen = max(attn_cache_store[device].shape[2], vlen) if device in attn_cache_store else vlen
-            max_offset, min_offset = max(self.attn_ofs_uniq), min(self.attn_ofs_uniq)
 
             attn_std_uniq = torch.tensor(self.attn_std_uniq).view(-1, 1, 1)
             indices_q = torch.arange(max_qlen).float().view(1, -1, 1) * self.word_count_ratio
-            indices_v = torch.arange(-max_offset, max_vlen - min_offset + 1).float().view(1, 1, -1)  # -max_offset: focus on right most position, self.max_qlen - min_offset: leftmost
+            indices_v = torch.arange(-max_offset, max_vlen - min_offset).float().view(1, 1, -1)  # -max_offset: focus on right most position, self.max_qlen - min_offset: leftmost
 
             distance_diff = indices_v - indices_q
             logits = (1 / (attn_std_uniq * math.sqrt(2 * math.pi)) * torch.exp(
@@ -103,8 +104,8 @@ class NewAttention(nn.Module):
             attn_cache_store[device] = logits.to(device)
 
         std_idx = [self.attn_std_uniq.index(i) for i in attn_std]
-        attn_ofs_l = np.array([- a for a in attn_offset])
-        attn_ofs_r = np.array([- a + vlen for a in attn_offset])
+        attn_ofs_l = np.array([min_offset - a for a in attn_offset])
+        attn_ofs_r = np.array([min_offset - a + vlen for a in attn_offset])
         print("attn_ofs_l", attn_ofs_l)
         print("attn_ofs_r", attn_ofs_r)
 
