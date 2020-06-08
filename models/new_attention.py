@@ -79,7 +79,7 @@ class NewAttention(nn.Module):
     _attn_cache = threading.local()
 
     def get_attn_cache(self, attn_std, attn_offset, qlen, vlen, device, decoder_position=-1):
-        pdb.set_trace()
+        # pdb.set_trace()
 
         attn_cache_store = NewAttention._attn_cache.__dict__
 
@@ -105,6 +105,8 @@ class NewAttention(nn.Module):
         std_idx = [self.attn_std_uniq.index(i) for i in attn_std]
         attn_ofs_l = np.array([- a for a in attn_offset])
         attn_ofs_r = np.array([- a + vlen for a in attn_offset])
+        print("attn_ofs_l", attn_ofs_l)
+        print("attn_ofs_r", attn_ofs_r)
 
         retrieved = attn_cache_store[device]  # nh x qlen x vlen
         retrieved = retrieved[
