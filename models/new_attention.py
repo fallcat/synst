@@ -104,8 +104,8 @@ class NewAttention(nn.Module):
             attn_cache_store[device] = logits.to(device)
 
         std_idx = [self.attn_std_uniq.index(i) for i in attn_std]
-        attn_ofs_l = np.array([a - min_offset for a in attn_offset])
-        attn_ofs_r = np.array([a - min_offset + vlen for a in attn_offset])
+        attn_ofs_l = np.array([max_offset - a for a in attn_offset])
+        attn_ofs_r = np.array([max_offset - a + vlen for a in attn_offset])
         print("attn_ofs_l", attn_ofs_l)
         print("attn_ofs_r", attn_ofs_r)
 
