@@ -263,7 +263,7 @@ class NewTransformer(nn.Module):
         self.dropout = nn.Dropout(config.dropout_p, inplace=True)
 
         # Allow for overriding the encoders and decoders in dervied classes
-        self.encoders = type(self).create_encoders(config)
+        self.encoders = self.create_encoders(config)
         self.decoders = self.create_decoders(config)
 
         self.label_smoothing = LabelSmoothingLoss(
@@ -276,8 +276,13 @@ class NewTransformer(nn.Module):
             reduction='none'
         )
 
-    @classmethod
-    def create_encoders(cls, config):
+        # Uniq attn attributes
+        self.attn_ofs_uniq = list(set(
+            config.enc_attn_offset + config.dec_attn_offset + config.enc_dec_attn_offset))
+        self.attn_std_uniq = list(set(
+            config.enc_attn_std + config.dec_attn_std + config.std))
+
+    def create_encoders(self, config):
         ''' Create the transformer encoders '''
         kwargs = {'dropout_p': config.dropout_p}
 
@@ -294,7 +299,9 @@ class NewTransformer(nn.Module):
                        'attn_threshold': config.enc_attn_threshold,
                        'attn_window': config.enc_attn_window,
                        'attn_impl': config.enc_attn_impl,
-                       'ffn_layer': config.ffn_layer}
+                       'ffn_layer': config.ffn_layer,
+                       'attn_ofs_uniq': self.attn_ofs_uniq,
+                       'attn_std_uniq': self.attn_std_uniq}
         args = [attn_config, config.num_heads, config.embedding_size, config.hidden_dim]
         encoders = nn.ModuleList([
             TransformerEncoderLayer(*args, layer_i, **kwargs)
@@ -303,7 +310,6 @@ class NewTransformer(nn.Module):
 
         return encoders
 
-    # @classmethod
     def create_decoders(self, config):
         ''' Create the transformer decoders '''
         kwargs = {'dropout_p': config.dropout_p}
@@ -321,7 +327,10 @@ class NewTransformer(nn.Module):
                            'attn_threshold': config.dec_attn_threshold,
                            'attn_window': config.dec_attn_window,
                            'attn_impl': config.dec_attn_impl,
-                           'ffn_layer': config.ffn_layer}
+                           'ffn_layer': config.ffn_layer,
+                           'attn_ofs_uniq': self.attn_ofs_uniq,
+                           'attn_std_uniq': self.attn_std_uniq
+                           }
         enc_dec_attn_config = {'attn_type': config.enc_dec_attn_type,
                                'attn_std': config.enc_dec_attn_std,
                                'attn_offset': config.enc_dec_attn_offset,
@@ -334,7 +343,9 @@ class NewTransformer(nn.Module):
                                'attn_threshold': config.enc_dec_attn_threshold,
                                'attn_window': config.enc_dec_attn_window,
                                'attn_impl': config.enc_dec_attn_impl,
-                               'ffn_layer': config.ffn_layer
+                               'ffn_layer': config.ffn_layer,
+                               'attn_ofs_uniq': self.attn_ofs_uniq,
+                               'attn_std_uniq': self.attn_std_uniq
                                }
         args = [dec_attn_config, enc_dec_attn_config, config.num_heads, config.embedding_size, config.hidden_dim]
         decoders = nn.ModuleList([
