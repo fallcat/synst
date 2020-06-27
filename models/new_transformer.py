@@ -262,6 +262,12 @@ class NewTransformer(nn.Module):
         self.position_embedding = PositionEmbedding(config.embedding_size)
         self.dropout = nn.Dropout(config.dropout_p, inplace=True)
 
+        # Uniq attn attributes
+        self.attn_ofs_uniq = list(set(
+            config.enc_attn_offset + config.dec_attn_offset + config.enc_dec_attn_offset))
+        self.attn_std_uniq = list(set(
+            config.enc_attn_std + config.dec_attn_std + config.std))
+
         # Allow for overriding the encoders and decoders in dervied classes
         self.encoders = self.create_encoders(config)
         self.decoders = self.create_decoders(config)
@@ -275,12 +281,6 @@ class NewTransformer(nn.Module):
             ignore_index=self.padding_idx,
             reduction='none'
         )
-
-        # Uniq attn attributes
-        self.attn_ofs_uniq = list(set(
-            config.enc_attn_offset + config.dec_attn_offset + config.enc_dec_attn_offset))
-        self.attn_std_uniq = list(set(
-            config.enc_attn_std + config.dec_attn_std + config.std))
 
     def create_encoders(self, config):
         ''' Create the transformer encoders '''
