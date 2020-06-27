@@ -266,7 +266,7 @@ class NewTransformer(nn.Module):
         self.attn_ofs_uniq = list(set(
             config.enc_attn_offset + config.dec_attn_offset + config.enc_dec_attn_offset))
         self.attn_std_uniq = list(set(
-            config.enc_attn_std + config.dec_attn_std + config.std))
+            config.enc_attn_std + config.dec_attn_std + config.enc_dec_attn_std))
 
         # Allow for overriding the encoders and decoders in dervied classes
         self.encoders = self.create_encoders(config)
