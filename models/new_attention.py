@@ -58,8 +58,8 @@ class NewAttention(nn.Module):
         self.attn_configs = list(self.load_attn_configs())
 
         self.max_absolute_offset = max([abs(a) for a in attn_config['attn_offset']])
-        self.attn_ofs_uniq = attn_config['attn_ofs_offset']
-        self.attn_std_uniq = attn_config['attn_std_offset']
+        self.attn_ofs_uniq = attn_config['attn_ofs_uniq']
+        self.attn_std_uniq = attn_config['attn_std_uniq']
 
         self.impl = attn_config['attn_impl']
 
