@@ -443,7 +443,7 @@ class NewAttention(nn.Module):
                 queries, = self.project(queries, 2)
 
         else:
-            values, = self.project(values, 0, project=False)
+            values, = self.project(values, 0, project=True)
             keys, = self.project(keys, 1, project=False)
             queries, = self.project(queries, 2, project=False)
         # pylint:enable=unbalanced-tuple-unpacking
