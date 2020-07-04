@@ -1,7 +1,7 @@
 # StupidNMT: Hard-Coded Gaussian Attention for Neural Machine Translation
 
 This is the official repository which contains all the code necessary to
-replicate the results from the ACL 2020 long paper *[Hard-Coded Gaussian Attention for Neural Machine Translation](https://arxiv.org/abs/2005.00742)*. It can also be used to
+replicate the results from the ACL 2020 long paper *[Hard-Coded Gaussian Attention for Neural Machine Translation](https://www.aclweb.org/anthology/2020.acl-main.687/)*. It can also be used to
 train a vanilla Transformer.
 
 The full model architecture is displayed below:
